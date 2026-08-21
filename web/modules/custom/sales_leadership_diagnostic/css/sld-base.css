@@ -1,0 +1,162 @@
+/**
+ * Sistema visual base del Sales Leadership Diagnostic AI.
+ *
+ * Todo el color, la tipografía y el espaciado se expresan como variables CSS.
+ * Cuando el cliente entregue la identidad visual de Salesbumm (§21), aplicarla
+ * consistirá en reemplazar los valores de este bloque :root, sin tocar ninguna
+ * regla de los componentes.
+ *
+ * La paleta actual es neutra y provisional, elegida para no anticipar una
+ * identidad que todavía no conocemos.
+ */
+
+.sld {
+  /* Marca — pendiente de sustituir por la identidad de Salesbumm. */
+  --sld-color-primary: #1f4788;
+  --sld-color-primary-hover: #16345f;
+  --sld-color-primary-contrast: #ffffff;
+
+  /* Superficies. */
+  --sld-color-bg: #ffffff;
+  --sld-color-surface: #f6f7f9;
+  --sld-color-border: #d9dde3;
+
+  /* Texto. */
+  --sld-color-text: #1c1f24;
+  --sld-color-text-muted: #5b6470;
+
+  /* Estados. */
+  --sld-color-success: #1a7f4b;
+  --sld-color-warning: #8a6100;
+  --sld-color-danger: #b3261e;
+  --sld-color-info: #1f4788;
+
+  /* Espaciado y forma. */
+  --sld-radius: 10px;
+  --sld-radius-sm: 6px;
+  --sld-space-xs: 0.25rem;
+  --sld-space-sm: 0.5rem;
+  --sld-space-md: 1rem;
+  --sld-space-lg: 1.5rem;
+  --sld-space-xl: 2.5rem;
+
+  --sld-font: inherit;
+  --sld-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+
+  box-sizing: border-box;
+  max-width: 60rem;
+  margin-inline: auto;
+  padding: var(--sld-space-lg) var(--sld-space-md);
+  color: var(--sld-color-text);
+  font-family: var(--sld-font);
+}
+
+.sld *,
+.sld *::before,
+.sld *::after {
+  box-sizing: inherit;
+}
+
+/* Respeta la preferencia del sistema sin imponer un tema oscuro propio. */
+@media (prefers-color-scheme: dark) {
+  .sld {
+    --sld-color-bg: #16181c;
+    --sld-color-surface: #1f2228;
+    --sld-color-border: #333941;
+    --sld-color-text: #e9ecf1;
+    --sld-color-text-muted: #a2acb9;
+    --sld-color-primary: #6f9bea;
+    --sld-color-primary-hover: #8db0f0;
+    --sld-color-primary-contrast: #0f1114;
+    --sld-shadow: none;
+  }
+}
+
+/* Botones ------------------------------------------------------------- */
+
+.sld__button {
+  display: inline-block;
+  padding: 0.7rem 1.4rem;
+  border: 1px solid transparent;
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-primary);
+  color: var(--sld-color-primary-contrast);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sld__button:hover,
+.sld__button:focus {
+  background: var(--sld-color-primary-hover);
+  color: var(--sld-color-primary-contrast);
+  text-decoration: none;
+}
+
+/* El foco visible nunca se elimina: es el único indicador de posición para
+   quien navega con teclado. */
+.sld__button:focus-visible,
+.sld__link:focus-visible {
+  outline: 2px solid var(--sld-color-primary);
+  outline-offset: 2px;
+}
+
+.sld__button--secondary {
+  background: transparent;
+  border-color: var(--sld-color-border);
+  color: var(--sld-color-text);
+}
+
+.sld__button--secondary:hover,
+.sld__button--secondary:focus {
+  background: var(--sld-color-surface);
+  color: var(--sld-color-text);
+}
+
+.sld__button[aria-disabled="true"],
+.sld__button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Avisos -------------------------------------------------------------- */
+
+.sld__notice {
+  padding: var(--sld-space-md);
+  border: 1px solid var(--sld-color-border);
+  border-left-width: 4px;
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-surface);
+  margin-block: var(--sld-space-md);
+}
+
+.sld__notice--warning {
+  border-left-color: var(--sld-color-warning);
+}
+
+.sld__notice p {
+  margin: 0;
+}
+
+.sld__notice ul {
+  margin: var(--sld-space-sm) 0 0;
+  padding-inline-start: 1.25rem;
+}
+
+/* Utilidades ---------------------------------------------------------- */
+
+.sld__muted {
+  color: var(--sld-color-text-muted);
+}
+
+.sld__visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -1,0 +1,138 @@
+/**
+ * Panel del alumno (§37).
+ *
+ * El historial se construye con una tabla real porque son datos tabulares:
+ * un lector de pantalla puede recorrerlo por filas y columnas, cosa que una
+ * rejilla de divs no permite. En móvil se reorganiza en tarjetas conservando
+ * la semántica de tabla.
+ */
+
+.sld-dashboard__header {
+  margin-bottom: var(--sld-space-lg);
+}
+
+.sld-dashboard__title {
+  margin: 0 0 var(--sld-space-xs);
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.sld-dashboard__greeting {
+  margin: 0;
+  color: var(--sld-color-text-muted);
+  font-size: 1.05rem;
+}
+
+.sld-dashboard__start {
+  margin-bottom: var(--sld-space-xl);
+}
+
+.sld-dashboard__section-title {
+  margin: 0 0 var(--sld-space-md);
+  font-size: 1.15rem;
+}
+
+.sld-dashboard__empty {
+  padding: var(--sld-space-lg);
+  border: 1px dashed var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  color: var(--sld-color-text-muted);
+  text-align: center;
+}
+
+/* Historial ----------------------------------------------------------- */
+
+.sld-dashboard__table-wrapper {
+  overflow-x: auto;
+}
+
+.sld-dashboard__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.sld-dashboard__table th,
+.sld-dashboard__table td {
+  padding: 0.75rem var(--sld-space-sm);
+  border-bottom: 1px solid var(--sld-color-border);
+  text-align: start;
+  vertical-align: middle;
+}
+
+.sld-dashboard__table th {
+  color: var(--sld-color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Estados ------------------------------------------------------------- */
+
+.sld-status {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--sld-color-surface);
+  border: 1px solid var(--sld-color-border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sld-status--completed {
+  border-color: var(--sld-color-success);
+  color: var(--sld-color-success);
+}
+
+.sld-status--in_progress,
+.sld-status--processing {
+  border-color: var(--sld-color-info);
+  color: var(--sld-color-info);
+}
+
+.sld-status--failed {
+  border-color: var(--sld-color-danger);
+  color: var(--sld-color-danger);
+}
+
+/* Móvil: la tabla se convierte en tarjetas ---------------------------- */
+
+@media (max-width: 34rem) {
+  .sld-dashboard__table thead {
+    /* Se oculta visualmente, no del árbol de accesibilidad. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+  }
+
+  .sld-dashboard__table tr {
+    display: block;
+    margin-bottom: var(--sld-space-md);
+    padding: var(--sld-space-md);
+    border: 1px solid var(--sld-color-border);
+    border-radius: var(--sld-radius);
+    background: var(--sld-color-bg);
+    box-shadow: var(--sld-shadow);
+  }
+
+  .sld-dashboard__table td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sld-space-md);
+    padding: 0.4rem 0;
+    border-bottom: 0;
+  }
+
+  /* La cabecera de columna se reintroduce como etiqueta de cada dato. */
+  .sld-dashboard__table td::before {
+    content: attr(data-label);
+    color: var(--sld-color-text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+}

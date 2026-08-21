@@ -1,0 +1,104 @@
+{#
+/**
+ * @file
+ * Panel del alumno (§37).
+ *
+ * Variables disponibles:
+ * - user_name: nombre para el saludo.
+ * - can_start: si puede iniciarse un diagnóstico ahora mismo.
+ * - unavailable_notice: motivo, si no puede. Un alumno recibe un mensaje
+ *   neutro; un administrador, el detalle técnico.
+ * - history: filas del historial, cada una con id, date, status,
+ *   status_machine, version, result_id e is_resumable.
+ *
+ * Twig autoescapa todas las variables, de modo que ningún dato de usuario
+ * puede inyectar marcado.
+ */
+#}
+<div class="sld sld-dashboard">
+
+  <header class="sld-dashboard__header">
+    <h1 class="sld-dashboard__title">{{ 'Sales Leadership Diagnostic AI'|t }}</h1>
+    <p class="sld-dashboard__greeting">{{ 'Bienvenido, @name'|t({'@name': user_name}) }}</p>
+  </header>
+
+  {% if unavailable_notice %}
+    <div class="sld__notice sld__notice--warning" role="status">
+      <p>{{ unavailable_notice.message }}</p>
+      {% if unavailable_notice.details is not empty %}
+        <ul>
+          {% for detail in unavailable_notice.details %}
+            <li>{{ detail }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="sld-dashboard__start">
+    {% if can_start %}
+      {# El destino real llega con la capa de conversación. Hasta entonces el
+         control no debe existir como enlace activo: crear una sesión sin pasar
+         por la comprobación de autorización sería exactamente lo que §12 y §13
+         prohíben. #}
+      <button type="button" class="sld__button" aria-disabled="true" disabled>
+        {{ 'Iniciar diagnóstico'|t }}
+      </button>
+      <p class="sld__muted">{{ 'Disponible al completar la integración.'|t }}</p>
+    {% else %}
+      <button type="button" class="sld__button" aria-disabled="true" disabled>
+        {{ 'Iniciar diagnóstico'|t }}
+      </button>
+    {% endif %}
+  </div>
+
+  <section aria-labelledby="sld-history-title">
+    <h2 class="sld-dashboard__section-title" id="sld-history-title">
+      {{ 'Mis diagnósticos'|t }}
+    </h2>
+
+    {% if history is empty %}
+      <p class="sld-dashboard__empty">
+        {{ 'Todavía no has realizado ningún diagnóstico.'|t }}
+      </p>
+    {% else %}
+      <div class="sld-dashboard__table-wrapper">
+        <table class="sld-dashboard__table">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'Fecha'|t }}</th>
+              <th scope="col">{{ 'Estado'|t }}</th>
+              <th scope="col">{{ 'Versión'|t }}</th>
+              <th scope="col">
+                <span class="sld__visually-hidden">{{ 'Acciones'|t }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in history %}
+              <tr>
+                <td data-label="{{ 'Fecha'|t }}">{{ row.date }}</td>
+                <td data-label="{{ 'Estado'|t }}">
+                  <span class="sld-status sld-status--{{ row.status_machine }}">
+                    {{ row.status }}
+                  </span>
+                </td>
+                <td data-label="{{ 'Versión'|t }}">{{ row.version }}</td>
+                <td data-label="{{ 'Acciones'|t }}">
+                  {% if row.result_id %}
+                    <span class="sld__muted">{{ 'Resultado disponible'|t }}</span>
+                  {% elseif row.is_resumable %}
+                    <span class="sld__muted">{{ 'Sin terminar'|t }}</span>
+                  {% else %}
+                    <span class="sld__muted">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+
+</div>

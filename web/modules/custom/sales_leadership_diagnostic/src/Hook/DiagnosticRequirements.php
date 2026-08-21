@@ -8,7 +8,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
+use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
 
 /**
  * Informe de estado del módulo en /admin/reports/status.
@@ -18,13 +18,16 @@ use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
  * cerrada (§13), así que una configuración a medias no se traduce en un
  * comportamiento degradado sino en accesos denegados: sin este informe, la
  * causa sería difícil de diagnosticar.
+ *
+ * La decisión de qué falta la toma DiagnosticReadiness, el mismo servicio que
+ * consulta el panel del alumno. Aquí solo se traduce a lenguaje administrativo.
  */
 final class DiagnosticRequirements {
 
   use StringTranslationTrait;
 
   public function __construct(
-    private readonly SecretsProvider $secrets,
+    private readonly DiagnosticReadiness $readiness,
     private readonly ConfigFactoryInterface $configFactory,
   ) {}
 
@@ -47,7 +50,7 @@ final class DiagnosticRequirements {
    * ni siquiera truncado (§43).
    */
   private function checkSecrets(): array {
-    $missing = $this->secrets->missing();
+    $missing = $this->readiness->missingSecrets();
 
     if ($missing === []) {
       return [
@@ -77,17 +80,9 @@ final class DiagnosticRequirements {
    * Verifica que la integración con WordPress esté configurada.
    */
   private function checkWordPress(): array {
-    $config = $this->configFactory->get('sales_leadership_diagnostic.settings');
-    $pending = [];
+    $missing = $this->readiness->missingWordPressSettings();
 
-    if (trim((string) $config->get('wordpress.api_base_url')) === '') {
-      $pending[] = $this->t('URL base de la API');
-    }
-    if (trim((string) $config->get('wordpress.course_id')) === '') {
-      $pending[] = $this->t('ID del curso autorizador');
-    }
-
-    if ($pending === []) {
+    if ($missing === []) {
       return [
         'title' => $this->t('Diagnostic AI: WordPress / LearnDash'),
         'value' => $this->t('Configurado'),
@@ -95,12 +90,22 @@ final class DiagnosticRequirements {
       ];
     }
 
+    $labels = [
+      'api_base_url' => $this->t('URL base de la API'),
+      'course_id' => $this->t('ID del curso autorizador'),
+    ];
+
+    $pending = array_map(
+      static fn (string $key): string => (string) ($labels[$key] ?? $key),
+      $missing,
+    );
+
     return [
       'title' => $this->t('Diagnostic AI: WordPress / LearnDash'),
       'value' => $this->t('Configuración incompleta'),
       'severity' => RequirementSeverity::Warning,
       'description' => $this->t('Falta por definir: @items. Ningún alumno podrá ser autorizado hasta completarlo.', [
-        '@items' => implode(', ', array_map(static fn ($item): string => (string) $item, $pending)),
+        '@items' => implode(', ', $pending),
       ]),
     ];
   }
@@ -113,11 +118,7 @@ final class DiagnosticRequirements {
    * ejecutarse.
    */
   private function checkAgent(): array {
-    $config = $this->configFactory->get('sales_leadership_diagnostic.diagnostic');
-    $version = trim((string) $config->get('version'));
-    $hasPrompt = trim((string) $config->get('system_prompt')) !== '';
-
-    if (!$hasPrompt) {
+    if (!$this->readiness->isAgentLoaded()) {
       return [
         'title' => $this->t('Diagnostic AI: agente'),
         'value' => $this->t('Sin prompt cargado'),
@@ -126,9 +127,15 @@ final class DiagnosticRequirements {
       ];
     }
 
+    $version = trim((string) $this->configFactory
+      ->get('sales_leadership_diagnostic.diagnostic')
+      ->get('version'));
+
     return [
       'title' => $this->t('Diagnostic AI: agente'),
-      'value' => $this->t('Cargado (versión @version)', ['@version' => $version !== '' ? $version : $this->t('sin definir')]),
+      'value' => $this->t('Cargado (versión @version)', [
+        '@version' => $version !== '' ? $version : $this->t('sin definir'),
+      ]),
       'severity' => RequirementSeverity::OK,
     ];
   }

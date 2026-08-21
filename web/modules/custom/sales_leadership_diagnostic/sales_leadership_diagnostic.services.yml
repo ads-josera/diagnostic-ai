@@ -7,9 +7,26 @@ services:
     arguments:
       - '@settings'
 
+  # Define en un solo sitio qué significa que el módulo esté listo para
+  # ejecutar diagnósticos. Lo consultan el informe de estado y el panel.
+  Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness:
+    arguments:
+      - '@config.factory'
+      - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
+
   # Única puerta de entrada a los mensajes de las conversaciones.
   # Viven en una tabla propia, fuera de Entity API, por privacidad (§43).
   Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository:
     arguments:
       - '@database'
       - '@datetime.time'
+
+  # Consultas sobre sesiones y resultados. Concentrarlas aquí evita que los
+  # controllers construyan entity queries y olviden filtrar por propietario.
+  Drupal\sales_leadership_diagnostic\Repository\DiagnosticSessionRepository:
+    arguments:
+      - '@entity_type.manager'
+
+  Drupal\sales_leadership_diagnostic\Repository\DiagnosticResultRepository:
+    arguments:
+      - '@entity_type.manager'

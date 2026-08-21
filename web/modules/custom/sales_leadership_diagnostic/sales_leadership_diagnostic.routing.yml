@@ -1,3 +1,24 @@
+# ---------------------------------------------------------------------------
+# Rutas del alumno
+# ---------------------------------------------------------------------------
+# Por ahora se protegen solo con el permiso. La cadena completa de
+# autorización —token válido, entrada en el authmap y consulta a
+# WordPress/LearnDash— se añade con _custom_access en la Fase 5. Hasta
+# entonces no existe ninguna vía de entrada automática: el permiso solo puede
+# otorgarlo un administrador a mano.
+sales_leadership_diagnostic.dashboard:
+  path: '/sales-diagnostic'
+  defaults:
+    _controller: '\Drupal\sales_leadership_diagnostic\Controller\DashboardController::view'
+    _title: 'Sales Leadership Diagnostic AI'
+  requirements:
+    _permission: 'access sales leadership diagnostic'
+  options:
+    no_cache: FALSE
+
+# ---------------------------------------------------------------------------
+# Administración
+# ---------------------------------------------------------------------------
 # Sección propia dentro de /admin/config.
 #
 # Agrupar aquí la configuración de Salesbumm evita mezclarla con la de Drupal

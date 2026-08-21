@@ -1,0 +1,7 @@
+# Assets propios del módulo (§4: nunca en el tema del sitio).
+dashboard:
+  version: 1.x
+  css:
+    theme:
+      css/sld-base.css: {}
+      css/sld-dashboard.css: {}

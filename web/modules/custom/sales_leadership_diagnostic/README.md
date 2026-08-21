@@ -157,5 +157,19 @@ asignados y reinstalación sobre un rol huérfano.
 |---|---|
 | 0 — Entorno base | ✅ Completada |
 | 1 — Esqueleto del módulo | ✅ Completada |
-| 2 — Configuración administrativa | Pendiente |
-| 3–16 | Pendientes (ver `docs/ARQUITECTURA.md` §14) |
+| 2 — Configuración administrativa | ✅ Completada |
+| 6 — Modelo de datos | ✅ Completada |
+| 7 — Dashboard | ✅ Completada |
+| 8 — Chat UI | Siguiente |
+| 3, 4, 5 — WordPress, autorización, SSO | Bloqueadas: requieren acceso al WordPress del cliente |
+| 9–16 | Pendientes (ver `docs/ARQUITECTURA.md` §14) |
+
+### El botón «Iniciar diagnóstico» está deshabilitado a propósito
+
+No es un pendiente olvidado. Crear una sesión exige comprobar antes que el
+alumno tiene derecho al curso, y esa cadena de autorización llega en las fases
+4 y 5. Habilitar el botón ahora significaría abrir una vía para crear sesiones
+sin verificar autorización, que es exactamente lo que prohíben §12 y §13.
+
+El panel ya muestra el historial y el estado de disponibilidad; solo falta la
+acción, que se conecta junto con la capa de conversación.
