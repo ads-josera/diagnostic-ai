@@ -9,6 +9,7 @@ use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
+use Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory;
 
 /**
  * Informe de estado del módulo en /admin/reports/status.
@@ -29,6 +30,7 @@ final class DiagnosticRequirements {
   public function __construct(
     private readonly DiagnosticReadiness $readiness,
     private readonly ConfigFactoryInterface $configFactory,
+    private readonly DiagnosticEngineFactory $engineFactory,
   ) {}
 
   /**
@@ -36,10 +38,32 @@ final class DiagnosticRequirements {
    */
   #[Hook('runtime_requirements')]
   public function runtime(): array {
-    return [
+    $requirements = [
       'sales_leadership_diagnostic_secrets' => $this->checkSecrets(),
       'sales_leadership_diagnostic_wordpress' => $this->checkWordPress(),
       'sales_leadership_diagnostic_agent' => $this->checkAgent(),
+    ];
+
+    if ($this->engineFactory->isMockActive()) {
+      $requirements['sales_leadership_diagnostic_mock_engine'] = $this->warnAboutMockEngine();
+    }
+
+    return $requirements;
+  }
+
+  /**
+   * Avisa de forma destacada si el motor simulado está activo.
+   *
+   * Es la red de seguridad del ajuste: un entorno que lo tuviera habilitado
+   * por error entregaría diagnósticos inventados a alumnos reales, y nada en
+   * la interfaz del alumno lo delataría. El informe de estado sí.
+   */
+  private function warnAboutMockEngine(): array {
+    return [
+      'title' => $this->t('Diagnostic AI: motor de IA'),
+      'value' => $this->t('SIMULADO — no se está usando IA real'),
+      'severity' => RequirementSeverity::Error,
+      'description' => $this->t('El ajuste <code>$settings[\'sld_use_mock_engine\']</code> está activo, de modo que los diagnósticos se generan con respuestas de prueba y no con el proveedor de IA. Es correcto en desarrollo; en staging o producción debe retirarse de settings.php de inmediato.'),
     ];
   }
 

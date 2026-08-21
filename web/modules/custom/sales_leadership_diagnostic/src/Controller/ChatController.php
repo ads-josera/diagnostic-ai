@@ -7,6 +7,7 @@ namespace Drupal\sales_leadership_diagnostic\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Render\Markup;
+use Drupal\Core\Url;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 use Drupal\sales_leadership_diagnostic\MessageRole;
@@ -62,11 +63,16 @@ final class ChatController extends ControllerBase {
           'salesLeadershipDiagnostic' => [
             'sessionId' => (int) $session->id(),
             'acceptsMessages' => $status->acceptsMessages(),
-            // El endpoint de envío llega con la capa de conversación. Mientras
-            // sea nulo, el JS deja el compositor en modo lectura en lugar de
-            // lanzar peticiones contra una ruta inexistente.
-            'messageEndpoint' => NULL,
-            'csrfTokenUrl' => '/session/token',
+            // Solo se entrega el endpoint si la sesión admite mensajes. Una
+            // sesión cerrada no debe siquiera ofrecer a dónde escribir; el
+            // servidor lo rechazaría igualmente, pero no tiene sentido que el
+            // navegador conozca una ruta que no puede usar.
+            'messageEndpoint' => $status->acceptsMessages()
+              ? Url::fromRoute('sales_leadership_diagnostic.session_message', [
+                'sld_diagnostic_session' => $session->id(),
+              ])->toString()
+              : NULL,
+            'csrfTokenUrl' => Url::fromRoute('system.csrftoken')->toString(),
           ],
         ],
       ],

@@ -35,6 +35,24 @@ sales_leadership_diagnostic.session:
     _permission: 'access sales leadership diagnostic'
     _entity_access: 'sld_diagnostic_session.view'
 
+# Envío de un mensaje. Devuelve JSON; lo consume el chat por fetch.
+#
+# Exige acceso de ACTUALIZACIÓN sobre la sesión, no de lectura: enviar un
+# mensaje la modifica. Así, alguien con permiso para consultar diagnósticos
+# ajenos —el personal de soporte— puede leerlos pero no escribir en ellos.
+#
+# El token CSRF viaja en la cabecera X-CSRF-Token, que es el mecanismo que
+# core usa para endpoints JSON; el navegador lo obtiene de /session/token.
+sales_leadership_diagnostic.session_message:
+  path: '/sales-diagnostic/session/{sld_diagnostic_session}/message'
+  methods: [POST]
+  defaults:
+    _controller: '\Drupal\sales_leadership_diagnostic\Controller\ConversationApiController::send'
+  requirements:
+    _permission: 'access sales leadership diagnostic'
+    _entity_access: 'sld_diagnostic_session.update'
+    _csrf_request_header_token: 'TRUE'
+
 # ---------------------------------------------------------------------------
 # Administración
 # ---------------------------------------------------------------------------

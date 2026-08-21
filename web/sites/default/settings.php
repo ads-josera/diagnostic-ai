@@ -935,6 +935,20 @@ $settings['sld_wp_hmac_secret'] = getenv('SLD_WP_HMAC_SECRET') ?: '';
 $settings['sld_openai_api_key'] = getenv('SLD_OPENAI_API_KEY') ?: '';
 
 /**
+ * Motor de diagnóstico simulado — SOLO DESARROLLO.
+ *
+ * Permite ejercitar el circuito completo de la conversación sin depender de un
+ * proveedor de IA real ni gastar en llamadas.
+ *
+ * Debe declararse de forma explícita: el módulo nunca cae sobre el simulador
+ * por su cuenta. Un despliegue mal configurado que lo hiciera entregaría
+ * diagnósticos inventados a alumnos reales sin que nada lo delatase.
+ *
+ * NO debe activarse en staging ni en producción.
+ */
+$settings['sld_use_mock_engine'] = TRUE;
+
+/**
  * Trusted host patterns.
  *
  * Obligatorio en producción para evitar ataques de HTTP Host header.

@@ -2,10 +2,20 @@ services:
   _defaults:
     autoconfigure: true
 
+  # --- Seguridad -----------------------------------------------------------
+
   # Punto único de acceso a los secretos del módulo (§29).
   Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider:
     arguments:
       - '@settings'
+
+  # Límites de uso por alumno (§44).
+  Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter:
+    arguments:
+      - '@flood'
+      - '@config.factory'
+
+  # --- Diagnóstico ---------------------------------------------------------
 
   # Define en un solo sitio qué significa que el módulo esté listo para
   # ejecutar diagnósticos. Lo consultan el informe de estado y el panel.
@@ -14,11 +24,67 @@ services:
       - '@config.factory'
       - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
 
+  # Composición y versionado del prompt del cliente (§18, §57).
+  Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManager:
+    arguments:
+      - '@config.factory'
+
+  # Decide qué se envía al motor, y sobre todo qué no (§31).
+  Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticContextBuilder:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository'
+      - '@config.factory'
+
+  # Valida la respuesta del motor antes de almacenarla (§32).
+  Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator:
+    class: Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator
+
+  # --- Motor de IA ---------------------------------------------------------
+
+  Drupal\sales_leadership_diagnostic\Service\Engine\MockDiagnosticEngine:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator'
+
+  Drupal\sales_leadership_diagnostic\Service\Engine\UnavailableDiagnosticEngine:
+    class: Drupal\sales_leadership_diagnostic\Service\Engine\UnavailableDiagnosticEngine
+
+  Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory:
+    arguments:
+      - '@settings'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\MockDiagnosticEngine'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\UnavailableDiagnosticEngine'
+
+  # El motor activo lo decide la fábrica. El resto del módulo depende de la
+  # interfaz y no sabe cuál está en uso (§28).
+  sales_leadership_diagnostic.engine:
+    class: Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineInterface
+    factory: ['@Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory', 'create']
+
+  Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineInterface: '@sales_leadership_diagnostic.engine'
+
+  # --- Conversación --------------------------------------------------------
+
   # Markdown del agente -> HTML saneado (§25). Sin argumentos a propósito: su
   # configuración de seguridad es interna para que no pueda relajarse desde
   # este archivo sin que se note al revisar la clase.
   Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer:
     class: Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer
+
+  # Orquestador del turno: es el único sitio que conoce el orden en que
+  # ocurren bloqueo, límites, persistencia, motor y cierre (§27).
+  Drupal\sales_leadership_diagnostic\Service\Conversation\ConversationService:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository'
+      - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticContextBuilder'
+      - '@sales_leadership_diagnostic.engine'
+      - '@Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer'
+      - '@Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter'
+      - '@lock'
+      - '@entity_type.manager'
+      - '@datetime.time'
+      - '@logger.factory'
+
+  # --- Repositorios --------------------------------------------------------
 
   # Única puerta de entrada a los mensajes de las conversaciones.
   # Viven en una tabla propia, fuera de Entity API, por privacidad (§43).
