@@ -1,0 +1,13 @@
+sales_leadership_diagnostic.admin_section:
+  title: 'Salesbumm'
+  description: 'Configuración de las herramientas de Salesbumm.'
+  parent: system.admin_config
+  route_name: sales_leadership_diagnostic.admin_section
+  weight: 50
+
+sales_leadership_diagnostic.settings:
+  title: 'Sales Leadership Diagnostic AI'
+  description: 'Integración con WordPress/LearnDash y el proveedor de IA, agente y límites de seguridad.'
+  parent: sales_leadership_diagnostic.admin_section
+  route_name: sales_leadership_diagnostic.settings
+  weight: 0

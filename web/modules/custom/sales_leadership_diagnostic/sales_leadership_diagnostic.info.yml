@@ -3,6 +3,7 @@ type: module
 description: 'Experiencia privada de diagnóstico de liderazgo comercial mediante IA. La identidad y la autorización se delegan en WordPress/LearnDash; el motor de diagnóstico se ejecuta contra un proveedor de IA configurable.'
 package: 'Salesbumm'
 core_version_requirement: ^11
+configure: sales_leadership_diagnostic.settings
 dependencies:
   - drupal:system
   - drupal:user

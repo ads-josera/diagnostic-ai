@@ -273,7 +273,13 @@ El *nombre del módulo* sigue siendo `sales_leadership_diagnostic` (sin límite)
 | Paquete | Tipo | Justificación | Alternativa descartada |
 |---|---|---|---|
 | `drupal/externalauth` | Contrib | Mapeo WP user ↔ Drupal user. Provee tabla `authmap`, `loginRegister()`, y resuelve colisiones y condiciones de carrera en el primer login. Es la base de `cas` y `simplesamlphp_auth`; mantenido y compatible con D11. | Tabla propia: ~150 líneas frágiles, con race conditions reales en logins concurrentes |
-| `firebase/php-jwt` | Composer | JWT firmado con `exp`, `iss`, `aud`, `jti` y *leeway* de reloj. Librería mínima y auditada. | `drupal/jwt`: acopla al sistema de auth providers de Drupal, innecesario. HMAC casero: reinventar JWT mal |
+| `firebase/php-jwt` **^7.1** | Composer | JWT firmado con `exp`, `iss`, `aud`, `jti` y *leeway* de reloj. Librería mínima y auditada. Su API recibe un objeto `Key` que fija el algoritmo, lo que previene ataques de confusión de algoritmo. | `drupal/jwt`: acopla al sistema de auth providers de Drupal, innecesario. HMAC casero: reinventar JWT mal |
+
+> ⚠ **Restricción de versión — `firebase/php-jwt`.** Las versiones **6.10.0 a
+> 6.11.1** están afectadas por el aviso de seguridad `PKSA-y2cr-5h3j-g3ys` y
+> Composer bloquea su instalación. El módulo fija la línea **7.x**, verificada
+> sin avisos. No degradar a 6.x ni añadir el aviso a la lista de excepciones
+> de `audit`.
 | `league/commonmark` | Composer | Renderizado seguro de Markdown del agente (§25). Estándar de facto en el ecosistema PHP. | Regex propias: vector de XSS garantizado |
 
 ### 4.2 Dependencias explícitamente NO añadidas
@@ -875,11 +881,26 @@ entorno (§29, §5.1 de este documento).
 `hash_salt` · variables de entorno de desarrollo.
 **Entregable:** entorno funcional y versionado.
 
-### Fase 1 — Esqueleto del módulo
+### Fase 1 — Esqueleto del módulo ✅
 
 `.info.yml`, `.services.yml`, permisos, rol de alumno, config schema, `composer.json`,
-`hook_requirements()`. Instalable y desinstalable limpiamente.
+`hook_runtime_requirements()`. Instalable y desinstalable limpiamente.
 **Entregable:** el módulo se activa sin errores y no hace nada todavía.
+
+> **Corrección aplicada durante la implementación — el rol de alumno.** Declararlo
+> en `config/install/` deja el módulo **imposible de reinstalar**: al desinstalar,
+> `Role::onDependencyRemoval()` conserva el rol sin permisos para no destruir las
+> asignaciones a usuarios, y la instalación siguiente aborta con
+> `PreExistingConfigException`, en contra de §3. El rol se crea en `hook_install()`
+> de forma idempotente (repara un rol huérfano en lugar de fallar) y
+> `hook_uninstall()` solo lo elimina si ningún usuario lo tiene asignado.
+
+> **Nota de API.** Drupal 11.1+ sustituye `hook_requirements()` por
+> `hook_runtime_requirements()` y las constantes `REQUIREMENT_*` por el enum
+> `RequirementSeverity`. Los hooks del módulo usan la forma OOP con el atributo
+> `#[Hook]` en `src/Hook/`. Los hooks de instalación (`hook_install`,
+> `hook_uninstall`, `hook_schema`, `hook_update_N`) siguen siendo procedurales
+> en el archivo `.install`: el sistema OOP no los cubre.
 
 ### Fase 2 — Configuración
 

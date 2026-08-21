@@ -1,0 +1,11 @@
+sales_leadership_diagnostic.settings_tab:
+  title: 'Integración y seguridad'
+  route_name: sales_leadership_diagnostic.settings
+  base_route: sales_leadership_diagnostic.settings
+  weight: 0
+
+sales_leadership_diagnostic.agent_tab:
+  title: 'Agente'
+  route_name: sales_leadership_diagnostic.agent_settings
+  base_route: sales_leadership_diagnostic.settings
+  weight: 10

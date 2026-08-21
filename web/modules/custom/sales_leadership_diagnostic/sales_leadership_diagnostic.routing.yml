@@ -1,0 +1,27 @@
+# Sección propia dentro de /admin/config.
+#
+# Agrupar aquí la configuración de Salesbumm evita mezclarla con la de Drupal
+# core y deja sitio a futuras herramientas del cliente sin reorganizar el menú.
+sales_leadership_diagnostic.admin_section:
+  path: '/admin/config/salesbumm'
+  defaults:
+    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
+    _title: 'Salesbumm'
+  requirements:
+    _permission: 'administer sales leadership diagnostic'
+
+sales_leadership_diagnostic.settings:
+  path: '/admin/config/salesbumm/diagnostic'
+  defaults:
+    _form: '\Drupal\sales_leadership_diagnostic\Form\SettingsForm'
+    _title: 'Sales Leadership Diagnostic AI'
+  requirements:
+    _permission: 'administer sales leadership diagnostic'
+
+sales_leadership_diagnostic.agent_settings:
+  path: '/admin/config/salesbumm/diagnostic/agent'
+  defaults:
+    _form: '\Drupal\sales_leadership_diagnostic\Form\DiagnosticConfigForm'
+    _title: 'Agente de diagnóstico'
+  requirements:
+    _permission: 'administer sales leadership diagnostic'

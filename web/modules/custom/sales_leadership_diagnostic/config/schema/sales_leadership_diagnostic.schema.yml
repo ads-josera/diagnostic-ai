@@ -63,16 +63,28 @@ sales_leadership_diagnostic.settings:
 sales_leadership_diagnostic.diagnostic:
   type: config_object
   label: 'Definición del agente de diagnóstico'
+  # El prompt, las instrucciones y el contrato de salida se declaran como
+  # `string` y no como `text` de forma deliberada.
+  #
+  # En el esquema de configuración de Drupal, `text` marca un valor como
+  # traducible y lo expone al sistema de traducción de configuración. Eso sería
+  # incorrecto aquí: dos traducciones del mismo prompt bajo una misma versión
+  # producirían diagnósticos distintos imposibles de reproducir, rompiendo la
+  # trazabilidad que exige §57.
+  #
+  # Un diagnóstico en otro idioma debe modelarse como una definición y una
+  # versión propias —la evolución hacia N diagnósticos que contempla §56—, no
+  # como una traducción de esta.
   mapping:
     version:
       type: string
       label: 'Versión del diagnóstico'
     system_prompt:
-      type: text
+      type: string
       label: 'Prompt principal (propiedad del cliente)'
     instructions:
-      type: text
+      type: string
       label: 'Instrucciones del agente (propiedad del cliente)'
     output_contract:
-      type: text
+      type: string
       label: 'Contrato de salida (añadido técnico)'
