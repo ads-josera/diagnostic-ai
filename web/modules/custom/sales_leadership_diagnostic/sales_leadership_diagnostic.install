@@ -1,0 +1,83 @@
+<?php
+
+/**
+ * @file
+ * Instalación y desinstalación del módulo Sales Leadership Diagnostic AI.
+ */
+
+declare(strict_types=1);
+
+use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\user\Entity\Role;
+
+/**
+ * Implements hook_install().
+ *
+ * Crea el rol de alumno mediante código y no mediante config/install de forma
+ * deliberada.
+ *
+ * Al desinstalar un módulo, Drupal no borra los roles que dependen de él: la
+ * clase Role::onDependencyRemoval() les retira los permisos pero conserva el
+ * rol para no destruir las asignaciones a usuarios. Como consecuencia, un rol
+ * declarado en config/install sobrevive a la desinstalación y hace que la
+ * siguiente instalación aborte con PreExistingConfigException, dejando el
+ * módulo imposible de reinstalar (§3).
+ *
+ * Crearlo aquí resuelve ambos extremos: la operación es idempotente, así que
+ * también repara un rol huérfano de una instalación anterior devolviéndole su
+ * permiso.
+ */
+function sales_leadership_diagnostic_install(): void {
+  $role = Role::load(SalesLeadershipDiagnostic::STUDENT_ROLE_ID);
+
+  if ($role === NULL) {
+    $role = Role::create([
+      'id' => SalesLeadershipDiagnostic::STUDENT_ROLE_ID,
+      'label' => SalesLeadershipDiagnostic::STUDENT_ROLE_LABEL,
+      'weight' => 5,
+    ]);
+  }
+
+  $role->grantPermission(SalesLeadershipDiagnostic::PERMISSION_ACCESS);
+  $role->save();
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Retira los permisos del módulo del rol de alumno y elimina el rol únicamente
+ * si ningún usuario lo tiene asignado.
+ *
+ * Borrar un rol que sigue asignado destruiría información irreversible, así
+ * que en ese caso se conserva vacío y se deja la decisión al administrador.
+ * Las cuentas provisionadas desde WordPress nunca se eliminan.
+ */
+function sales_leadership_diagnostic_uninstall(): void {
+  $role = Role::load(SalesLeadershipDiagnostic::STUDENT_ROLE_ID);
+
+  if ($role === NULL) {
+    return;
+  }
+
+  foreach (SalesLeadershipDiagnostic::ALL_PERMISSIONS as $permission) {
+    $role->revokePermission($permission);
+  }
+
+  $assigned = \Drupal::entityQuery('user')
+    ->accessCheck(FALSE)
+    ->condition('roles', SalesLeadershipDiagnostic::STUDENT_ROLE_ID)
+    ->range(0, 1)
+    ->execute();
+
+  if ($assigned === []) {
+    $role->delete();
+    return;
+  }
+
+  $role->save();
+
+  \Drupal::logger(SalesLeadershipDiagnostic::LOGGER_CHANNEL)->notice(
+    'El rol %role se conserva porque sigue asignado a uno o más usuarios. Se le han retirado los permisos del módulo.',
+    ['%role' => SalesLeadershipDiagnostic::STUDENT_ROLE_ID],
+  );
+}

@@ -1,0 +1,12 @@
+uuid: 5a4e5f9c-91f6-41d5-84ca-fb247b333b94
+langcode: es
+status: true
+dependencies:
+  module:
+    - sales_leadership_diagnostic
+id: sales_diagnostic_student
+label: 'Alumno Diagnostic AI'
+weight: 5
+is_admin: false
+permissions:
+  - 'access sales leadership diagnostic'

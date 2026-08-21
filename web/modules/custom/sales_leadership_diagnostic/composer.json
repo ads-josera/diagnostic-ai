@@ -1,0 +1,13 @@
+{
+    "name": "salesbumm/sales_leadership_diagnostic",
+    "description": "Sales Leadership Diagnostic AI — módulo custom para Drupal 11.",
+    "type": "drupal-custom-module",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=8.3",
+        "drupal/core": "^11",
+        "drupal/externalauth": "^2.0",
+        "firebase/php-jwt": "^7.1",
+        "league/commonmark": "^2.5"
+    }
+}

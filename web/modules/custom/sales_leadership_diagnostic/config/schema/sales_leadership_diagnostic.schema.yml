@@ -1,0 +1,78 @@
+sales_leadership_diagnostic.settings:
+  type: config_object
+  label: 'Ajustes de Sales Leadership Diagnostic AI'
+  mapping:
+    wordpress:
+      type: mapping
+      label: 'Integración WordPress / LearnDash'
+      mapping:
+        api_base_url:
+          type: string
+          label: 'URL base de la API de WordPress'
+        course_id:
+          type: string
+          label: 'ID del curso/producto que autoriza el diagnóstico'
+        timeout:
+          type: integer
+          label: 'Timeout de las peticiones a WordPress (segundos)'
+        cache_ttl_granted:
+          type: integer
+          label: 'TTL de cache para autorizaciones concedidas (segundos)'
+        cache_ttl_denied:
+          type: integer
+          label: 'TTL de cache para autorizaciones denegadas (segundos)'
+    openai:
+      type: mapping
+      label: 'Proveedor de IA'
+      mapping:
+        model:
+          type: string
+          label: 'Modelo'
+        timeout:
+          type: integer
+          label: 'Timeout de las peticiones al proveedor (segundos)'
+        max_retries:
+          type: integer
+          label: 'Número máximo de reintentos ante errores transitorios'
+    security:
+      type: mapping
+      label: 'Seguridad y límites de uso'
+      mapping:
+        messages_per_window:
+          type: integer
+          label: 'Mensajes permitidos por ventana y usuario'
+        window_seconds:
+          type: integer
+          label: 'Duración de la ventana de rate limiting (segundos)'
+        max_diagnostics_per_day:
+          type: integer
+          label: 'Diagnósticos que un alumno puede iniciar por día'
+        max_turns:
+          type: integer
+          label: 'Turnos máximos por diagnóstico'
+        session_timeout:
+          type: integer
+          label: 'Tiempo de inactividad que cierra una sesión de diagnóstico (segundos)'
+        sso_token_ttl:
+          type: integer
+          label: 'Vigencia máxima aceptada del token SSO (segundos)'
+        sso_token_leeway:
+          type: integer
+          label: 'Tolerancia de desfase de reloj al validar el token SSO (segundos)'
+
+sales_leadership_diagnostic.diagnostic:
+  type: config_object
+  label: 'Definición del agente de diagnóstico'
+  mapping:
+    version:
+      type: string
+      label: 'Versión del diagnóstico'
+    system_prompt:
+      type: text
+      label: 'Prompt principal (propiedad del cliente)'
+    instructions:
+      type: text
+      label: 'Instrucciones del agente (propiedad del cliente)'
+    output_contract:
+      type: text
+      label: 'Contrato de salida (añadido técnico)'

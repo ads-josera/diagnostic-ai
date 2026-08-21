@@ -1,0 +1,8 @@
+services:
+  _defaults:
+    autoconfigure: true
+
+  # Punto único de acceso a los secretos del módulo (§29).
+  Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider:
+    arguments:
+      - '@settings'

@@ -1,0 +1,13 @@
+'access sales leadership diagnostic':
+  title: 'Acceder al Sales Leadership Diagnostic AI'
+  description: 'Permite iniciar diagnósticos y consultar los resultados <em>propios</em>. No concede acceso a datos de otros alumnos: la propiedad se verifica siempre a nivel de entidad.'
+
+'administer sales leadership diagnostic':
+  title: 'Administrar Sales Leadership Diagnostic AI'
+  description: 'Configurar la integración con WordPress/LearnDash y el proveedor de IA, editar el prompt del agente y ajustar los límites de seguridad.'
+  restrict access: true
+
+'view all diagnostic results':
+  title: 'Ver los resultados de diagnóstico de cualquier alumno'
+  description: 'Concede acceso a información empresarial sensible de todos los alumnos. Otorgar únicamente a personal de soporte autorizado.'
+  restrict access: true

@@ -1,0 +1,23 @@
+# Valores por defecto del módulo.
+#
+# ⚠ Este archivo se versiona en Git y es exportable con `drush cex`.
+# NUNCA debe contener API keys, secretos ni tokens (§29).
+# Los secretos se leen exclusivamente de variables de entorno.
+wordpress:
+  api_base_url: ''
+  course_id: ''
+  timeout: 10
+  cache_ttl_granted: 900
+  cache_ttl_denied: 60
+openai:
+  model: ''
+  timeout: 60
+  max_retries: 2
+security:
+  messages_per_window: 20
+  window_seconds: 300
+  max_diagnostics_per_day: 3
+  max_turns: 40
+  session_timeout: 3600
+  sso_token_ttl: 90
+  sso_token_leeway: 30

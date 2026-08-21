@@ -1,0 +1,14 @@
+uuid: e728fad0-f609-44c2-bac3-905b8454f89f
+langcode: es
+status: true
+dependencies:
+  config:
+    - user.role.sales_diagnostic_student
+  module:
+    - user
+id: user_add_role_action.sales_diagnostic_student
+label: 'Añade el rol Alumno Diagnostic AI al(los) usuario(s) seleccionado(s)'
+type: user
+plugin: user_add_role_action
+configuration:
+  rid: sales_diagnostic_student

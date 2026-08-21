@@ -1,0 +1,12 @@
+# Definición del agente de diagnóstico.
+#
+# El prompt, las instrucciones y la metodología son propiedad del cliente
+# (§15) y se cargan desde la interfaz administrativa. Este archivo solo
+# establece la estructura y la versión inicial.
+#
+# `version` identifica de forma inequívoca qué prompt e instrucciones se
+# usaron en cada sesión (§57). Cambiarla es un acto deliberado.
+version: '1.0'
+system_prompt: ''
+instructions: ''
+output_contract: ''

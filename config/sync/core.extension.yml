@@ -34,12 +34,14 @@ module:
   page_cache: 0
   path: 0
   path_alias: 0
+  sales_leadership_diagnostic: 0
   system: 0
   taxonomy: 0
   text: 0
   update: 0
   user: 0
   views_ui: 0
+  externalauth: 10
   views: 10
   standard: 1000
 theme:

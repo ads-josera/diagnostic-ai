@@ -1,0 +1,14 @@
+uuid: 97f13274-7a2c-4785-b874-74c45c03ce7f
+langcode: es
+status: true
+dependencies:
+  config:
+    - user.role.sales_diagnostic_student
+  module:
+    - user
+id: user_remove_role_action.sales_diagnostic_student
+label: 'Elimina el rol Alumno Diagnostic AI al(los) usuario(s) seleccionado(s)'
+type: user
+plugin: user_remove_role_action
+configuration:
+  rid: sales_diagnostic_student
