@@ -11,6 +11,77 @@ use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\user\Entity\Role;
 
 /**
+ * Implements hook_schema().
+ *
+ * Define la tabla de mensajes de la conversación.
+ *
+ * No son una entidad de contenido por privacidad: contienen información
+ * empresarial sensible del alumno y como entidad quedarían expuestos a Views,
+ * al índice de búsqueda y a cualquier módulo que recorra entidades. Fuera de
+ * Entity API la única puerta de entrada es DiagnosticMessageRepository.
+ *
+ * Drupal crea y elimina esta tabla automáticamente al instalar y desinstalar.
+ */
+function sales_leadership_diagnostic_schema(): array {
+  return [
+    'sld_diagnostic_message' => [
+      'description' => 'Mensajes de las conversaciones de diagnóstico.',
+      'fields' => [
+        'id' => [
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'description' => 'Identificador del mensaje.',
+        ],
+        'session_id' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'description' => 'Sesión a la que pertenece.',
+        ],
+        'role' => [
+          'type' => 'varchar',
+          'length' => 16,
+          'not null' => TRUE,
+          'description' => 'Autor del mensaje: user o assistant.',
+        ],
+        'content' => [
+          'type' => 'text',
+          'size' => 'big',
+          'not null' => TRUE,
+          'description' => 'Texto del mensaje tal como se escribió o se recibió.',
+        ],
+        'payload' => [
+          'type' => 'text',
+          'size' => 'big',
+          'not null' => FALSE,
+          'description' => 'Turno estructurado completo en JSON. Nulo en los mensajes del alumno.',
+        ],
+        'sequence' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'description' => 'Posición dentro de la conversación.',
+        ],
+        'created' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'description' => 'Marca temporal de creación.',
+        ],
+      ],
+      'primary key' => ['id'],
+      'unique keys' => [
+        // Sirve a la vez de índice de lectura del historial y de última
+        // defensa contra turnos duplicados: si dos escrituras simultáneas
+        // calcularan la misma secuencia, la segunda falla en lugar de
+        // corromper el orden de la conversación en silencio.
+        'session_sequence' => ['session_id', 'sequence'],
+      ],
+    ],
+  ];
+}
+
+/**
  * Implements hook_install().
  *
  * Crea el rol de alumno mediante código y no mediante config/install de forma

@@ -6,3 +6,10 @@ services:
   Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider:
     arguments:
       - '@settings'
+
+  # Única puerta de entrada a los mensajes de las conversaciones.
+  # Viven en una tabla propia, fuera de Entity API, por privacidad (§43).
+  Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository:
+    arguments:
+      - '@database'
+      - '@datetime.time'
