@@ -1,0 +1,109 @@
+{#
+/**
+ * @file
+ * Vista de conversación del diagnóstico (§19–§22).
+ *
+ * Variables:
+ * - session_id: identificador de la sesión.
+ * - status / status_label: estado de la sesión y su etiqueta.
+ * - accepts_messages: si la sesión admite nuevos mensajes.
+ * - messages: lista con role, is_assistant, body, time y sequence.
+ *
+ * El enlace de vuelta se genera con path() en la propia plantilla: hacerlo en
+ * PHP obligaría a propagar a mano los metadatos de cache de la URL.
+ *
+ * El campo `body` de un mensaje del agente es un objeto Markup ya saneado por
+ * MarkdownRenderer y se imprime sin volver a escaparse. El de un alumno es una
+ * cadena y Twig la escapa: sus saltos de línea se respetan por CSS, no
+ * reintroduciendo etiquetas.
+ */
+#}
+<div class="sld sld-chat" data-sld-chat data-session-id="{{ session_id }}">
+
+  <header class="sld-chat__header">
+    <div class="sld-chat__header-main">
+      <h1 class="sld-chat__title">{{ 'Sales Leadership Diagnostic AI'|t }}</h1>
+      <span class="sld-status sld-status--{{ status }}">{{ status_label }}</span>
+    </div>
+    <a class="sld__link sld-chat__back" href="{{ path('sales_leadership_diagnostic.dashboard') }}">
+      {{ '← Volver al panel'|t }}
+    </a>
+  </header>
+
+  {#
+    role="log" con aria-live="polite" hace que un lector de pantalla anuncie
+    los mensajes nuevos sin interrumpir lo que el usuario esté leyendo.
+  #}
+  <div class="sld-chat__log"
+       role="log"
+       aria-live="polite"
+       aria-label="{{ 'Conversación del diagnóstico'|t }}"
+       data-sld-log>
+
+    {% if messages is empty %}
+      <p class="sld-chat__empty">
+        {{ 'La conversación aún no ha comenzado.'|t }}
+      </p>
+    {% endif %}
+
+    {% for message in messages %}
+      <article class="sld-chat__message sld-chat__message--{{ message.role }}">
+        <div class="sld-chat__meta">
+          <span class="sld-chat__author">
+            {{ message.is_assistant ? 'Diagnostic AI'|t : 'Tú'|t }}
+          </span>
+          <time class="sld-chat__time">{{ message.time }}</time>
+        </div>
+        <div class="sld-chat__bubble">{{ message.body }}</div>
+      </article>
+    {% endfor %}
+
+  </div>
+
+  {# Indicador de procesamiento (§24). Oculto hasta que hay una petición en vuelo. #}
+  <div class="sld-chat__typing" data-sld-typing hidden>
+    <span class="sld-chat__typing-dots" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </span>
+    <span class="sld-chat__typing-label">{{ 'Analizando…'|t }}</span>
+  </div>
+
+  {# Errores del envío. Se rellena desde JS con un mensaje neutro (§58). #}
+  <div class="sld__notice sld__notice--warning sld-chat__error"
+       role="alert"
+       data-sld-error
+       hidden></div>
+
+  {% if accepts_messages %}
+    <form class="sld-chat__composer" data-sld-composer>
+      <label class="sld__visually-hidden" for="sld-chat-input">
+        {{ 'Escribe tu respuesta'|t }}
+      </label>
+      <textarea id="sld-chat-input"
+                class="sld-chat__input"
+                data-sld-input
+                rows="1"
+                maxlength="4000"
+                placeholder="{{ 'Escribe tu respuesta…'|t }}"></textarea>
+      <button type="submit" class="sld__button sld-chat__send" data-sld-send>
+        {{ 'Enviar'|t }}
+      </button>
+    </form>
+    <p class="sld-chat__hint sld__muted" data-sld-hint>
+      {{ 'Pulsa Enter para enviar; Mayús+Enter para una línea nueva.'|t }}
+    </p>
+  {% else %}
+    <div class="sld__notice" role="status">
+      <p>
+        {% if status == 'completed' %}
+          {{ 'Este diagnóstico ya está completado.'|t }}
+        {% elseif status == 'processing' %}
+          {{ 'Se está generando tu resultado.'|t }}
+        {% else %}
+          {{ 'Este diagnóstico no admite más mensajes.'|t }}
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+
+</div>

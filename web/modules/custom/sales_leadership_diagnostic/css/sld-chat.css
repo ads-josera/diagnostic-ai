@@ -1,0 +1,297 @@
+/**
+ * Interfaz conversacional (§21).
+ *
+ * La referencia conceptual es la de un asistente de IA moderno, no su
+ * apariencia concreta: burbujas diferenciadas, compositor fijo abajo y una
+ * jerarquía tipográfica sobria. La identidad de Salesbumm entra por las
+ * variables de sld-base.css sin tocar este archivo.
+ */
+
+.sld-chat {
+  display: flex;
+  flex-direction: column;
+  /* dvh en lugar de vh: en móvil la barra de direcciones cambia de alto y vh
+     provoca que el compositor quede fuera de pantalla. */
+  min-height: calc(100dvh - 4rem);
+  max-width: 48rem;
+}
+
+/* Cabecera ------------------------------------------------------------ */
+
+.sld-chat__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sld-space-sm);
+  padding-bottom: var(--sld-space-md);
+  border-bottom: 1px solid var(--sld-color-border);
+}
+
+.sld-chat__header-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sld-space-sm);
+}
+
+.sld-chat__title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.sld-chat__back {
+  color: var(--sld-color-text-muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.sld-chat__back:hover {
+  color: var(--sld-color-primary);
+  text-decoration: underline;
+}
+
+/* Registro de la conversación ----------------------------------------- */
+
+.sld-chat__log {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-lg);
+  padding: var(--sld-space-lg) 0;
+  overflow-y: auto;
+  /* Ancla el scroll abajo: al añadir un mensaje la vista sigue el contenido
+     nuevo sin necesidad de calcular posiciones desde JS. */
+  overflow-anchor: auto;
+  scroll-behavior: smooth;
+}
+
+.sld-chat__empty {
+  margin: auto;
+  color: var(--sld-color-text-muted);
+  text-align: center;
+}
+
+/* Mensajes ------------------------------------------------------------ */
+
+.sld-chat__message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-xs);
+  max-width: 85%;
+}
+
+.sld-chat__message--assistant {
+  align-self: flex-start;
+}
+
+.sld-chat__message--user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.sld-chat__meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sld-space-sm);
+  font-size: 0.78rem;
+}
+
+.sld-chat__author {
+  color: var(--sld-color-text);
+  font-weight: 600;
+}
+
+.sld-chat__time {
+  color: var(--sld-color-text-muted);
+}
+
+.sld-chat__bubble {
+  padding: var(--sld-space-md);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  line-height: 1.6;
+}
+
+.sld-chat__message--assistant .sld-chat__bubble {
+  border-start-start-radius: var(--sld-radius-sm);
+  background: var(--sld-color-surface);
+}
+
+.sld-chat__message--user .sld-chat__bubble {
+  border-color: transparent;
+  border-start-end-radius: var(--sld-radius-sm);
+  background: var(--sld-color-primary);
+  color: var(--sld-color-primary-contrast);
+  /* Respeta los saltos de línea del alumno sin convertirlos en etiquetas. */
+  white-space: pre-wrap;
+}
+
+/* Markdown dentro de una burbuja del agente. */
+.sld-chat__bubble > :first-child {
+  margin-top: 0;
+}
+
+.sld-chat__bubble > :last-child {
+  margin-bottom: 0;
+}
+
+.sld-chat__bubble ul,
+.sld-chat__bubble ol {
+  margin-block: var(--sld-space-sm);
+  padding-inline-start: 1.35rem;
+}
+
+.sld-chat__bubble li + li {
+  margin-top: var(--sld-space-xs);
+}
+
+.sld-chat__bubble h3,
+.sld-chat__bubble h4,
+.sld-chat__bubble h5 {
+  margin-block: var(--sld-space-md) var(--sld-space-sm);
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.sld-chat__bubble code {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.16);
+  font-size: 0.9em;
+}
+
+.sld-chat__bubble pre {
+  padding: var(--sld-space-sm);
+  border-radius: var(--sld-radius-sm);
+  background: rgba(127, 127, 127, 0.16);
+  overflow-x: auto;
+}
+
+.sld-chat__bubble pre code {
+  padding: 0;
+  background: none;
+}
+
+.sld-chat__bubble blockquote {
+  margin-inline: 0;
+  padding-inline-start: var(--sld-space-md);
+  border-inline-start: 3px solid var(--sld-color-border);
+  color: var(--sld-color-text-muted);
+}
+
+/* Indicador de procesamiento (§24) ------------------------------------ */
+
+.sld-chat__typing {
+  display: flex;
+  align-items: center;
+  gap: var(--sld-space-sm);
+  padding: var(--sld-space-sm) 0;
+  color: var(--sld-color-text-muted);
+  font-size: 0.9rem;
+}
+
+.sld-chat__typing[hidden] {
+  display: none;
+}
+
+.sld-chat__typing-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.sld-chat__typing-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sld-color-text-muted);
+  animation: sld-typing 1.2s ease-in-out infinite;
+}
+
+.sld-chat__typing-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.sld-chat__typing-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes sld-typing {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* Quien pide menos movimiento recibe un indicador estático. */
+@media (prefers-reduced-motion: reduce) {
+  .sld-chat__typing-dots span {
+    animation: none;
+    opacity: 0.6;
+  }
+
+  .sld-chat__log {
+    scroll-behavior: auto;
+  }
+}
+
+/* Error --------------------------------------------------------------- */
+
+.sld-chat__error[hidden] {
+  display: none;
+}
+
+/* Compositor ---------------------------------------------------------- */
+
+.sld-chat__composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sld-space-sm);
+  padding-top: var(--sld-space-md);
+  border-top: 1px solid var(--sld-color-border);
+}
+
+.sld-chat__input {
+  flex: 1 1 auto;
+  min-height: 2.75rem;
+  max-height: 12rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-bg);
+  color: var(--sld-color-text);
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: none;
+}
+
+.sld-chat__input:focus-visible {
+  outline: 2px solid var(--sld-color-primary);
+  outline-offset: 1px;
+}
+
+.sld-chat__input:disabled {
+  background: var(--sld-color-surface);
+  cursor: not-allowed;
+}
+
+.sld-chat__send {
+  flex: 0 0 auto;
+}
+
+.sld-chat__hint {
+  margin: var(--sld-space-xs) 0 0;
+  font-size: 0.82rem;
+}
+
+/* Móvil --------------------------------------------------------------- */
+
+@media (max-width: 34rem) {
+  .sld-chat__message {
+    max-width: 95%;
+  }
+
+  .sld-chat__hint {
+    display: none;
+  }
+}

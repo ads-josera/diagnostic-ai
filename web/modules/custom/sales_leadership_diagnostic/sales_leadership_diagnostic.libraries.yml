@@ -5,3 +5,16 @@ dashboard:
     theme:
       css/sld-base.css: {}
       css/sld-dashboard.css: {}
+
+chat:
+  version: 1.x
+  css:
+    theme:
+      css/sld-base.css: {}
+      css/sld-chat.css: {}
+  js:
+    js/sld-chat.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+    - core/drupalSettings

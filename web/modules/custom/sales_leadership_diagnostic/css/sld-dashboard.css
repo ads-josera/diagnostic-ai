@@ -68,35 +68,6 @@
   text-transform: uppercase;
 }
 
-/* Estados ------------------------------------------------------------- */
-
-.sld-status {
-  display: inline-block;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  background: var(--sld-color-surface);
-  border: 1px solid var(--sld-color-border);
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.sld-status--completed {
-  border-color: var(--sld-color-success);
-  color: var(--sld-color-success);
-}
-
-.sld-status--in_progress,
-.sld-status--processing {
-  border-color: var(--sld-color-info);
-  color: var(--sld-color-info);
-}
-
-.sld-status--failed {
-  border-color: var(--sld-color-danger);
-  color: var(--sld-color-danger);
-}
-
 /* Móvil: la tabla se convierte en tarjetas ---------------------------- */
 
 @media (max-width: 34rem) {

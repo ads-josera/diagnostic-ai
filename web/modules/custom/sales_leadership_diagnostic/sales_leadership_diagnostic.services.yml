@@ -14,6 +14,12 @@ services:
       - '@config.factory'
       - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
 
+  # Markdown del agente -> HTML saneado (§25). Sin argumentos a propósito: su
+  # configuración de seguridad es interna para que no pueda relajarse desde
+  # este archivo sin que se note al revisar la clase.
+  Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer:
+    class: Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer
+
   # Única puerta de entrada a los mensajes de las conversaciones.
   # Viven en una tabla propia, fuera de Entity API, por privacidad (§43).
   Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository:

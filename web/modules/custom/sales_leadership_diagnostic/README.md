@@ -160,16 +160,38 @@ asignados y reinstalación sobre un rol huérfano.
 | 2 — Configuración administrativa | ✅ Completada |
 | 6 — Modelo de datos | ✅ Completada |
 | 7 — Dashboard | ✅ Completada |
-| 8 — Chat UI | Siguiente |
+| 8 — Chat UI | ✅ Completada |
+| 9 — Conversation Service | Siguiente |
 | 3, 4, 5 — WordPress, autorización, SSO | Bloqueadas: requieren acceso al WordPress del cliente |
-| 9–16 | Pendientes (ver `docs/ARQUITECTURA.md` §14) |
+| 10–16 | Pendientes (ver `docs/ARQUITECTURA.md` §14) |
 
-### El botón «Iniciar diagnóstico» está deshabilitado a propósito
+### Dos controles están deshabilitados a propósito
 
-No es un pendiente olvidado. Crear una sesión exige comprobar antes que el
-alumno tiene derecho al curso, y esa cadena de autorización llega en las fases
-4 y 5. Habilitar el botón ahora significaría abrir una vía para crear sesiones
-sin verificar autorización, que es exactamente lo que prohíben §12 y §13.
+No son pendientes olvidados.
 
-El panel ya muestra el historial y el estado de disponibilidad; solo falta la
-acción, que se conecta junto con la capa de conversación.
+**El botón «Iniciar diagnóstico» del panel.** Crear una sesión exige comprobar
+antes que el alumno tiene derecho al curso, y esa cadena de autorización llega
+en las fases 4 y 5. Habilitarlo ahora abriría una vía para crear sesiones sin
+verificar autorización, que es lo que prohíben §12 y §13.
+
+**El compositor del chat.** El endpoint de envío llega en la fase 9. Mientras
+`drupalSettings.salesLeadershipDiagnostic.messageEndpoint` sea `null`, el JS
+deja el compositor en modo lectura en lugar de lanzar peticiones contra una
+ruta inexistente. Conectarlo consistirá en rellenar ese valor.
+
+El resto de la interfaz —conversación, burbujas, Markdown saneado, indicador de
+procesamiento, responsive y accesibilidad— ya está operativo y verificado.
+
+### Seguridad del renderizado de respuestas
+
+`MarkdownRenderer` es la única vía por la que el texto del agente llega al
+navegador como HTML, y aplica dos defensas independientes: CommonMark con
+`html_input: strip` y después `Xss::filter()` con lista blanca explícita.
+
+La lista **no incluye `<a>`**. Un enlace generado por un modelo de lenguaje es
+un vector de phishing y un diagnóstico conversacional no necesita emitirlos. Si
+la metodología del cliente los requiriese, habilitarlo debe ser una decisión
+explícita y revisada.
+
+En el lado del navegador, `innerHTML` solo se usa con el HTML que ya saneó el
+servidor; el texto del alumno se inserta como nodo de texto.

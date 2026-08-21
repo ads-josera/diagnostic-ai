@@ -29,6 +29,15 @@ final class DiagnosticThemeHooks {
           'history' => [],
         ],
       ],
+      'sld_chat' => [
+        'variables' => [
+          'session_id' => 0,
+          'status' => '',
+          'status_label' => '',
+          'accepts_messages' => FALSE,
+          'messages' => [],
+        ],
+      ],
     ];
   }
 

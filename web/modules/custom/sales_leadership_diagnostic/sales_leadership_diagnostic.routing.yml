@@ -16,6 +16,22 @@ sales_leadership_diagnostic.dashboard:
   options:
     no_cache: FALSE
 
+# Vista de conversación.
+#
+# El nombre del parámetro coincide con el ID del tipo de entidad, así que
+# Drupal lo resuelve a entidad automáticamente y _entity_access aplica el
+# handler de acceso ANTES de invocar el controller: un identificador ajeno
+# devuelve 403 sin que se ejecute una sola línea del módulo. Ahí está la
+# protección contra IDOR (§35, §42).
+sales_leadership_diagnostic.session:
+  path: '/sales-diagnostic/session/{sld_diagnostic_session}'
+  defaults:
+    _controller: '\Drupal\sales_leadership_diagnostic\Controller\ChatController::view'
+    _title: 'Diagnóstico'
+  requirements:
+    _permission: 'access sales leadership diagnostic'
+    _entity_access: 'sld_diagnostic_session.view'
+
 # ---------------------------------------------------------------------------
 # Administración
 # ---------------------------------------------------------------------------

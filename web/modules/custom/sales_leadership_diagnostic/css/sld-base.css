@@ -145,6 +145,37 @@
   padding-inline-start: 1.25rem;
 }
 
+/* Píldora de estado --------------------------------------------------- */
+/* Compartida por el panel y el chat: vive aquí para que ninguno de los dos
+   tenga que depender de la hoja de estilos del otro. */
+
+.sld-status {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--sld-color-border);
+  border-radius: 999px;
+  background: var(--sld-color-surface);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sld-status--completed {
+  border-color: var(--sld-color-success);
+  color: var(--sld-color-success);
+}
+
+.sld-status--in_progress,
+.sld-status--processing {
+  border-color: var(--sld-color-info);
+  color: var(--sld-color-info);
+}
+
+.sld-status--failed {
+  border-color: var(--sld-color-danger);
+  color: var(--sld-color-danger);
+}
+
 /* Utilidades ---------------------------------------------------------- */
 
 .sld__muted {
