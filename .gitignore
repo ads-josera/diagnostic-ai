@@ -1,0 +1,94 @@
+# =============================================================================
+# Sales Leadership Diagnostic AI — Drupal 11
+# =============================================================================
+# Estrategia: Composer gestiona core, contrib y vendor; Git versiona únicamente
+# lo que escribimos nosotros (código custom, configuración exportada, docs) y
+# los archivos que definen las dependencias (composer.json / composer.lock).
+#
+# Un clon fresco se levanta con:  ddev start && ddev composer install
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Dependencias gestionadas por Composer
+# -----------------------------------------------------------------------------
+/vendor/
+/web/core/
+/web/modules/contrib/
+/web/themes/contrib/
+/web/profiles/contrib/
+/web/libraries/
+/drush/Commands/contrib/
+
+# -----------------------------------------------------------------------------
+# Archivos de scaffold (regenerados por drupal/core-composer-scaffold)
+# -----------------------------------------------------------------------------
+/web/.csslintrc
+/web/.editorconfig
+/web/.eslintignore
+/web/.eslintrc.json
+/web/.ht.router.php
+/web/.htaccess
+/web/autoload.php
+/web/autoload_runtime.php
+/web/index.php
+/web/INSTALL.txt
+/web/README.md
+/web/robots.txt
+/web/update.php
+/web/example.gitignore
+/web/sites/default/default.settings.php
+/web/sites/default/default.services.yml
+/web/sites/example.settings.local.php
+/web/sites/example.sites.php
+/web/sites/development.services.yml
+/web/modules/README.txt
+/web/profiles/README.txt
+/web/themes/README.txt
+/web/sites/README.txt
+/recipes/README.txt
+/.editorconfig
+/.gitattributes
+/LICENSE.txt
+
+# -----------------------------------------------------------------------------
+# SECRETOS Y CONFIGURACIÓN LOCAL — nunca deben llegar al repositorio (§29, §49)
+# -----------------------------------------------------------------------------
+# NOTA: settings.php SÍ se versiona a propósito. No contiene ningún secreto:
+# las credenciales de base de datos viven en settings.ddev.php (ignorado) y los
+# tres secretos del módulo se leen exclusivamente de variables de entorno.
+# Los archivos de abajo son los que sí pueden contener valores sensibles.
+/web/sites/*/settings.ddev.php
+/web/sites/*/settings.local.php
+/web/sites/*/services.yml
+/web/sites/*/services.local.yml
+.env
+.env.*
+!.env.example
+
+# -----------------------------------------------------------------------------
+# Contenido generado por usuarios y datos privados (§43)
+# -----------------------------------------------------------------------------
+/web/sites/*/files/
+/web/sites/*/private/
+/web/sites/simpletest/
+/web/sites/*/files-public/
+/web/sites/*/files-private/
+
+# -----------------------------------------------------------------------------
+# Salidas de herramientas
+# -----------------------------------------------------------------------------
+/web/sites/*/php_storage/
+.phpunit.result.cache
+/build/
+/reports/
+
+# -----------------------------------------------------------------------------
+# Sistema operativo y editores
+# -----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.sublime-*
+*.swp
+*~
