@@ -27,7 +27,10 @@ sales_leadership_diagnostic.session:
   path: '/sales-diagnostic/session/{sld_diagnostic_session}'
   defaults:
     _controller: '\Drupal\sales_leadership_diagnostic\Controller\ChatController::view'
-    _title: 'Diagnóstico'
+    # Este título es el <h1> de la página y el de la pestaña del navegador. La
+    # plantilla no imprime otro: dos <h1> idénticos rompen el esquema del
+    # documento y se anuncian dos veces en un lector de pantalla.
+    _title: 'Sales Leadership Diagnostic AI'
   requirements:
     _permission: 'access sales leadership diagnostic'
     _entity_access: 'sld_diagnostic_session.view'

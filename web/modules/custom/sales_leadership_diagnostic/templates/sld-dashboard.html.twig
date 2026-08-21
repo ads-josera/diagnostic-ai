@@ -17,8 +17,13 @@
 #}
 <div class="sld sld-dashboard">
 
+  {#
+    El título de la página lo imprime Drupal a partir del `_title` de la ruta.
+    Repetirlo aquí produciría dos <h1> idénticos: además de la redundancia
+    visual, rompe el esquema del documento y hace que un lector de pantalla
+    anuncie el título dos veces.
+  #}
   <header class="sld-dashboard__header">
-    <h1 class="sld-dashboard__title">{{ 'Sales Leadership Diagnostic AI'|t }}</h1>
     <p class="sld-dashboard__greeting">{{ 'Bienvenido, @name'|t({'@name': user_name}) }}</p>
   </header>
 

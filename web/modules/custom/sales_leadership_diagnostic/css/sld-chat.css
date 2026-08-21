@@ -35,12 +35,6 @@
   gap: var(--sld-space-sm);
 }
 
-.sld-chat__title {
-  margin: 0;
-  font-size: 1.25rem;
-  line-height: 1.3;
-}
-
 .sld-chat__back {
   color: var(--sld-color-text-muted);
   font-size: 0.9rem;

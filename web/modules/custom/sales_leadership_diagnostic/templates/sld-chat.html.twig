@@ -20,9 +20,13 @@
 #}
 <div class="sld sld-chat" data-sld-chat data-session-id="{{ session_id }}">
 
+  {#
+    Sin <h1> propio: el título de la página ya lo imprime Drupal desde la ruta.
+    Duplicarlo rompería el esquema del documento y lo anunciaría dos veces un
+    lector de pantalla. Esta cabecera es la barra de estado de la conversación.
+  #}
   <header class="sld-chat__header">
     <div class="sld-chat__header-main">
-      <h1 class="sld-chat__title">{{ 'Sales Leadership Diagnostic AI'|t }}</h1>
       <span class="sld-status sld-status--{{ status }}">{{ status_label }}</span>
     </div>
     <a class="sld__link sld-chat__back" href="{{ path('sales_leadership_diagnostic.dashboard') }}">
