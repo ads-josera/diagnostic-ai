@@ -10,7 +10,11 @@
  * identidad que todavía no conocemos.
  */
 
-.sld {
+/* Los tokens se declaran en los dos contenedores raíz del módulo: el bloque de
+   contenido (.sld) y el marco de página del chat (.sld-page), que no anida
+   dentro del primero. */
+.sld,
+.sld-page {
   /* Marca — pendiente de sustituir por la identidad de Salesbumm. */
   --sld-color-primary: #1f4788;
   --sld-color-primary-hover: #16345f;
@@ -42,7 +46,9 @@
 
   --sld-font: inherit;
   --sld-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+}
 
+.sld {
   box-sizing: border-box;
   max-width: 60rem;
   margin-inline: auto;
@@ -59,7 +65,8 @@
 
 /* Respeta la preferencia del sistema sin imponer un tema oscuro propio. */
 @media (prefers-color-scheme: dark) {
-  .sld {
+  .sld,
+  .sld-page {
     --sld-color-bg: #16181c;
     --sld-color-surface: #1f2228;
     --sld-color-border: #333941;
@@ -143,6 +150,72 @@
 .sld__notice ul {
   margin: var(--sld-space-sm) 0 0;
   padding-inline-start: 1.25rem;
+}
+
+/* Marco de página dedicado (solo la vista de conversación) ------------- */
+
+.sld-page {
+  display: flex;
+  flex-direction: column;
+  /* `height` y no `min-height`: con min-height el contenedor puede crecer, así
+     que nada obliga a los hijos a repartirse el espacio y el compositor acaba
+     por debajo del pliegue. Con altura fija el chat ocupa lo que sobra y el
+     desplazamiento ocurre dentro del registro de la conversación, como en
+     cualquier aplicación de mensajería. */
+  height: 100dvh;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: var(--sld-color-bg);
+  font-family: var(--sld-font);
+}
+
+.sld-page__bar {
+  flex: 0 0 auto;
+  padding: var(--sld-space-md) var(--sld-space-md);
+  border-bottom: 1px solid var(--sld-color-border);
+}
+
+.sld-page__title {
+  max-width: 60rem;
+  margin: 0 auto;
+  color: var(--sld-color-text);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+.sld-page__content {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Entre `page.content` y el chat, el tema interpone tres envoltorios: la
+ * región (con su propio grid), el bloque y el contenido del bloque. Cada uno
+ * corta la propagación de la altura, de modo que el compositor terminaba por
+ * debajo del pliegue.
+ *
+ * `display: contents` los retira del árbol de cajas sin quitarlos del DOM: el
+ * chat pasa a ser, a efectos de layout, hijo directo del contenedor. Es más
+ * robusto que calcular una altura fija, porque no depende de cuánto ocupen la
+ * barra ni los mensajes del sistema, que aparecen y desaparecen.
+ *
+ * Son divs sin rol semántico, así que no afecta al árbol de accesibilidad. */
+.sld-page__content .region,
+.sld-page__content .block,
+.sld-page__content .block__content {
+  display: contents;
+}
+
+.sld-page .sld-chat {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding-block: var(--sld-space-md);
 }
 
 /* Píldora de estado --------------------------------------------------- */

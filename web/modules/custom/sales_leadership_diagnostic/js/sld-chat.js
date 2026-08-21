@@ -64,6 +64,26 @@
   }
 
   /**
+   * Lleva la conversación al final una vez el layout se ha estabilizado.
+   *
+   * Hacerlo solo al inicializar deja el último mensaje cortado: las fuentes web
+   * llegan después y cambian la altura del contenido, de modo que la posición
+   * calculada deja de ser el final. Se repite tras el siguiente reflujo y de
+   * nuevo cuando las fuentes están listas.
+   */
+  function scrollToEndWhenSettled(log) {
+    scrollToEnd(log);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToEnd(log));
+    });
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => scrollToEnd(log)).catch(() => {});
+    }
+  }
+
+  /**
    * Añade un mensaje al registro.
    *
    * `html` solo se usa para mensajes del agente, y siempre con marcado que ya
@@ -125,7 +145,7 @@
     const typing = root.querySelector('[data-sld-typing]');
     const errorBox = root.querySelector('[data-sld-error]');
 
-    scrollToEnd(log);
+    scrollToEndWhenSettled(log);
 
     // Sesión cerrada: no hay compositor que inicializar.
     if (!composer) {

@@ -1,0 +1,36 @@
+{#
+/**
+ * @file
+ * Plantilla de página dedicada a la vista de conversación.
+ *
+ * §65 pide que el diagnóstico no se sienta como un formulario conectado a una
+ * API sino como una experiencia conversacional profesional. El marco habitual
+ * del sitio —migas de pan, menús, pie— compite con eso, así que esta ruta usa
+ * un marco propio.
+ *
+ * La plantilla vive en el módulo, no en el tema (§4). Se aplica mediante una
+ * sugerencia de plantilla y, si por cualquier motivo no llegara a aplicarse,
+ * la página cae con normalidad en la plantilla del tema: la conversación se
+ * sigue viendo, solo que con el marco completo del sitio.
+ *
+ * Regiones que se omiten a propósito: header, primary_menu, secondary_menu,
+ * breadcrumb, content_above (donde vive el bloque de título) y los pies.
+ *
+ * El título lo imprime esta plantilla en lugar del bloque de título del tema.
+ * Así hay exactamente un <h1> tanto si la sugerencia se aplica como si no.
+ */
+#}
+<div class="sld-page">
+
+  <header class="sld-page__bar">
+    <h1 class="sld-page__title">{{ 'Sales Leadership Diagnostic AI'|t }}</h1>
+  </header>
+
+  {# Mensajes del sistema: se conservan porque el alumno necesita verlos. #}
+  {{ page.highlighted }}
+
+  <main class="sld-page__content" role="main">
+    {{ page.content }}
+  </main>
+
+</div>
