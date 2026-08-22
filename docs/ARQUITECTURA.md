@@ -364,6 +364,28 @@ siempre en el access handler, incluso para quien tenga el permiso de acceso.
 
 ## 6. FLUJO DE INTEGRACIÓN CON WORDPRESS (§60.5, §8, §9)
 
+### 6.0 Caducidad del acceso al diagnóstico
+
+> **Requisito posterior a la propuesta inicial, ya implementado y verificado.**
+> El alumno conserva el acceso al **curso** indefinidamente, pero el acceso al
+> **diagnóstico** caduca a los doce meses. Una compra posterior lo reactiva.
+>
+> Eso rompe la equivalencia que asumía el diseño original —*tiene el curso ⇒
+> tiene acceso al diagnóstico*— porque el curso ya no caduca.
+>
+> **La regla vive en WordPress**, coherente con §6: es quien sabe qué compró
+> cada alumno y cuándo. El plugin lleva un reloj propio por alumno en meta de
+> usuario, en lugar de derivar la fecha de LearnDash: el acceso al diagnóstico
+> es un producto distinto del curso, y derivar uno del otro modelaría una
+> relación que ya no existe.
+>
+> El contrato del endpoint pasa a devolver `expires_at`, que Drupal usa para
+> avisar al alumno en los treinta días previos.
+>
+> Verificado contra producción el 22-08-2026: `expires_at` a doce meses vista,
+> la fecha sobrevive a la cache, y el aviso aparece dentro del umbral y dice
+> «caduca hoy» en las últimas horas.
+
 ### 6.1 El mu-plugin de WordPress (decisión 2)
 
 Un único plugin `salesbumm-sld` con **dos responsabilidades y nada más**:
