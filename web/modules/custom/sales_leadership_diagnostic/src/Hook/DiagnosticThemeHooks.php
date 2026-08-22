@@ -48,6 +48,11 @@ final class DiagnosticThemeHooks {
           'messages' => [],
         ],
       ],
+      'sld_sso_denied' => [
+        'variables' => [
+          'message' => '',
+        ],
+      ],
       // Variante de `page` para la vista de conversación. `base hook` hace que
       // se le apliquen los mismos preprocesos que a cualquier página.
       'page__sales_diagnostic_chat' => [

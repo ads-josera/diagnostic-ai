@@ -1,0 +1,18 @@
+{#
+/**
+ * @file
+ * Página que explica por qué no se pudo entrar al diagnóstico.
+ *
+ * Existe para que un rechazo no acabe en la página de acceso denegado de
+ * Drupal, que no dice nada útil a un alumno, y para que la URL que queda
+ * registrada no contenga el token (§43).
+ *
+ * Variables:
+ * - message: explicación adaptada al motivo.
+ */
+#}
+<div class="sld sld-denied">
+  <div class="sld__notice sld__notice--warning" role="status">
+    <p>{{ message }}</p>
+  </div>
+</div>

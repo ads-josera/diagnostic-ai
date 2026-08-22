@@ -12,6 +12,7 @@ use Drupal\sales_leadership_diagnostic\Repository\DiagnosticResultRepository;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticSessionRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
+use Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -27,6 +28,7 @@ final class DashboardController extends ControllerBase {
     private readonly DiagnosticSessionRepository $sessions,
     private readonly DiagnosticResultRepository $results,
     private readonly DiagnosticReadiness $readiness,
+    private readonly UserProvisioner $provisioner,
     private readonly DateFormatterInterface $dateFormatter,
   ) {}
 
@@ -38,6 +40,7 @@ final class DashboardController extends ControllerBase {
       $container->get(DiagnosticSessionRepository::class),
       $container->get(DiagnosticResultRepository::class),
       $container->get(DiagnosticReadiness::class),
+      $container->get(UserProvisioner::class),
       $container->get('date.formatter'),
     );
   }
@@ -54,7 +57,10 @@ final class DashboardController extends ControllerBase {
 
     return [
       '#theme' => 'sld_dashboard',
-      '#user_name' => $account->getDisplayName(),
+      // El nombre de usuario es técnico —«sld_wp_4821»— porque derivarlo del
+      // nombre real permitiría suplantaciones. Para saludar se usa el nombre
+      // que envió WordPress, guardado junto a la correspondencia.
+      '#user_name' => $this->provisioner->getDisplayName($account),
       '#can_start' => $this->readiness->isReady(),
       '#unavailable_notice' => $this->buildUnavailableNotice(),
       '#history' => $this->buildHistory($sessions, $results),

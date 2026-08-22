@@ -9,6 +9,39 @@ services:
     arguments:
       - '@settings'
 
+  # Consume el identificador del token para que no pueda reutilizarse (§10).
+  Drupal\sales_leadership_diagnostic\Service\Security\ReplayGuard:
+    arguments:
+      - '@keyvalue.expirable'
+
+  # Valida firma, vigencia, emisor, audiencia y unicidad del token SSO.
+  Drupal\sales_leadership_diagnostic\Service\Security\SsoTokenValidator:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
+      - '@Drupal\sales_leadership_diagnostic\Service\Security\ReplayGuard'
+      - '@config.factory'
+      - '@datetime.time'
+      - '@logger.factory'
+
+  # Crea o recupera la cuenta de Drupal del alumno.
+  Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner:
+    arguments:
+      - '@externalauth.externalauth'
+      - '@externalauth.authmap'
+      - '@entity_type.manager'
+      - '@logger.factory'
+
+  # Comprobación de acceso de las rutas del alumno.
+  #
+  # No lleva la etiqueta access_check: esa es para requisitos con nombre propio
+  # (_mi_check). Una ruta con _custom_access resuelve la llamada a través del
+  # contenedor por el identificador del servicio, que aquí es el nombre
+  # completo de la clase.
+  Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner'
+      - '@Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker'
+
   # Límites de uso por alumno (§44).
   Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter:
     arguments:

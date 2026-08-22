@@ -1,11 +1,34 @@
 # ---------------------------------------------------------------------------
 # Rutas del alumno
 # ---------------------------------------------------------------------------
-# Por ahora se protegen solo con el permiso. La cadena completa de
-# autorización —token válido, entrada en el authmap y consulta a
-# WordPress/LearnDash— se añade con _custom_access en la Fase 5. Hasta
-# entonces no existe ninguna vía de entrada automática: el permiso solo puede
-# otorgarlo un administrador a mano.
+# Punto de entrada desde WordPress. Es la única ruta pública del módulo, y lo
+# es por necesidad: quien llega todavía no tiene sesión en Drupal. El token
+# firmado ES la autenticación, y el controlador aplica además un límite de
+# intentos por dirección IP.
+sales_leadership_diagnostic.sso:
+  path: '/sales-diagnostic/sso'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\sales_leadership_diagnostic\Controller\SsoController::login'
+    _title: 'Acceso al diagnóstico'
+  requirements:
+    _access: 'TRUE'
+  options:
+    no_cache: TRUE
+
+# Explicación de por qué no se pudo entrar. Pública y sin token en la URL: es
+# el destino al que redirige cualquier rechazo del SSO.
+sales_leadership_diagnostic.sso_denied:
+  path: '/sales-diagnostic/sin-acceso'
+  methods: [GET]
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\SsoController::denied'
+    _title: 'Acceso al diagnóstico'
+  requirements:
+    _access: 'TRUE'
+
+# El resto de rutas del alumno exigen la cadena completa: permiso, procedencia
+# de WordPress y derecho al curso vigente.
 sales_leadership_diagnostic.dashboard:
   path: '/sales-diagnostic'
   defaults:
@@ -13,8 +36,9 @@ sales_leadership_diagnostic.dashboard:
     _title: 'Sales Leadership Diagnostic AI'
   requirements:
     _permission: 'access sales leadership diagnostic'
-  options:
-    no_cache: FALSE
+    # Sin barra invertida inicial: el ID del servicio se registra sin ella, y con
+    # ella el contenedor no lo encuentra e instancia la clase sin argumentos.
+    _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::access'
 
 # Vista de conversación.
 #
@@ -33,6 +57,9 @@ sales_leadership_diagnostic.session:
     _title: 'Sales Leadership Diagnostic AI'
   requirements:
     _permission: 'access sales leadership diagnostic'
+    # Sin barra invertida inicial: el ID del servicio se registra sin ella, y con
+    # ella el contenedor no lo encuentra e instancia la clase sin argumentos.
+    _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::access'
     _entity_access: 'sld_diagnostic_session.view'
 
 # Envío de un mensaje. Devuelve JSON; lo consume el chat por fetch.
@@ -50,6 +77,9 @@ sales_leadership_diagnostic.session_message:
     _controller: '\Drupal\sales_leadership_diagnostic\Controller\ConversationApiController::send'
   requirements:
     _permission: 'access sales leadership diagnostic'
+    # Sin barra invertida inicial: el ID del servicio se registra sin ella, y con
+    # ella el contenedor no lo encuentra e instancia la clase sin argumentos.
+    _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::access'
     _entity_access: 'sld_diagnostic_session.update'
     _csrf_request_header_token: 'TRUE'
 
