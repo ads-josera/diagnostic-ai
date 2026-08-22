@@ -78,6 +78,13 @@ class DiagnosticResult extends ContentEntityBase implements DiagnosticResultInte
       ->setLabel(new TranslatableMarkup('Estructura completa'))
       ->setDescription(new TranslatableMarkup('Resultado íntegro en JSON, ya validado. Se guarda como estructura en lugar de desplegarse en campos porque la forma definitiva depende de la metodología del cliente; los campos que necesiten consulta se promoverán después mediante una actualización.'));
 
+    $fields['is_sandbox'] = BaseFieldDefinition::create('boolean')
+      ->setLabel(new TranslatableMarkup('Conversación de prueba'))
+      ->setDescription(new TranslatableMarkup('Marca las conversaciones que el gestor crea al ajustar el prompt. Se excluyen del listado de resultados y no cuentan para el límite de diagnósticos por periodo: son ensayos, no diagnósticos de un alumno.'))
+      ->setDefaultValue(FALSE)
+      ->setSetting('on_label', new TranslatableMarkup('Prueba'))
+      ->setSetting('off_label', new TranslatableMarkup('Real'));
+
     $fields['created'] = BaseFieldDefinition::create('created')
       ->setLabel(new TranslatableMarkup('Creado'));
 

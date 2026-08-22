@@ -1,0 +1,14 @@
+uuid: ed16ac1a-c7ca-443d-8d32-90feecd10ee5
+langcode: es
+status: true
+dependencies:
+  config:
+    - user.role.gestor_sam
+  module:
+    - user
+id: user_add_role_action.gestor_sam
+label: 'Añade el rol Gestor SAM al(los) usuario(s) seleccionado(s)'
+type: user
+plugin: user_add_role_action
+configuration:
+  rid: gestor_sam

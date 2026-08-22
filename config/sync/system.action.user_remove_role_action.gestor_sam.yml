@@ -1,0 +1,14 @@
+uuid: 60315f13-8eb9-4135-8e34-b91e0c8d6952
+langcode: es
+status: true
+dependencies:
+  config:
+    - user.role.gestor_sam
+  module:
+    - user
+id: user_remove_role_action.gestor_sam
+label: 'Elimina el rol Gestor SAM al(los) usuario(s) seleccionado(s)'
+type: user
+plugin: user_remove_role_action
+configuration:
+  rid: gestor_sam

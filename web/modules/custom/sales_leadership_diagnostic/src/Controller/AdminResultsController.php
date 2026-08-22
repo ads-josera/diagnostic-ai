@@ -157,6 +157,9 @@ final class AdminResultsController extends ControllerBase {
       // entidad sin handler de acceso a consultas no filtra nada, y confiar en
       // que lo hace daría una falsa sensación de seguridad.
       ->accessCheck(FALSE)
+      // Los ensayos del gestor no son diagnósticos de nadie: mezclarlos aquí
+      // daría un listado en el que no se puede confiar para dar soporte.
+      ->condition('is_sandbox', FALSE)
       ->sort('created', 'DESC')
       ->pager(self::PER_PAGE);
 

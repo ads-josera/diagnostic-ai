@@ -1,0 +1,105 @@
+{#
+/**
+ * @file
+ * Estudio del prompt: editor a la izquierda, ensayo a la derecha.
+ *
+ * Variables disponibles:
+ * - form: el formulario del prompt, con borrador y publicación.
+ * - session_id: conversación de ensayo del gestor.
+ * - messages: turnos de esa conversación, en el mismo formato que el chat del
+ *   alumno (role, is_assistant, body, time, sequence).
+ * - reset_url: destino del formulario que reinicia el ensayo.
+ *
+ * El panel derecho reproduce el marcado del chat del alumno, y no una versión
+ * simplificada, para que el gestor vea EXACTAMENTE lo que verá el alumno. Una
+ * vista previa aproximada dejaría pasar problemas de presentación que solo
+ * aparecen en la página real.
+ */
+#}
+<div class="sld sld-studio">
+
+  <div class="sld-studio__panel sld-studio__panel--editor">
+    <h2 class="sld-studio__panel-title">{{ 'Prompt'|t }}</h2>
+    {{ form }}
+  </div>
+
+  <div class="sld-studio__panel sld-studio__panel--chat">
+    <div class="sld-studio__chat-header">
+      <h2 class="sld-studio__panel-title">{{ 'Conversación de prueba'|t }}</h2>
+
+      <form action="{{ reset_url }}" method="post" class="sld-studio__reset">
+        <button type="submit" class="sld__button sld__button--secondary">
+          {{ 'Reiniciar'|t }}
+        </button>
+      </form>
+    </div>
+
+    <p class="sld-studio__note sld__muted">
+      {{ 'Esta conversación usa el motor de IA real y el prompt que tienes a la izquierda. No aparece en el listado de resultados ni consume el diagnóstico de ningún alumno.'|t }}
+    </p>
+
+    {#
+      Mismo marcado y mismos atributos de datos que el chat del alumno: el JS
+      es literalmente el mismo archivo, y encuentra lo que espera.
+    #}
+    <div class="sld sld-chat sld-studio__chat" data-sld-chat data-session-id="{{ session_id }}">
+      <div class="sld-chat__log"
+           role="log"
+           aria-live="polite"
+           aria-label="{{ 'Conversación de prueba'|t }}"
+           data-sld-log>
+        {% if messages is empty %}
+          <p class="sld-chat__empty">
+            {{ 'Escribe un mensaje para ver cómo responde el agente.'|t }}
+          </p>
+        {% endif %}
+
+        {% for message in messages %}
+          <article class="sld-chat__message sld-chat__message--{{ message.role }}">
+            <div class="sld-chat__meta">
+              <span class="sld-chat__author">
+                {{ message.is_assistant ? 'Diagnostic AI'|t : 'Tú'|t }}
+              </span>
+              <time class="sld-chat__time">{{ message.time }}</time>
+            </div>
+            <div class="sld-chat__bubble">{{ message.body }}</div>
+          </article>
+        {% endfor %}
+      </div>
+
+      {# Indicador de procesamiento (§24). Oculto hasta que hay una petición en vuelo. #}
+      <div class="sld-chat__typing" data-sld-typing hidden>
+        <span class="sld-chat__typing-dots" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span class="sld-chat__typing-label">{{ 'Analizando…'|t }}</span>
+      </div>
+
+      {# Errores del envío. Se rellena desde JS con un mensaje neutro (§58). #}
+      <div class="sld__notice sld__notice--warning sld-chat__error"
+           role="alert"
+           data-sld-error
+           hidden></div>
+
+      <form class="sld-chat__composer" data-sld-composer>
+        <label class="sld__visually-hidden" for="sld-studio-input">
+          {{ 'Tu mensaje de prueba'|t }}
+        </label>
+        <textarea id="sld-studio-input"
+                  class="sld-chat__input"
+                  data-sld-input
+                  rows="1"
+                  maxlength="4000"
+                  placeholder="{{ 'Escribe un mensaje de prueba…'|t }}"></textarea>
+        <button type="submit" class="sld__button sld-chat__send" data-sld-send>
+          {{ 'Enviar'|t }}
+        </button>
+      </form>
+
+      <p class="sld-chat__hint sld__muted" data-sld-hint>
+        {{ 'Pulsa Enter para enviar; Mayús+Enter para una línea nueva.'|t }}
+      </p>
+    </div>
+  </div>
+
+</div>

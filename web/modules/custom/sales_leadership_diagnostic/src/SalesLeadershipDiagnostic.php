@@ -100,6 +100,19 @@ final class SalesLeadershipDiagnostic {
   public const PERMISSION_VIEW_ALL_RESULTS = 'view all diagnostic results';
 
   /**
+   * Permite editar y publicar el prompt del agente.
+   *
+   * Separado de PERMISSION_ADMINISTER a propósito. Quien define cómo conversa
+   * el agente no tiene por qué ver los secretos, la integración con WordPress
+   * ni los límites de seguridad; y al revés, quien administra la instalación
+   * no es necesariamente quien sabe de metodología comercial.
+   *
+   * Antes de existir este permiso, dar acceso al prompt obligaba a entregar
+   * también todo lo demás.
+   */
+  public const PERMISSION_EDIT_PROMPT = 'edit diagnostic prompt';
+
+  /**
    * Lista completa de los permisos que define el módulo.
    *
    * @var string[]
@@ -108,6 +121,7 @@ final class SalesLeadershipDiagnostic {
     self::PERMISSION_ACCESS,
     self::PERMISSION_ADMINISTER,
     self::PERMISSION_VIEW_ALL_RESULTS,
+    self::PERMISSION_EDIT_PROMPT,
   ];
 
   /**

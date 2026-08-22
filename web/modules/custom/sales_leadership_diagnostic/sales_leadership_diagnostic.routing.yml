@@ -164,6 +164,46 @@ sales_leadership_diagnostic.settings:
   requirements:
     _permission: 'administer sales leadership diagnostic'
 
+# ---------------------------------------------------------------------------
+# Estudio del prompt
+# ---------------------------------------------------------------------------
+# Editor a la izquierda, conversación de prueba a la derecha. Protegido por un
+# permiso propio: quien define cómo conversa el agente no necesita ver los
+# secretos ni la integración con WordPress.
+sales_leadership_diagnostic.studio:
+  path: '/admin/config/salesbumm/diagnostic/estudio'
+  methods: [GET, POST]
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\PromptStudioController::view'
+    _title: 'Estudio del prompt'
+  requirements:
+    _permission: 'edit diagnostic prompt+administer sales leadership diagnostic'
+
+# Descarta la conversación de ensayo y empieza otra.
+sales_leadership_diagnostic.studio_reset:
+  path: '/admin/config/salesbumm/diagnostic/estudio/reiniciar'
+  methods: [POST]
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\PromptStudioController::reset'
+  requirements:
+    _permission: 'edit diagnostic prompt+administer sales leadership diagnostic'
+    _csrf_token: 'TRUE'
+
+# Envío de un turno del ensayo.
+#
+# Reutiliza el MISMO controlador que el chat del alumno a propósito: ensayar
+# por otro camino probaría otra cosa. Lo que cambia es quién puede entrar, y de
+# eso se encarga SandboxSessionCheck, que además exige que la sesión sea de
+# prueba y propia.
+sales_leadership_diagnostic.studio_message:
+  path: '/admin/config/salesbumm/diagnostic/estudio/mensaje/{sld_diagnostic_session}'
+  methods: [POST]
+  defaults:
+    _controller: '\Drupal\sales_leadership_diagnostic\Controller\ConversationApiController::send'
+  requirements:
+    _custom_access: 'Drupal\sales_leadership_diagnostic\Access\SandboxSessionCheck::access'
+    _csrf_request_header_token: 'TRUE'
+
 sales_leadership_diagnostic.agent_settings:
   path: '/admin/config/salesbumm/diagnostic/agent'
   defaults:

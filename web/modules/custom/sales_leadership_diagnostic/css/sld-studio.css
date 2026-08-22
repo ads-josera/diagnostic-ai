@@ -1,0 +1,84 @@
+/**
+ * @file
+ * Estudio del prompt: dos columnas, editor y ensayo.
+ *
+ * El reparto no es al 50 %. El editor necesita más ancho porque contiene texto
+ * largo que se escribe y se relee, mientras que la conversación son mensajes
+ * cortos; darles la misma anchura dejaría el prompt en una columna estrecha e
+ * incómoda de editar, que es donde se pasa la mayor parte del tiempo.
+ */
+
+.sld-studio {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--sld-space-lg);
+  align-items: start;
+}
+
+/**
+ * Por debajo de este ancho las dos columnas dejan de caber sin que una de las
+ * dos quede inservible, así que se apilan. El editor va primero: es lo que se
+ * viene a hacer.
+ */
+@media (max-width: 1100px) {
+  .sld-studio {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.sld-studio__panel {
+  min-width: 0;
+}
+
+.sld-studio__panel-title {
+  margin: 0 0 var(--sld-space-md);
+  font-size: 1.125rem;
+}
+
+.sld-studio__chat-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sld-space-md);
+}
+
+.sld-studio__reset {
+  margin: 0;
+}
+
+.sld-studio__note {
+  margin: 0 0 var(--sld-space-md);
+  font-size: 0.875rem;
+}
+
+/**
+ * La conversación se queda a la vista mientras se edita el prompt en la
+ * columna de al lado, que es justo el ciclo que el estudio quiere acortar.
+ * Se desactiva al apilar: pegar algo en una pantalla estrecha tapa contenido.
+ */
+@media (min-width: 1101px) {
+  .sld-studio__panel--chat {
+    position: sticky;
+    top: var(--sld-space-md);
+  }
+}
+
+/**
+ * Altura fija para el registro de mensajes. Sin ella, la conversación crece
+ * hacia abajo y arrastra el pie de página lejos del editor a medida que se
+ * ensaya.
+ */
+.sld-studio__chat .sld-chat__log {
+  min-height: 22rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Los textareas del prompt son para leer texto largo: fuente monoespaciada
+   y ancho completo, como cualquier editor de texto. */
+.sld-studio__form textarea {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}

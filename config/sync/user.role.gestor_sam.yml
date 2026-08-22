@@ -1,0 +1,15 @@
+uuid: 9f9c3701-0256-4100-9d59-1c24b40d3ca9
+langcode: es
+status: true
+dependencies:
+  module:
+    - sales_leadership_diagnostic
+    - system
+id: gestor_sam
+label: 'Gestor SAM'
+weight: 7
+is_admin: false
+permissions:
+  - 'edit diagnostic prompt'
+  - 'view all diagnostic results'
+  - 'view the administration theme'

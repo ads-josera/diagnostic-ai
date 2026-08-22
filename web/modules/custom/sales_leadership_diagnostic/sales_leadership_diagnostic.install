@@ -7,6 +7,8 @@
 
 declare(strict_types=1);
 
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\user\Entity\Role;
 
@@ -346,4 +348,38 @@ function sales_leadership_diagnostic_update_10005(): string {
   );
 
   return 'Creado el rol "Gestor SAM" con permiso para consultar los diagnósticos de cualquier alumno. No se ha asignado a ningún usuario.';
+}
+
+/**
+ * Añade la marca de conversación de prueba a sesiones y resultados.
+ *
+ * Existe para que el gestor pueda ensayar el prompt con conversaciones reales
+ * sin que esos ensayos aparezcan en el listado de resultados, cuenten para el
+ * límite de diagnósticos por periodo, ni se confundan con datos de un alumno.
+ *
+ * Cuanto existiera antes de este cambio queda como NO prueba, que es lo
+ * correcto: son diagnósticos reales de alumnos reales.
+ */
+function sales_leadership_diagnostic_update_10006(): string {
+  $definition = BaseFieldDefinition::create('boolean')
+    ->setLabel(new TranslatableMarkup('Conversación de prueba'))
+    ->setDefaultValue(FALSE);
+
+  $manager = \Drupal::entityDefinitionUpdateManager();
+  $creados = [];
+
+  foreach (['sld_diagnostic_session', 'sld_diagnostic_result'] as $tipo) {
+    if ($manager->getFieldStorageDefinition('is_sandbox', $tipo) !== NULL) {
+      continue;
+    }
+
+    $manager->installFieldStorageDefinition('is_sandbox', $tipo, 'sales_leadership_diagnostic', $definition);
+    $creados[] = $tipo;
+  }
+
+  if ($creados === []) {
+    return 'La marca de conversación de prueba ya existía; no se ha modificado nada.';
+  }
+
+  return sprintf('Añadida la marca de conversación de prueba a: %s.', implode(', ', $creados));
 }

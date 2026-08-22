@@ -106,6 +106,13 @@ class DiagnosticSession extends ContentEntityBase implements DiagnosticSessionIn
     $fields['completed_at'] = BaseFieldDefinition::create('timestamp')
       ->setLabel(new TranslatableMarkup('Fin del diagnóstico'));
 
+    $fields['is_sandbox'] = BaseFieldDefinition::create('boolean')
+      ->setLabel(new TranslatableMarkup('Conversación de prueba'))
+      ->setDescription(new TranslatableMarkup('Marca las conversaciones que el gestor crea al ajustar el prompt. Se excluyen del listado de resultados y no cuentan para el límite de diagnósticos por periodo: son ensayos, no diagnósticos de un alumno.'))
+      ->setDefaultValue(FALSE)
+      ->setSetting('on_label', new TranslatableMarkup('Prueba'))
+      ->setSetting('off_label', new TranslatableMarkup('Real'));
+
     $fields['created'] = BaseFieldDefinition::create('created')
       ->setLabel(new TranslatableMarkup('Creado'));
 

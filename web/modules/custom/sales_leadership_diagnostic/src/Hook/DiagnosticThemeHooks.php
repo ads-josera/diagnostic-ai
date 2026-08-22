@@ -55,6 +55,14 @@ final class DiagnosticThemeHooks {
           'messages' => [],
         ],
       ],
+      'sld_studio' => [
+        'variables' => [
+          'form' => NULL,
+          'session_id' => 0,
+          'messages' => [],
+          'reset_url' => '',
+        ],
+      ],
       'sld_result' => [
         'variables' => [
           'summary' => NULL,

@@ -11,3 +11,8 @@
   title: 'Ver los resultados de diagnóstico de cualquier alumno'
   description: 'Concede acceso a información empresarial sensible de todos los alumnos. Otorgar únicamente a personal de soporte autorizado.'
   restrict access: true
+
+'edit diagnostic prompt':
+  title: 'Editar y publicar el prompt del agente'
+  description: 'Permite redactar el prompt, ensayarlo en una conversación de prueba y publicarlo. Define cómo conversa el agente con TODOS los alumnos, así que concédalo solo a quien conozca la metodología. No da acceso a los secretos, a la integración con WordPress ni a los límites de seguridad.'
+  restrict access: true

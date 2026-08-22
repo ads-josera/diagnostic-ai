@@ -231,3 +231,22 @@ services:
     arguments:
       - '@state'
       - '@datetime.time'
+
+  # --- Estudio del prompt --------------------------------------------------
+
+  # Borrador del prompt. En estado y no en configuración: el trabajo a medias
+  # de alguien no debe exportarse a Git ni desplegarse entre entornos.
+  Drupal\sales_leadership_diagnostic\Service\Diagnostic\PromptDraft:
+    arguments:
+      - '@state'
+      - '@datetime.time'
+
+  # Conversaciones de ensayo, aisladas de los datos reales por su marca.
+  Drupal\sales_leadership_diagnostic\Service\Diagnostic\SandboxSessionManager:
+    arguments:
+      - '@entity_type.manager'
+      - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\PromptDraft'
+      - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManager'
+      - '@datetime.time'
+
+  Drupal\sales_leadership_diagnostic\Access\SandboxSessionCheck: {}

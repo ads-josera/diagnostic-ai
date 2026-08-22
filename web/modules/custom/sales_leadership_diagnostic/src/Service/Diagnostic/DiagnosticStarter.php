@@ -168,6 +168,8 @@ final class DiagnosticStarter {
       ->accessCheck(FALSE)
       ->condition('uid', $uid)
       ->condition('status', [DiagnosticStatus::Draft->value, DiagnosticStatus::InProgress->value], 'IN')
+      // Una prueba a medias no debe secuestrar el botón del alumno.
+      ->condition('is_sandbox', FALSE)
       ->sort('created', 'DESC')
       ->range(0, 1)
       ->execute();
@@ -239,6 +241,8 @@ final class DiagnosticStarter {
       ->accessCheck(FALSE)
       ->condition('uid', $uid)
       ->condition('created', $periodStart, '>=')
+      // Un ensayo del prompt no gasta el diagnóstico de nadie.
+      ->condition('is_sandbox', FALSE)
       ->count()
       ->execute();
   }

@@ -32,3 +32,17 @@ welcome:
     theme:
       css/sld-base.css: {}
       css/sld-welcome.css: {}
+
+studio:
+  version: 1.x
+  css:
+    theme:
+      css/sld-base.css: {}
+      css/sld-chat.css: {}
+      css/sld-studio.css: {}
+  js:
+    js/sld-chat.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+    - core/drupalSettings
