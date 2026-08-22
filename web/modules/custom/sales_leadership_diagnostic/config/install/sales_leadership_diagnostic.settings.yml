@@ -18,6 +18,7 @@ openai:
   available_models: {  }
   timeout: 60
   max_retries: 2
+  max_completion_tokens: 2000
 security:
   messages_per_window: 20
   window_seconds: 300

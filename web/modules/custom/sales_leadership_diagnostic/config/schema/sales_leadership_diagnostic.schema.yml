@@ -43,6 +43,9 @@ sales_leadership_diagnostic.settings:
         max_retries:
           type: integer
           label: 'Número máximo de reintentos ante errores transitorios'
+        max_completion_tokens:
+          type: integer
+          label: 'Tokens máximos por respuesta'
     security:
       type: mapping
       label: 'Seguridad y límites de uso'

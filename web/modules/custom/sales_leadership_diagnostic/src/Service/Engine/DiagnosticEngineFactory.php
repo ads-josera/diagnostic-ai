@@ -29,6 +29,7 @@ final class DiagnosticEngineFactory {
     private readonly Settings $settings,
     private readonly MockDiagnosticEngine $mock,
     private readonly UnavailableDiagnosticEngine $unavailable,
+    private readonly OpenAIDiagnosticProvider $openAi,
   ) {}
 
   /**
@@ -39,9 +40,21 @@ final class DiagnosticEngineFactory {
       return $this->mock;
     }
 
-    // El proveedor real se incorpora en la fase de integración con OpenAI.
-    // Hasta entonces, cualquier intento de diagnosticar falla explícitamente.
-    return $this->unavailable;
+    // Sin API key no hay proveedor con el que hablar. Se devuelve el motor
+    // que falla de forma explícita en lugar de intentar la llamada: el error
+    // resultante nombra la causa en vez de ser un 401 del proveedor.
+    if (!$this->hasApiKey()) {
+      return $this->unavailable;
+    }
+
+    return $this->openAi;
+  }
+
+  /**
+   * Indica si hay credenciales para hablar con el proveedor real.
+   */
+  private function hasApiKey(): bool {
+    return trim((string) $this->settings->get('sld_openai_api_key', '')) !== '';
   }
 
   /**

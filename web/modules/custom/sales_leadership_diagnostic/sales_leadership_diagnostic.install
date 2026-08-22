@@ -201,3 +201,24 @@ function sales_leadership_diagnostic_update_10002(): string {
     ? sprintf('Catálogo de modelos creado conservando el modelo configurado "%s".', $current)
     : 'Catálogo de modelos creado, vacío.';
 }
+
+/**
+ * Añade el límite de tokens por respuesta del proveedor de IA.
+ *
+ * Los modelos con razonamiento consumen parte de este presupuesto antes de
+ * empezar a escribir. Si se agota, la respuesta llega truncada y el JSON
+ * queda incompleto: el diagnóstico falla con un error de formato cuya causa
+ * real —presupuesto insuficiente— no es evidente. Por eso el valor es
+ * configurable y su defecto es holgado.
+ */
+function sales_leadership_diagnostic_update_10003(): string {
+  $config = \Drupal::configFactory()->getEditable('sales_leadership_diagnostic.settings');
+
+  if ($config->get('openai.max_completion_tokens') !== NULL) {
+    return 'El límite de tokens ya estaba configurado; no se ha modificado.';
+  }
+
+  $config->set('openai.max_completion_tokens', 2000)->save();
+
+  return 'Añadido el límite de tokens por respuesta con un valor de 2000.';
+}

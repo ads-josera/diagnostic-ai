@@ -129,11 +129,21 @@ services:
   Drupal\sales_leadership_diagnostic\Service\Engine\UnavailableDiagnosticEngine:
     class: Drupal\sales_leadership_diagnostic\Service\Engine\UnavailableDiagnosticEngine
 
+  # Unica clase que sabe que el proveedor es OpenAI (§28).
+  Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIDiagnosticProvider:
+    arguments:
+      - '@http_client'
+      - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
+      - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator'
+      - '@config.factory'
+      - '@logger.factory'
+
   Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory:
     arguments:
       - '@settings'
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\MockDiagnosticEngine'
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\UnavailableDiagnosticEngine'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIDiagnosticProvider'
 
   # El motor activo lo decide la fábrica. El resto del módulo depende de la
   # interfaz y no sabe cuál está en uso (§28).

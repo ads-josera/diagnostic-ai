@@ -946,7 +946,7 @@ $settings['sld_openai_api_key'] = getenv('SLD_OPENAI_API_KEY') ?: '';
  *
  * NO debe activarse en staging ni en producción.
  */
-$settings['sld_use_mock_engine'] = TRUE;
+// $settings['sld_use_mock_engine'] = TRUE;   // desactivado: ya hay proveedor real
 
 /**
  * Trusted host patterns.

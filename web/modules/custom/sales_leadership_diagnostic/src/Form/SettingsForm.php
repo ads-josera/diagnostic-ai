@@ -249,6 +249,15 @@ final class SettingsForm extends ConfigFormBase {
         '#config_target' => self::CONFIG_NAME . ':openai.timeout',
       ],
 
+      'max_completion_tokens' => [
+        '#type' => 'number',
+        '#title' => $this->t('Tokens máximos por respuesta'),
+        '#description' => $this->t('Los modelos que razonan consumen parte de este presupuesto antes de empezar a escribir. Si se agota, la respuesta llega cortada y el diagnóstico falla con un error de formato cuya causa real no es evidente. Conviene que sea holgado. Recomendado: 2000 o más.'),
+        '#min' => 256,
+        '#max' => 32000,
+        '#config_target' => self::CONFIG_NAME . ':openai.max_completion_tokens',
+      ],
+
       'max_retries' => [
         '#type' => 'number',
         '#title' => $this->t('Reintentos ante errores transitorios'),
