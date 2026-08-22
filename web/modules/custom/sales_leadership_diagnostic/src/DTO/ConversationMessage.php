@@ -16,9 +16,23 @@ use Drupal\sales_leadership_diagnostic\MessageRole;
 final readonly class ConversationMessage {
 
   /**
+   * Construye un mensaje ya leído de la base de datos.
+   *
+   * @param int $id
+   *   Identificador del mensaje.
+   * @param int $sessionId
+   *   Sesión a la que pertenece.
+   * @param \Drupal\sales_leadership_diagnostic\MessageRole $role
+   *   Quién lo escribió.
+   * @param string $content
+   *   Texto tal como se escribió o se recibió.
    * @param array<string, mixed>|null $payload
    *   Turno estructurado completo tal como lo devolvió el motor, si lo hubo.
    *   Los mensajes del alumno no tienen estructura y llevan NULL.
+   * @param int $sequence
+   *   Posición dentro de la conversación.
+   * @param int $created
+   *   Marca temporal de creación.
    */
   public function __construct(
     public int $id,
@@ -56,6 +70,7 @@ final readonly class ConversationMessage {
    * Representación del mensaje en el formato que esperan las APIs de IA.
    *
    * @return array{role: string, content: string}
+   *   El mensaje con la forma que esperan las APIs de los proveedores.
    */
   public function toEnginePayload(): array {
     return [

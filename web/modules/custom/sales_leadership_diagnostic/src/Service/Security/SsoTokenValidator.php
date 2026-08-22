@@ -31,6 +31,11 @@ use Firebase\JWT\SignatureInvalidException;
  */
 final class SsoTokenValidator {
 
+  /**
+   * Canal de log del módulo.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
   private LoggerChannelInterface $logger;
 
   public function __construct(
@@ -198,6 +203,9 @@ final class SsoTokenValidator {
     return $value > 0 ? $value : 90;
   }
 
+  /**
+   * Configuración del módulo.
+   */
   private function config() {
     return $this->configFactory->get('sales_leadership_diagnostic.settings');
   }

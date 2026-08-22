@@ -59,6 +59,11 @@ final class MarkdownRenderer {
     'hr',
   ];
 
+  /**
+   * Conversor de Markdown con la configuración de seguridad ya aplicada.
+   *
+   * @var \League\CommonMark\CommonMarkConverter
+   */
   private readonly CommonMarkConverter $converter;
 
   public function __construct() {

@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<ruleset name="Salesbumm SLD">
+  <description>
+    Estándar de código del plugin puente.
+
+    Se sigue WordPress Coding Standards y no PSR-12: el plugin vive en el
+    WordPress del cliente y debe resultar familiar a quien mantenga ese sitio.
+    El módulo de Drupal, en el mismo repositorio, sigue el estándar de Drupal
+    por la misma razón.
+  </description>
+
+  <file>.</file>
+
+  <rule ref="WordPress"/>
+
+  <config name="minimum_wp_version" value="6.0"/>
+
+  <rule ref="WordPress.WP.I18n">
+    <properties>
+      <property name="text_domain" type="array">
+        <element value="salesbumm-sld"/>
+      </property>
+    </properties>
+  </rule>
+
+  <!--
+    El plugin usa espacios de nombres y una clase por archivo con el prefijo
+    del proyecto: class-sld-sso-handler.php para Salesbumm\SLD\SsoHandler.
+
+    La regla de WordPress esperaría class-ssohandler.php, porque asume clases
+    sin espacio de nombres cuyo prefijo va en el propio nombre de la clase. Con
+    espacios de nombres esa convención pierde sentido y produce nombres de
+    archivo peores: se distingue a simple vista qué archivos pertenecen a este
+    plugin, cosa que "class-ssohandler.php" no permite.
+  -->
+  <rule ref="WordPress.Files.FileName.InvalidClassFileName">
+    <severity>0</severity>
+  </rule>
+</ruleset>

@@ -13,12 +13,12 @@ namespace Drupal\sales_leadership_diagnostic;
  */
 enum MessageRole: string {
 
-  /**
+  /*
    * Mensaje escrito por el alumno.
    */
   case User = 'user';
 
-  /**
+  /*
    * Mensaje generado por el agente.
    */
   case Assistant = 'assistant';

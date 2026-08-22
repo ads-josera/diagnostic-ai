@@ -14,6 +14,8 @@ namespace Drupal\sales_leadership_diagnostic\DTO;
 final readonly class SsoIdentity {
 
   /**
+   * Construye la identidad extraída del token.
+   *
    * @param string $externalUserId
    *   Identificador del alumno en WordPress. Es LA identidad.
    * @param string $email

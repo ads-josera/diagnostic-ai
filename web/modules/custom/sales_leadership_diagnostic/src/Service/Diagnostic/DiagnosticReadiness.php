@@ -35,6 +35,7 @@ final class DiagnosticReadiness {
    * Motivos que impiden ejecutar diagnósticos ahora mismo.
    *
    * @return \Drupal\sales_leadership_diagnostic\ReadinessBlocker[]
+   *   Los motivos que impiden diagnosticar; vacío si no hay ninguno.
    */
   public function blockers(): array {
     $blockers = [];
@@ -58,6 +59,7 @@ final class DiagnosticReadiness {
    * Nombres de los secretos que faltan por configurar.
    *
    * @return string[]
+   *   Nombres de los ajustes de secreto que siguen vacíos.
    */
   public function missingSecrets(): array {
     return $this->secrets->missing();
@@ -67,6 +69,7 @@ final class DiagnosticReadiness {
    * Claves de configuración de WordPress que siguen vacías.
    *
    * @return string[]
+   *   Claves de WordPress pendientes de configurar.
    */
   public function missingWordPressSettings(): array {
     $config = $this->configFactory->get('sales_leadership_diagnostic.settings');
@@ -99,6 +102,7 @@ final class DiagnosticReadiness {
    * toda la cache.
    *
    * @return string[]
+   *   Las etiquetas de cache de las que depende esta decisión.
    */
   public function getCacheTags(): array {
     return [

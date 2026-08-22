@@ -101,6 +101,7 @@ final class ResultsController extends ControllerBase {
    * la superficie de marcado generado por el modelo.
    *
    * @param array<string, mixed> $payload
+   *   Estructura completa del resultado, tal como la guardó el motor.
    */
   private function buildSections(array $payload): array {
     $sections = [];

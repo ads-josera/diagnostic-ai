@@ -42,7 +42,7 @@ final class SalesLeadershipDiagnostic {
   public const PERMISSION_VIEW_ALL_RESULTS = 'view all diagnostic results';
 
   /**
-   * Todos los permisos que define el módulo.
+   * Lista completa de los permisos que define el módulo.
    *
    * @var string[]
    */

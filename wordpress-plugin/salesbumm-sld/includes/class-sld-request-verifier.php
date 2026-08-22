@@ -115,8 +115,8 @@ class RequestVerifier {
 	/**
 	 * Recalcula la firma y la compara en tiempo constante.
 	 *
-	 * hash_equals evita que el tiempo de comparación revele cuántos bytes
-	 * iniciales de la firma eran correctos.
+	 * La comparación en tiempo constante de hash_equals() evita que el tiempo
+	 * de respuesta revele cuántos bytes iniciales de la firma eran correctos.
 	 *
 	 * @param string $timestamp Marca de tiempo.
 	 * @param string $nonce     Nonce.

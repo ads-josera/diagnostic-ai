@@ -24,7 +24,7 @@ use GuzzleHttp\Exception\GuzzleException;
  * otro proveedor será escribir otra implementación de la interfaz y cambiar
  * una línea en la fábrica.
  *
- * Todo lo que hay aquí sobre el comportamiento del proveedor se comprobó
+ * Cuanto se afirma aquí sobre el comportamiento del proveedor se comprobó
  * contra la API real antes de escribirlo, no se dio por supuesto:
  *
  *  - Se usa `max_completion_tokens`; `max_tokens` no aplica a estos modelos.
@@ -62,6 +62,8 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
    *
    * El modo estricto obliga a que todas las propiedades estén declaradas como
    * requeridas, así que los campos opcionales se expresan admitiendo nulo.
+   *
+   * @var array<string, mixed>
    */
   private const RESPONSE_SCHEMA = [
     'type' => 'object',
@@ -100,6 +102,11 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
     'additionalProperties' => FALSE,
   ];
 
+  /**
+   * Canal de log del módulo.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
   private LoggerChannelInterface $logger;
 
   public function __construct(
@@ -132,6 +139,7 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
    * Construye el cuerpo de la petición.
    *
    * @return array<string, mixed>
+   *   El cuerpo de la petición, listo para enviar.
    */
   private function buildPayload(DiagnosticContext $context, string $model): array {
     $messages = [
@@ -171,6 +179,7 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
    * Ejecuta la petición, reintentando solo lo que merece reintento.
    *
    * @param array<string, mixed> $payload
+   *   Cuerpo de la petición.
    *
    * @return array<string, mixed>
    *   Respuesta del modelo, ya decodificada.
@@ -216,8 +225,10 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
    * Una sola llamada al proveedor.
    *
    * @param array<string, mixed> $payload
+   *   Cuerpo de la petición.
    *
    * @return array<string, mixed>
+   *   Respuesta del proveedor, ya decodificada.
    *
    * @throws \Drupal\sales_leadership_diagnostic\Exception\EngineException
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
@@ -254,6 +265,7 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
    * Extrae el turno estructurado de la respuesta del proveedor.
    *
    * @return array<string, mixed>
+   *   El turno estructurado que devolvió el modelo.
    *
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
    */
@@ -324,6 +336,7 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
    * la conversación (§43).
    *
    * @param array<string, mixed> $usage
+   *   Cifras de consumo que devuelve el proveedor.
    */
   private function logUsage(array $usage): void {
     if ($usage === []) {
@@ -337,26 +350,41 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
     ]);
   }
 
+  /**
+   * Identificador del modelo seleccionado.
+   */
   private function getModel(): string {
     return trim((string) $this->config()->get('openai.model'));
   }
 
+  /**
+   * Timeout configurado para las peticiones, en segundos.
+   */
   private function getTimeout(): int {
     $value = (int) $this->config()->get('openai.timeout');
 
     return $value > 0 ? $value : 60;
   }
 
+  /**
+   * Número de reintentos admitidos, acotado a un máximo razonable.
+   */
   private function getMaxRetries(): int {
     return max(0, min((int) $this->config()->get('openai.max_retries'), 5));
   }
 
+  /**
+   * Presupuesto de tokens por respuesta.
+   */
   private function getMaxCompletionTokens(): int {
     $value = (int) $this->config()->get('openai.max_completion_tokens');
 
     return $value > 0 ? $value : 2000;
   }
 
+  /**
+   * Configuración del módulo.
+   */
   private function config() {
     return $this->configFactory->get('sales_leadership_diagnostic.settings');
   }

@@ -23,8 +23,8 @@ use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseVali
  *
  * La razón es de seguridad de producto: un despliegue mal configurado que
  * cayera en silencio sobre este motor entregaría diagnósticos inventados a
- * alumnos reales, y nada en la interfaz lo delataría. Por eso el módulo prefiere
- * fallar de forma visible a funcionar con datos falsos.
+ * alumnos reales, y nada en la interfaz lo delataría. Por eso el módulo
+ * prefiere fallar de forma visible a funcionar con datos falsos.
  *
  * Sus textos van marcados como simulados a propósito: si alguna vez aparecen en
  * un entorno real, deben ser inmediatamente reconocibles.
@@ -86,6 +86,7 @@ final class MockDiagnosticEngine implements DiagnosticEngineInterface {
    * Construye un resultado final simulado.
    *
    * @return array<string, mixed>
+   *   Un resultado final simulado, con todas sus secciones.
    */
   private function buildResult(DiagnosticContext $context): array {
     return [

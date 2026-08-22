@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\sales_leadership_diagnostic\DTO;
 
 /**
- * Todo lo que el motor de diagnóstico necesita para producir un turno.
+ * Cuanto necesita el motor de diagnóstico para producir un turno.
  *
  * Deliberadamente no contiene identidad del alumno: ni nombre, ni correo, ni
  * identificadores de Drupal o WordPress. El motor no los necesita para aplicar
@@ -19,6 +19,8 @@ namespace Drupal\sales_leadership_diagnostic\DTO;
 final readonly class DiagnosticContext {
 
   /**
+   * Construye el contexto de un turno.
+   *
    * @param string $systemPrompt
    *   Prompt e instrucciones ya resueltos, tal como se congelaron al iniciar.
    * @param \Drupal\sales_leadership_diagnostic\DTO\ConversationMessage[] $history
@@ -52,6 +54,7 @@ final readonly class DiagnosticContext {
    * Historial en el formato que esperan las APIs de IA.
    *
    * @return array<int, array{role: string, content: string}>
+   *   El historial en el formato que espera la API del proveedor.
    */
   public function historyAsPayload(): array {
     return array_map(

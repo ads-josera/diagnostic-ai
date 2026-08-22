@@ -348,6 +348,7 @@ final class SettingsForm extends ConfigFormBase {
    * instancia del formulario.
    *
    * @return string[]
+   *   Los identificadores, sin espacios, vacíos ni duplicados.
    */
   public static function parseModelList(?string $value): array {
     $lines = preg_split('/\R/', (string) $value) ?: [];
@@ -364,6 +365,7 @@ final class SettingsForm extends ConfigFormBase {
    * Opciones del desplegable, construidas desde el catálogo guardado.
    *
    * @return array<string, string>
+   *   Los modelos del catálogo, listos para un desplegable.
    */
   private function getModelOptions(): array {
     $models = $this->config(self::CONFIG_NAME)->get('openai.available_models');

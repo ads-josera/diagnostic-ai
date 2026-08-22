@@ -12,6 +12,9 @@ sales_leadership_diagnostic.sso:
     _controller: '\Drupal\sales_leadership_diagnostic\Controller\SsoController::login'
     _title: 'Acceso al diagnóstico'
   requirements:
+    # Pública por necesidad: quien llega todavía no tiene sesión en Drupal. El
+    # token firmado ES la autenticación, y el controlador aplica además un
+    # límite de intentos por dirección IP.
     _access: 'TRUE'
   options:
     no_cache: TRUE
@@ -25,6 +28,10 @@ sales_leadership_diagnostic.sso_denied:
     _controller: 'Drupal\sales_leadership_diagnostic\Controller\SsoController::denied'
     _title: 'Acceso al diagnóstico'
   requirements:
+    # Pública a propósito: es el destino al que redirige un rechazo del SSO, y
+    # quien llega aquí por definición no ha conseguido iniciar sesión. No
+    # muestra ningún dato: solo un mensaje explicativo elegido de una lista
+    # cerrada de motivos.
     _access: 'TRUE'
 
 # El resto de rutas del alumno exigen la cadena completa: permiso, procedencia

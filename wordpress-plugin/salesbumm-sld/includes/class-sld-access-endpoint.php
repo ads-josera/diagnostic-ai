@@ -53,8 +53,8 @@ class AccessEndpoint {
 			SLD_REST_NAMESPACE,
 			'/access',
 			array(
-				'methods'  => 'POST',
-				'callback' => array( $this, 'handle' ),
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'handle' ),
 				// La verificación de firma va aquí y no en el callback: así una
 				// petición no autenticada se rechaza antes de que se ejecute
 				// ninguna lógica de negocio.

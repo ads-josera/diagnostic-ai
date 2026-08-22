@@ -40,10 +40,39 @@ final class DiagnosticAccessTest extends KernelTestBase {
     'sales_leadership_diagnostic',
   ];
 
+  /**
+   * Alumno propietario de los datos.
+   *
+   * @var \Drupal\user\Entity\User
+   */
   private User $alumnoA;
+
+  /**
+   * Otro alumno, que no debe ver nada de A.
+   *
+   * @var \Drupal\user\Entity\User
+   */
   private User $alumnoB;
+
+  /**
+   * Personal de soporte autorizado a consultar.
+   *
+   * @var \Drupal\user\Entity\User
+   */
   private User $soporte;
+
+  /**
+   * Sesión de diagnóstico del alumno A.
+   *
+   * @var \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSession
+   */
   private DiagnosticSession $sesionDeA;
+
+  /**
+   * Resultado del alumno A.
+   *
+   * @var \Drupal\sales_leadership_diagnostic\Entity\DiagnosticResult
+   */
   private DiagnosticResult $resultadoDeA;
 
   /**
@@ -102,7 +131,7 @@ final class DiagnosticAccessTest extends KernelTestBase {
   /**
    * El dueño puede ver su sesión y su resultado.
    */
-  public function testElDuenoAccedeASusDatos(): void {
+  public function testElDuenoVeSusDatos(): void {
     $this->assertTrue($this->sesionDeA->access('view', $this->alumnoA));
     $this->assertTrue($this->resultadoDeA->access('view', $this->alumnoA));
   }
@@ -112,7 +141,7 @@ final class DiagnosticAccessTest extends KernelTestBase {
    *
    * Este es el test que no debe fallar nunca.
    */
-  public function testOtroAlumnoNoAccedeANada(): void {
+  public function testOtroAlumnoNoVeNada(): void {
     $this->assertFalse(
       $this->sesionDeA->access('view', $this->alumnoB),
       'Un alumno pudo ver la sesión de otro.',
@@ -202,7 +231,13 @@ final class DiagnosticAccessTest extends KernelTestBase {
   /**
    * Crea un usuario con los roles indicados.
    *
+   * @param string $nombre
+   *   Nombre de la cuenta.
    * @param string[] $roles
+   *   Roles que se le asignan.
+   *
+   * @return \Drupal\user\Entity\User
+   *   La cuenta ya guardada.
    */
   private function crearUsuario(string $nombre, array $roles): User {
     $usuario = User::create(['name' => $nombre, 'status' => 1]);

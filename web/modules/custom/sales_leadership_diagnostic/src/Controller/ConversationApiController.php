@@ -40,6 +40,11 @@ final class ConversationApiController extends ControllerBase {
    */
   private const MAX_MESSAGE_LENGTH = 4000;
 
+  /**
+   * Canal de log del módulo.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
   private LoggerChannelInterface $logger;
 
   public function __construct(

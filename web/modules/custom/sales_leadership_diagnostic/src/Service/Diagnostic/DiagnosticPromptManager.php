@@ -59,6 +59,9 @@ final class DiagnosticPromptManager {
     return hash('sha256', $prompt);
   }
 
+  /**
+   * Configuración del agente de diagnóstico.
+   */
   private function config() {
     return $this->configFactory->get(self::CONFIG_NAME);
   }

@@ -125,12 +125,12 @@ class AccessClock {
 	 * Reiniciar es lo que ocurre en una reactivación: el alumno vuelve a
 	 * disponer del periodo completo desde este momento.
 	 *
-	 * @param int         $user_id Usuario.
-	 * @param string      $reason  Motivo, para soporte.
-	 * @param int|null    $when    Momento de inicio. Por defecto, ahora.
+	 * @param int      $user_id Usuario.
+	 * @param string   $reason  Motivo, para soporte.
+	 * @param int|null $when    Momento de inicio. Por defecto, ahora.
 	 */
 	public function start( int $user_id, string $reason, ?int $when = null ): void {
-		$when = $when ?? time();
+		$when = null === $when ? time() : $when;
 
 		update_user_meta( $user_id, self::META_STARTED, $when );
 		update_user_meta(

@@ -38,6 +38,11 @@ final class SsoTokenValidatorTest extends KernelTestBase {
    */
   private const SECRETO = 'secreto-de-pruebas-con-longitud-mas-que-suficiente-para-hs256';
 
+  /**
+   * Validador bajo prueba.
+   *
+   * @var \Drupal\sales_leadership_diagnostic\Service\Security\SsoTokenValidator
+   */
   private SsoTokenValidator $validador;
 
   /**
@@ -195,6 +200,12 @@ final class SsoTokenValidatorTest extends KernelTestBase {
    * Firma un token con los claims indicados.
    *
    * @param array<string, mixed> $sobrescribir
+   *   Claims que sustituyen a los de un token legítimo.
+   * @param string|null $secreto
+   *   Secreto con el que firmar; por defecto, el correcto.
+   *
+   * @return string
+   *   El token firmado.
    */
   private function firmar(array $sobrescribir = [], ?string $secreto = NULL): string {
     return JWT::encode(
@@ -208,6 +219,7 @@ final class SsoTokenValidatorTest extends KernelTestBase {
    * Claims por defecto de un token legítimo.
    *
    * @return array<string, mixed>
+   *   Los claims de un token válido.
    */
   private function claims(): array {
     $ahora = time();

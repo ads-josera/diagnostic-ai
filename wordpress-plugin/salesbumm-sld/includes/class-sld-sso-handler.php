@@ -137,8 +137,36 @@ class SsoHandler {
 
 		header( 'Referrer-Policy: no-referrer' );
 		nocache_headers();
-		wp_redirect( $url, 302 );
+
+		// wp_safe_redirect() solo permite destinos de la lista blanca, y el
+		// nuestro es por definición otro dominio. Se añade el host configurado
+		// —y solo ese— justo para esta redirección.
+		//
+		// Podría usarse wp_redirect() sin más, ya que la URL la fija un
+		// administrador. Pero eso convertiría un ajuste mal validado, o una
+		// opción alterada en la base de datos, en una redirección abierta que
+		// WordPress no filtraría. Con esta forma, el destino tiene que
+		// coincidir con lo que el plugin espera.
+		add_filter( 'allowed_redirect_hosts', array( $this, 'allow_drupal_host' ) );
+		wp_safe_redirect( $url, 302 );
 		exit;
+	}
+
+	/**
+	 * Añade el host de Drupal a los destinos de redirección permitidos.
+	 *
+	 * @param string[] $hosts Hosts ya permitidos por WordPress.
+	 *
+	 * @return string[] La lista con el host de destino incorporado.
+	 */
+	public function allow_drupal_host( $hosts ) {
+		$parts = wp_parse_url( $this->settings->get_drupal_sso_url() );
+
+		if ( is_array( $parts ) && ! empty( $parts['host'] ) ) {
+			$hosts[] = (string) $parts['host'];
+		}
+
+		return $hosts;
 	}
 
 	/**
@@ -195,6 +223,9 @@ class SsoHandler {
 		wp_die(
 			esc_html( $message ),
 			esc_html__( 'Diagnostic AI', 'salesbumm-sld' ),
+			// $status no es salida sino el código HTTP de la respuesta, y está
+			// tipado como int en la firma del método: no puede llevar marcado.
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			array( 'response' => $status )
 		);
 	}

@@ -41,6 +41,7 @@ interface DiagnosticResultInterface extends ContentEntityInterface, EntityOwnerI
    * Estructura completa del resultado, ya validada.
    *
    * @return array<string, mixed>
+   *   La estructura completa del resultado, ya validada.
    */
   public function getPayload(): array;
 
@@ -48,6 +49,7 @@ interface DiagnosticResultInterface extends ContentEntityInterface, EntityOwnerI
    * Sustituye la estructura completa del resultado.
    *
    * @param array<string, mixed> $payload
+   *   Estructura completa del resultado, ya validada.
    */
   public function setPayload(array $payload): static;
 

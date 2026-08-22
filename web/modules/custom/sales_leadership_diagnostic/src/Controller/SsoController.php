@@ -21,7 +21,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 
-
 /**
  * Punto de entrada del alumno desde WordPress (§10).
  *
@@ -61,6 +60,11 @@ final class SsoController extends ControllerBase {
   private const FLOOD_THRESHOLD = 20;
   private const FLOOD_WINDOW = 300;
 
+  /**
+   * Canal de log del módulo.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
   private LoggerChannelInterface $logger;
 
   public function __construct(

@@ -91,6 +91,7 @@ final class DiagnosticResponseValidator {
    * concretas.
    *
    * @return array<string, mixed>
+   *   La estructura del resultado final, tal como la devolvió el motor.
    *
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
    */

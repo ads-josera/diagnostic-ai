@@ -19,6 +19,11 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(DiagnosticResponseValidator::class)]
 final class DiagnosticResponseValidatorTest extends UnitTestCase {
 
+  /**
+   * Validador bajo prueba.
+   *
+   * @var \Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator
+   */
   private DiagnosticResponseValidator $validator;
 
   /**
@@ -89,7 +94,7 @@ final class DiagnosticResponseValidatorTest extends UnitTestCase {
   }
 
   /**
-   * `status: completed` basta para dar el diagnóstico por terminado.
+   * Un estado "completed" basta para dar el diagnóstico por terminado.
    */
   public function testStatusCompletedCierraElDiagnostico(): void {
     $turno = $this->validator->validate([

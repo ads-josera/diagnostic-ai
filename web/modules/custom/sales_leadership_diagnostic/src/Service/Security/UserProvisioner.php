@@ -30,6 +30,11 @@ use Drupal\user\UserInterface;
  */
 final class UserProvisioner {
 
+  /**
+   * Canal de log del módulo.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
   private LoggerChannelInterface $logger;
 
   public function __construct(

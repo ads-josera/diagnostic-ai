@@ -26,6 +26,7 @@ final class DiagnosticSessionRepository {
    * Sesiones de un alumno, de la más reciente a la más antigua.
    *
    * @return \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[]
+   *   Sus sesiones, de la más reciente a la más antigua.
    */
   public function loadForUser(int $uid, int $limit = 50): array {
     $storage = $this->entityTypeManager->getStorage(self::ENTITY_TYPE);

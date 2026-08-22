@@ -18,7 +18,7 @@ use GuzzleHttp\Exception\GuzzleException;
  * Es la única clase del módulo que habla con WordPress. Ningún controller ni
  * servicio de negocio hace peticiones HTTP por su cuenta (§8).
  *
- * Todo fallo se traduce a WordPressUnavailableException. Se hace a propósito:
+ * Cualquier fallo se traduce a WordPressUnavailableException, a propósito:
  * quien llama no debería tener que distinguir un timeout de un 500 ni de un
  * JSON malformado, porque su reacción es la misma en los tres casos. Lo que sí
  * debe distinguir —y por eso nunca se traduce a esta excepción— es una
@@ -31,6 +31,11 @@ final class WordPressApiClient {
    */
   private const ACCESS_PATH = '/wp-json/salesbumm-sld/v1/access';
 
+  /**
+   * Canal de log del módulo.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
   private LoggerChannelInterface $logger;
 
   public function __construct(
@@ -99,6 +104,7 @@ final class WordPressApiClient {
    * Interpreta la respuesta del endpoint.
    *
    * @return array<string, mixed>
+   *   La respuesta de WordPress, ya decodificada.
    *
    * @throws \Drupal\sales_leadership_diagnostic\Exception\WordPressUnavailableException
    */
@@ -152,6 +158,9 @@ final class WordPressApiClient {
     return $timeout > 0 ? $timeout : 10;
   }
 
+  /**
+   * Configuración del módulo.
+   */
   private function config() {
     return $this->configFactory->get('sales_leadership_diagnostic.settings');
   }

@@ -30,6 +30,8 @@ final readonly class AccessDecision {
   public const SOURCE_CACHE = 'cache';
 
   /**
+   * Construye una decisión de acceso.
+   *
    * @param bool $granted
    *   Si el alumno tiene derecho al diagnóstico ahora mismo.
    * @param string $courseId
@@ -81,6 +83,7 @@ final readonly class AccessDecision {
    * Representación para almacenar en cache.
    *
    * @return array<string, mixed>
+   *   Los datos mínimos para reconstruir la decisión desde la cache.
    */
   public function toArray(): array {
     return [

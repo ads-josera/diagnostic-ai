@@ -212,7 +212,7 @@ class Settings {
 			return $legacy > 0 ? array( $legacy ) : array();
 		}
 
-		$ids = array_map( 'absint', preg_split( '/[\s,]+/', trim( $raw ) ) ?: array() );
+		$ids = array_map( 'absint', $this->split_ids( $raw ) );
 
 		return array_values( array_unique( array_filter( $ids ) ) );
 	}
@@ -246,7 +246,7 @@ class Settings {
 	 * @param mixed $value Valor recibido.
 	 */
 	public function sanitize_course_ids( $value ): string {
-		$ids = array_map( 'absint', preg_split( '/[\s,]+/', trim( (string) $value ) ) ?: array() );
+		$ids = array_map( 'absint', $this->split_ids( (string) $value ) );
 		$ids = array_values( array_unique( array_filter( $ids ) ) );
 
 		return implode( ', ', $ids );
@@ -323,7 +323,8 @@ class Settings {
 								<span style="color:#b3261e">✘ <?php echo esc_html__( 'No definido', 'salesbumm-sld' ); ?></span>
 							<?php elseif ( ! Secrets::is_long_enough( $constant ) ) : ?>
 								<span style="color:#b3261e">
-									✘ <?php
+									✘ 
+									<?php
 									printf(
 										/* translators: %d: longitud mínima en bytes. */
 										esc_html__( 'Demasiado corto: mínimo %d caracteres', 'salesbumm-sld' ),
@@ -469,6 +470,19 @@ define( '<?php echo esc_html( $constant ); ?>', '<?php echo esc_html__( 'pega-aq
 			</p>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Parte una lista de identificadores separados por comas o espacios.
+	 *
+	 * @param string $raw Texto tal como lo escribió el administrador.
+	 *
+	 * @return string[] Los fragmentos, sin partes vacías.
+	 */
+	private function split_ids( string $raw ): array {
+		$partes = preg_split( '/[\s,]+/', trim( $raw ) );
+
+		return is_array( $partes ) ? $partes : array();
 	}
 
 	/**

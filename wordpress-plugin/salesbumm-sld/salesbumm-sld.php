@@ -30,9 +30,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * promovidas, ni readonly, aunque el proyecto los use del otro lado.
  */
 
-const SLD_VERSION      = '1.0.0';
-const SLD_PLUGIN_FILE  = __FILE__;
-const SLD_TEXT_DOMAIN  = 'salesbumm-sld';
+const SLD_VERSION     = '1.0.0';
+const SLD_PLUGIN_FILE = __FILE__;
+const SLD_TEXT_DOMAIN = 'salesbumm-sld';
 
 /**
  * Espacio de nombres del endpoint REST.

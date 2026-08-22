@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\sales_leadership_diagnostic\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
@@ -38,6 +39,7 @@ final class DashboardController extends ControllerBase {
     private readonly UserProvisioner $provisioner,
     private readonly DiagnosticAccessChecker $accessChecker,
     private readonly DateFormatterInterface $dateFormatter,
+    private readonly TimeInterface $time,
   ) {}
 
   /**
@@ -51,6 +53,7 @@ final class DashboardController extends ControllerBase {
       $container->get(UserProvisioner::class),
       $container->get(DiagnosticAccessChecker::class),
       $container->get('date.formatter'),
+      $container->get('datetime.time'),
     );
   }
 
@@ -93,7 +96,9 @@ final class DashboardController extends ControllerBase {
    * Construye las filas del historial (§36).
    *
    * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[] $sessions
+   *   Sesiones del alumno, de la más reciente a la más antigua.
    * @param array<int, \Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface> $results
+   *   Sus resultados, indexados por la sesión que los produjo.
    */
   private function buildHistory(array $sessions, array $results): array {
     $rows = [];
@@ -143,7 +148,7 @@ final class DashboardController extends ControllerBase {
       return NULL;
     }
 
-    $dias = $decision->daysUntilExpiry($this->time());
+    $dias = $decision->daysUntilExpiry($this->time->getRequestTime());
 
     if ($dias === NULL || $dias > self::EXPIRY_WARNING_DAYS) {
       return NULL;
@@ -160,13 +165,6 @@ final class DashboardController extends ControllerBase {
         'Tu acceso al diagnóstico caduca en @count días.',
       ),
     ];
-  }
-
-  /**
-   * Momento actual, en segundos.
-   */
-  private function time(): int {
-    return (int) \Drupal::time()->getRequestTime();
   }
 
   /**

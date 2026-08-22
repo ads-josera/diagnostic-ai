@@ -15,27 +15,27 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
  */
 enum DiagnosticStatus: string {
 
-  /**
+  /*
    * Creada pero sin el primer mensaje del agente.
    */
   case Draft = 'draft';
 
-  /**
+  /*
    * Conversación en curso.
    */
   case InProgress = 'in_progress';
 
-  /**
+  /*
    * Generando el resultado final.
    */
   case Processing = 'processing';
 
-  /**
+  /*
    * Diagnóstico terminado, con resultado disponible.
    */
   case Completed = 'completed';
 
-  /**
+  /*
    * Interrumpida por un error irrecuperable o por superar el tope de turnos.
    */
   case Failed = 'failed';
@@ -44,6 +44,7 @@ enum DiagnosticStatus: string {
    * Valores permitidos del campo, en el formato que espera list_string.
    *
    * @return array<string, \Drupal\Core\StringTranslation\TranslatableMarkup>
+   *   Las etiquetas de cada estado, indexadas por el valor que se almacena.
    */
   public static function allowedValues(): array {
     return [

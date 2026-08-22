@@ -49,6 +49,11 @@ final class CachedCourseAccessProvider implements CourseAccessProviderInterface 
    */
   public const CACHE_TAG = 'sld_authorization';
 
+  /**
+   * Canal de log del módulo.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
   private LoggerChannelInterface $logger;
 
   public function __construct(
@@ -186,6 +191,9 @@ final class CachedCourseAccessProvider implements CourseAccessProviderInterface 
     return (int) $this->config()->get('wordpress.cache_grace_period');
   }
 
+  /**
+   * Configuración del módulo.
+   */
   private function config() {
     return $this->configFactory->get('sales_leadership_diagnostic.settings');
   }

@@ -10,7 +10,6 @@ use Drupal\Core\Lock\LockBackendInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
-use Drupal\sales_leadership_diagnostic\DTO\ConversationMessage;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
@@ -52,6 +51,11 @@ final class ConversationService {
    */
   private const LOCK_TIMEOUT = 60.0;
 
+  /**
+   * Canal de log del módulo.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
   private LoggerChannelInterface $logger;
 
   public function __construct(
@@ -72,6 +76,7 @@ final class ConversationService {
    * Procesa un mensaje del alumno y devuelve la respuesta del agente.
    *
    * @return array{message_html: string, session_status: string, completed: bool, result_id: int|null}
+   *   Lo que el navegador necesita para pintar el turno y reaccionar al cierre.
    *
    * @throws \Drupal\sales_leadership_diagnostic\Exception\DiagnosticException
    */
@@ -204,7 +209,8 @@ final class ConversationService {
   /**
    * Devuelve la conversación de una sesión, lista para renderizar.
    *
-   * @return ConversationMessage[]
+   * @return \Drupal\sales_leadership_diagnostic\DTO\ConversationMessage[]
+   *   Los turnos de la sesión, en orden.
    */
   public function getConversation(int $sessionId): array {
     return $this->messages->loadForSession($sessionId);

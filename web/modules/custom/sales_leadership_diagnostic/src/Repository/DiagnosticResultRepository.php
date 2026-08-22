@@ -25,6 +25,7 @@ final class DiagnosticResultRepository {
    * cada fila del historial para saber si esa sesión tiene resultado.
    *
    * @return array<int, \Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface>
+   *   Los resultados del alumno, indexados por la sesión que los produjo.
    */
   public function loadForUserIndexedBySession(int $uid): array {
     $storage = $this->entityTypeManager->getStorage(self::ENTITY_TYPE);

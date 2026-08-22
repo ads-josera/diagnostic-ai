@@ -63,7 +63,12 @@ final class DiagnosticRequirements {
       'title' => $this->t('Diagnostic AI: motor de IA'),
       'value' => $this->t('SIMULADO — no se está usando IA real'),
       'severity' => RequirementSeverity::Error,
-      'description' => $this->t('El ajuste <code>$settings[\'sld_use_mock_engine\']</code> está activo, de modo que los diagnósticos se generan con respuestas de prueba y no con el proveedor de IA. Es correcto en desarrollo; en staging o producción debe retirarse de settings.php de inmediato.'),
+      'description' => $this->t("El ajuste <code>@ajuste</code> está activo, de modo que los diagnósticos se generan con respuestas de prueba y no con el proveedor de IA. Es correcto en desarrollo; en staging o producción debe retirarse de settings.php de inmediato.", [
+        // El nombre del ajuste va como argumento y no incrustado en la cadena:
+        // así el texto traducible no arrastra comillas escapadas y quien
+        // traduzca no puede romperlo por accidente.
+        '@ajuste' => "\$settings['" . DiagnosticEngineFactory::MOCK_SETTING . "']",
+      ]),
     ];
   }
 

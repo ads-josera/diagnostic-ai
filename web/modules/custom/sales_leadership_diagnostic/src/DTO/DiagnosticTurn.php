@@ -14,6 +14,8 @@ namespace Drupal\sales_leadership_diagnostic\DTO;
 final readonly class DiagnosticTurn {
 
   /**
+   * Construye el turno que devolvió el motor.
+   *
    * @param string $message
    *   Texto conversacional para el alumno, en Markdown.
    * @param bool $completed

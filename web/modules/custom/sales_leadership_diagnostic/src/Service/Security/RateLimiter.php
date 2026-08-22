@@ -94,6 +94,7 @@ final class RateLimiter {
    * Sección de seguridad de la configuración.
    *
    * @return array<string, mixed>
+   *   Los límites de uso configurados.
    */
   private function security(): array {
     $values = $this->configFactory

@@ -14,17 +14,17 @@ namespace Drupal\sales_leadership_diagnostic;
  */
 enum ReadinessBlocker: string {
 
-  /**
+  /*
    * Falta alguna variable de entorno con un secreto.
    */
   case MissingSecrets = 'missing_secrets';
 
-  /**
+  /*
    * La integración con WordPress está incompleta.
    */
   case WordPressNotConfigured = 'wordpress_not_configured';
 
-  /**
+  /*
    * El cliente aún no ha cargado el prompt del agente.
    */
   case AgentNotLoaded = 'agent_not_loaded';

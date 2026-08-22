@@ -25,6 +25,11 @@ use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
  */
 final class DiagnosticAccessChecker {
 
+  /**
+   * Canal de log del módulo.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
   private LoggerChannelInterface $logger;
 
   public function __construct(

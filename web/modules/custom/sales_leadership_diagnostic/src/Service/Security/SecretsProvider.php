@@ -37,7 +37,7 @@ final class SecretsProvider {
   public const OPENAI_API_KEY = 'sld_openai_api_key';
 
   /**
-   * Todos los secretos que el módulo necesita para operar por completo.
+   * Lista completa de los secretos que el módulo necesita para operar.
    *
    * @var string[]
    */
@@ -81,6 +81,7 @@ final class SecretsProvider {
    * Devuelve los nombres de los secretos que faltan por configurar.
    *
    * @return string[]
+   *   Nombres de los ajustes que faltan por definir.
    */
   public function missing(): array {
     return array_values(array_filter(

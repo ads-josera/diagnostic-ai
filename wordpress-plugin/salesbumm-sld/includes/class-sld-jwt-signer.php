@@ -100,6 +100,10 @@ class JwtSigner {
 	 * @param string $data Datos a codificar.
 	 */
 	private function base64url_encode( string $data ): string {
+		// base64 aquí no oculta nada: es la codificación que el propio formato
+		// JWT exige para sus tres segmentos. El aviso del verificador apunta a
+		// su uso para disimular código, que no es el caso.
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return rtrim( strtr( base64_encode( $data ), '+/', '-_' ), '=' );
 	}
 }

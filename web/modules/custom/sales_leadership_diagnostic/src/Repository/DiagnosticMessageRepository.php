@@ -41,6 +41,12 @@ final class DiagnosticMessageRepository {
    * normales el bloqueo por sesión de la capa de conversación evita que se
    * llegue a ese punto.
    *
+   * @param int $sessionId
+   *   Sesión a la que pertenece el turno.
+   * @param \Drupal\sales_leadership_diagnostic\MessageRole $role
+   *   Quién escribe: el alumno o el agente.
+   * @param string $content
+   *   Texto del mensaje, sin procesar.
    * @param array<string, mixed>|null $payload
    *   Turno estructurado devuelto por el motor, si lo hubo.
    */
@@ -83,12 +89,15 @@ final class DiagnosticMessageRepository {
   /**
    * Devuelve la conversación completa de una sesión, en orden.
    *
+   * @param int $sessionId
+   *   Sesión cuya conversación se quiere leer.
    * @param int|null $limit
    *   Si se indica, devuelve solo los últimos N turnos, manteniendo el orden
    *   cronológico. Sirve para acotar el contexto que se envía al motor sin que
    *   el llamante tenga que invertir el array.
    *
    * @return \Drupal\sales_leadership_diagnostic\DTO\ConversationMessage[]
+   *   Los turnos de la sesión, del más antiguo al más reciente.
    */
   public function loadForSession(int $sessionId, ?int $limit = NULL): array {
     $query = $this->database->select(self::TABLE, 'm')

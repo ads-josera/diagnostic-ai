@@ -14,23 +14,23 @@ namespace Drupal\sales_leadership_diagnostic;
  */
 enum SsoDenialReason: string {
 
-  /**
+  /*
    * El token no era válido por cualquier motivo: firma, vigencia, emisor,
    * audiencia, formato o reutilización.
    */
   case InvalidToken = 'token';
 
-  /**
+  /*
    * El token era correcto, pero el alumno no tiene el curso.
    */
   case NoCourse = 'curso';
 
-  /**
+  /*
    * No se pudo preparar la cuenta: colisión de correo o cuenta bloqueada.
    */
   case AccountUnavailable = 'cuenta';
 
-  /**
+  /*
    * Demasiados intentos desde la misma dirección.
    */
   case TooManyAttempts = 'intentos';

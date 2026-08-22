@@ -10,7 +10,7 @@ use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
  * Firma las peticiones que Drupal envía a WordPress.
  *
  * El contrato es simétrico al que verifica el plugin del otro lado y no debe
- * cambiarse en uno solo de los dos: la cadena que se firma es
+ * cambiarse en uno solo de los dos: la cadena que se firma es.
  *
  *   timestamp . "." . nonce . "." . cuerpo
  *
@@ -40,6 +40,7 @@ final class HmacSigner {
    *   una cadena y enviar otra produce un 401 imposible de diagnosticar.
    *
    * @return array<string, string>
+   *   Las cabeceras de firma que espera el plugin de WordPress.
    *
    * @throws \Drupal\sales_leadership_diagnostic\Exception\MissingSecretException
    */

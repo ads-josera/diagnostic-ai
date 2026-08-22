@@ -121,10 +121,10 @@ class Plugin {
 	 * manual o por grupo. Se filtra por los cursos configurados para no
 	 * reactivar por la compra de un curso cualquiera del catálogo.
 	 *
-	 * @param int  $user_id   Usuario.
-	 * @param int  $course_id Curso.
+	 * @param int   $user_id   Usuario.
+	 * @param int   $course_id Curso.
 	 * @param array $access_list Lista de accesos. No se usa.
-	 * @param bool $remove    TRUE si se está RETIRANDO el acceso.
+	 * @param bool  $remove    TRUE si se está RETIRANDO el acceso.
 	 */
 	public function on_course_access_granted( $user_id, $course_id, $access_list = array(), $remove = false ): void {
 		// Retirar el acceso a un curso no debe reiniciar nada.

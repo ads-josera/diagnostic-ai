@@ -51,11 +51,32 @@ final class AuthorizationDegradationTest extends KernelTestBase {
 
     $this->installConfig(['sales_leadership_diagnostic']);
 
-    $this->proveedorExterno = new class implements CourseAccessProviderInterface {
+    $this->proveedorExterno = new class() implements CourseAccessProviderInterface {
+
+      /**
+       * Cuántas veces se ha consultado al proveedor.
+       *
+       * @var int
+       */
       public int $llamadas = 0;
+
+      /**
+       * Si se simula que WordPress no responde.
+       *
+       * @var bool
+       */
       public bool $caido = FALSE;
+
+      /**
+       * Qué respuesta se devuelve cuando sí responde.
+       *
+       * @var bool
+       */
       public bool $concede = TRUE;
 
+      /**
+       * {@inheritdoc}
+       */
       public function checkAccess(string $externalUserId, string $courseId): AccessDecision {
         $this->llamadas++;
 
@@ -65,6 +86,7 @@ final class AuthorizationDegradationTest extends KernelTestBase {
 
         return new AccessDecision($this->concede, $courseId, \Drupal::time()->getRequestTime());
       }
+
     };
   }
 
@@ -104,7 +126,7 @@ final class AuthorizationDegradationTest extends KernelTestBase {
    *
    * Es el comportamiento por defecto que exige §13.
    */
-  public function testSinCacheYSinWordPressSeDeniega(): void {
+  public function testSinCacheNiWordPressSeDeniega(): void {
     $this->proveedorExterno->caido = TRUE;
 
     $this->expectException(WordPressUnavailableException::class);
@@ -118,7 +140,7 @@ final class AuthorizationDegradationTest extends KernelTestBase {
    * Quien ya fue verificado hace poco no debe quedarse fuera por una avería
    * ajena, y echarlo no aportaría ninguna seguridad.
    */
-  public function testUnaConcesionRecienteSobreviveALaCaida(): void {
+  public function testUnaConcesionRecienteSobreviveLaCaida(): void {
     $this->sembrarCache('7', TRUE, 1000);
     $this->proveedorExterno->caido = TRUE;
 
@@ -202,6 +224,13 @@ final class AuthorizationDegradationTest extends KernelTestBase {
    * La entrada se guarda con caducidad lejana pero con marca de tiempo
    * antigua: así se distingue "ya no es fresca" de "ya no existe", que es
    * justo la diferencia que activa el periodo de gracia.
+   *
+   * @param string $usuario
+   *   Identificador externo del alumno.
+   * @param bool $concedido
+   *   Si la decisión guardada concede acceso.
+   * @param int $antiguedadSegundos
+   *   Cuánto hace que se tomó.
    */
   private function sembrarCache(string $usuario, bool $concedido, int $antiguedadSegundos): void {
     $ahora = $this->container->get('datetime.time')->getRequestTime();
