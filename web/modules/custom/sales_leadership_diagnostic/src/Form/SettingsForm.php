@@ -372,6 +372,41 @@ final class SettingsForm extends ConfigFormBase {
     $this->validateWordPressUrl($form_state);
     $this->validateCacheRelationship($form_state);
     $this->validateSelectedModel($form_state);
+    $this->validateModelIdentifiers($form_state);
+  }
+
+  /**
+   * Avisa de identificadores que parecen nombres comerciales.
+   *
+   * Los proveedores de IA nombran sus modelos de dos formas: un nombre
+   * comercial para las personas («GPT-5.6 Terra») y un identificador para la
+   * API, en minúsculas y sin espacios («gpt-5.6-terra-2026-01-15»). Solo el
+   * segundo funciona en una llamada.
+   *
+   * Confundirlos no da un error al guardar sino mucho después, cuando un
+   * alumno intenta hacer su diagnóstico y el proveedor responde que el modelo
+   * no existe. Este aviso adelanta ese descubrimiento al momento de
+   * configurarlo.
+   *
+   * No bloquea el guardado: es una heurística sobre convenciones de terceros,
+   * no una regla que podamos garantizar. Avisar y dejar decidir es preferible
+   * a impedir una configuración que quizá sea correcta.
+   */
+  private function validateModelIdentifiers(FormStateInterface $form_state): void {
+    $catalogue = self::parseModelList((string) $form_state->getValue(['openai', 'available_models']));
+
+    $suspicious = array_filter(
+      $catalogue,
+      static fn (string $model): bool => preg_match('/^[a-z0-9][a-z0-9._\-]*$/', $model) !== 1,
+    );
+
+    if ($suspicious === []) {
+      return;
+    }
+
+    $this->messenger()->addWarning($this->t('Estos identificadores parecen nombres comerciales y no identificadores de API: @models. Un identificador de API va en minúsculas, sin espacios y con guiones. Si son estos los que has copiado de la interfaz del proveedor, busca el identificador técnico en su documentación: de lo contrario los diagnósticos fallarán con un error de "modelo no encontrado" en el momento de usarlos.', [
+      '@models' => implode(', ', $suspicious),
+    ]));
   }
 
   /**
