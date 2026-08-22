@@ -114,14 +114,25 @@ Para cargarlo en un entorno de desarrollo, desde la raíz del proyecto:
 
 ```bash
 ddev drush php:eval '
-$md = file_get_contents("docs/prompt-pruebas.md");
+// La ruta se deriva de DRUPAL_ROOT: php:eval resuelve las rutas relativas
+// desde el directorio de Drupal (web/), no desde la raíz del proyecto.
+$ruta = DRUPAL_ROOT . "/../docs/prompt-pruebas.md";
+$md = file_get_contents($ruta);
+if ($md === false) { throw new \RuntimeException("No se encontró $ruta"); }
 preg_match_all("/```\n(.*?)\n```/s", $md, $m);
+if (count($m[1]) < 3) { throw new \RuntimeException("El documento no contiene los tres bloques."); }
 [$p, $i, $c] = array_map("trim", array_slice($m[1], 0, 3));
 \Drupal::configFactory()->getEditable("sales_leadership_diagnostic.diagnostic")
   ->set("version", "0.0-PRUEBAS")->set("system_prompt", $p)
   ->set("instructions", $i)->set("output_contract", $c)->save();
-echo "Prompt de pruebas cargado.\n";'
+printf("Cargado: prompt %d, instrucciones %d, contrato %d caracteres.\n",
+  mb_strlen($p), mb_strlen($i), mb_strlen($c));'
 ```
+
+> El comando falla de forma ruidosa si no encuentra el documento o si no
+> contiene los tres bloques. La versión anterior guardaba cadenas vacías en
+> silencio y el informe de estado seguía diciendo «Sin prompt cargado» sin
+> que nada explicara por qué.
 
 Para retirarlo, basta con vaciar los tres campos desde la interfaz de
 administración o volver a exportar la configuración.
