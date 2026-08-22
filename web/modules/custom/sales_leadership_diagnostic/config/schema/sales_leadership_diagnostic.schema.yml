@@ -30,7 +30,13 @@ sales_leadership_diagnostic.settings:
       mapping:
         model:
           type: string
-          label: 'Modelo'
+          label: 'Modelo en uso'
+        available_models:
+          type: sequence
+          label: 'Catálogo de modelos disponibles'
+          sequence:
+            type: string
+            label: 'Identificador del modelo'
         timeout:
           type: integer
           label: 'Timeout de las peticiones al proveedor (segundos)'

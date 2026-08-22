@@ -212,11 +212,27 @@ final class SettingsForm extends ConfigFormBase {
       '#open' => TRUE,
       '#tree' => TRUE,
 
+      'available_models' => [
+        '#type' => 'textarea',
+        '#title' => $this->t('Catálogo de modelos disponibles'),
+        '#rows' => 5,
+        '#description' => $this->t('Un identificador de modelo por línea, tal como lo espera la API del proveedor. Añadir o retirar un modelo se hace aquí, sin tocar código ni desplegar (§30). El identificador debe copiarse literalmente de la documentación del proveedor: no es el nombre comercial.'),
+        '#config_target' => new ConfigTarget(
+          self::CONFIG_NAME,
+          'openai.available_models',
+          // La configuración guarda una lista; el formulario muestra una línea
+          // por elemento. Aquí se traduce entre ambas formas.
+          fromConfig: static fn (?array $value): string => implode("\n", $value ?? []),
+          toConfig: [self::class, 'parseModelList'],
+        ),
+      ],
+
       'model' => [
-        '#type' => 'textfield',
-        '#title' => $this->t('Modelo'),
-        '#description' => $this->t('Identificador del modelo tal como lo espera la API del proveedor. Configurable a propósito: no debe estar escrito en el código.'),
-        '#maxlength' => 128,
+        '#type' => 'select',
+        '#title' => $this->t('Modelo en uso'),
+        '#description' => $this->t('Se elige del catálogo de arriba. Guarda el catálogo primero si acabas de añadir un modelo nuevo.'),
+        '#options' => $this->getModelOptions(),
+        '#empty_option' => $this->t('- Ninguno seleccionado -'),
         '#config_target' => new ConfigTarget(
           self::CONFIG_NAME,
           'openai.model',
@@ -317,6 +333,37 @@ final class SettingsForm extends ConfigFormBase {
   }
 
   /**
+   * Convierte el textarea del catálogo en la lista que guarda la config.
+   *
+   * Es público y estático porque lo invoca ConfigTarget, que no dispone de la
+   * instancia del formulario.
+   *
+   * @return string[]
+   */
+  public static function parseModelList(?string $value): array {
+    $lines = preg_split('/\R/', (string) $value) ?: [];
+
+    $models = array_map(static fn (string $line): string => trim($line), $lines);
+    $models = array_filter($models, static fn (string $line): bool => $line !== '');
+
+    // array_values reindexa: la configuración de tipo sequence espera una
+    // lista, y unos índices con huecos la convertirían en un mapa.
+    return array_values(array_unique($models));
+  }
+
+  /**
+   * Opciones del desplegable, construidas desde el catálogo guardado.
+   *
+   * @return array<string, string>
+   */
+  private function getModelOptions(): array {
+    $models = $this->config(self::CONFIG_NAME)->get('openai.available_models');
+    $models = is_array($models) ? $models : [];
+
+    return array_combine($models, $models) ?: [];
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
@@ -324,6 +371,30 @@ final class SettingsForm extends ConfigFormBase {
 
     $this->validateWordPressUrl($form_state);
     $this->validateCacheRelationship($form_state);
+    $this->validateSelectedModel($form_state);
+  }
+
+  /**
+   * Avisa si el modelo elegido desaparece del catálogo.
+   *
+   * Ocurre al retirar del catálogo el modelo que estaba en uso. No se bloquea
+   * el guardado —puede ser justo lo que el administrador quiere hacer antes de
+   * elegir otro— pero sí se advierte, porque el diagnóstico deja de funcionar.
+   */
+  private function validateSelectedModel(FormStateInterface $form_state): void {
+    $selected = trim((string) $form_state->getValue(['openai', 'model']));
+
+    if ($selected === '') {
+      return;
+    }
+
+    $catalogue = self::parseModelList((string) $form_state->getValue(['openai', 'available_models']));
+
+    if (!in_array($selected, $catalogue, TRUE)) {
+      $this->messenger()->addWarning($this->t('El modelo en uso (@model) ya no está en el catálogo. Elige otro o vuelve a añadirlo, o los diagnósticos fallarán.', [
+        '@model' => $selected,
+      ]));
+    }
   }
 
   /**

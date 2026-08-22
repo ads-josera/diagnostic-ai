@@ -9,6 +9,7 @@ wordpress:
   cache_grace_period: 3600
 openai:
   model: ''
+  available_models: {  }
   timeout: 60
   max_retries: 2
 security:

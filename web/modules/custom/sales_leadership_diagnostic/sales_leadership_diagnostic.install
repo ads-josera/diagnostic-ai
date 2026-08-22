@@ -172,3 +172,32 @@ function sales_leadership_diagnostic_update_10001(): string {
 
   return 'El periodo de gracia ya estaba configurado; no se ha modificado.';
 }
+
+/**
+ * Añade el catálogo de modelos de IA disponibles.
+ *
+ * Convierte el modelo de un campo de texto libre a una selección sobre una
+ * lista administrada. Un identificador mal escrito solo se detectaba al
+ * intentar generar un diagnóstico, con un error del proveedor difícil de
+ * interpretar; con un catálogo, solo puede elegirse algo que ya se validó al
+ * añadirlo.
+ */
+function sales_leadership_diagnostic_update_10002(): string {
+  $config = \Drupal::configFactory()->getEditable('sales_leadership_diagnostic.settings');
+
+  if ($config->get('openai.available_models') !== NULL) {
+    return 'El catálogo de modelos ya existía; no se ha modificado.';
+  }
+
+  // Si ya había un modelo escrito a mano, se conserva y se incorpora al
+  // catálogo para no perder la configuración existente.
+  $current = trim((string) $config->get('openai.model'));
+
+  $config
+    ->set('openai.available_models', $current !== '' ? [$current] : [])
+    ->save();
+
+  return $current !== ''
+    ? sprintf('Catálogo de modelos creado conservando el modelo configurado "%s".', $current)
+    : 'Catálogo de modelos creado, vacío.';
+}

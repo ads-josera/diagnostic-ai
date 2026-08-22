@@ -11,7 +11,11 @@ wordpress:
   cache_ttl_denied: 60
   cache_grace_period: 3600
 openai:
+  # El identificador del modelo NUNCA se fija en el código (§30). El catálogo
+  # se administra desde la interfaz para que anadir o retirar un modelo no
+  # requiera un despliegue.
   model: ''
+  available_models: {  }
   timeout: 60
   max_retries: 2
 security:
