@@ -100,3 +100,30 @@ sales_leadership_diagnostic.diagnostic:
     output_contract:
       type: string
       label: 'Contrato de salida (añadido técnico)'
+
+# Personalización visual (§4). Vive en su propio objeto de configuración y no
+# junto a los ajustes de integración: son cosas que cambian por motivos
+# distintos y que suele tocar gente distinta.
+sales_leadership_diagnostic.branding:
+  type: config_object
+  label: 'Marca del diagnóstico'
+  mapping:
+    logo_fid:
+      type: integer
+      label: 'Identificador del archivo del logotipo'
+    logo_alt:
+      # Traducible: es texto que lee una persona.
+      type: label
+      label: 'Texto alternativo del logotipo'
+    color_primary:
+      type: string
+      label: 'Color principal'
+    color_primary_hover:
+      type: string
+      label: 'Color principal al pasar el ratón'
+    color_accent:
+      type: string
+      label: 'Color de acento'
+    welcome_text:
+      type: text
+      label: 'Mensaje de bienvenida del panel'

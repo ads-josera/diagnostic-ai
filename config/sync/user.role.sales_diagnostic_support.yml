@@ -1,0 +1,12 @@
+uuid: ea7383a5-8305-4dfa-9e3d-50396c793313
+langcode: es
+status: true
+dependencies:
+  module:
+    - sales_leadership_diagnostic
+id: sales_diagnostic_support
+label: 'Soporte Diagnostic AI'
+weight: 6
+is_admin: false
+permissions:
+  - 'view all diagnostic results'

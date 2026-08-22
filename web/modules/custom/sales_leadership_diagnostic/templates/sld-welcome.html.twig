@@ -1,0 +1,49 @@
+{#
+/**
+ * @file
+ * Portada del sitio.
+ *
+ * Variables disponibles:
+ * - logo_url: logotipo de marca, o nulo.
+ * - logo_alt: texto alternativo del logotipo.
+ * - origin_url: URL del WordPress desde el que se entra, o nulo si no está
+ *   configurada o no usa https.
+ * - has_access: si quien mira ya es alumno con acceso.
+ *
+ * El título de la página lo imprime Drupal desde la ruta, así que aquí no hay
+ * <h1>: duplicarlo rompería el esquema del documento.
+ */
+#}
+<div class="sld sld-welcome">
+
+  {% if logo_url %}
+    <img class="sld-welcome__logo" src="{{ logo_url }}" alt="{{ logo_alt }}">
+  {% endif %}
+
+  {% if has_access %}
+    {#
+      Ya es alumno: se le lleva directo a su panel en vez de devolverlo a
+      WordPress para que repita el trayecto de entrada.
+    #}
+    <p class="sld-welcome__lead">{{ 'Ya tienes acceso al diagnóstico.'|t }}</p>
+
+    <a class="sld__button" href="{{ path('sales_leadership_diagnostic.dashboard') }}">
+      {{ 'Ir a mi diagnóstico'|t }}
+    </a>
+  {% else %}
+    <p class="sld-welcome__lead">
+      {{ 'Este espacio aloja el diagnóstico de liderazgo comercial. Se accede desde tu cuenta del programa, no desde aquí.'|t }}
+    </p>
+
+    {% if origin_url %}
+      <a class="sld__button" href="{{ origin_url }}" rel="noopener">
+        {{ 'Ir a mi cuenta'|t }}
+      </a>
+    {% endif %}
+
+    <p class="sld-welcome__help">
+      {{ 'Si has llegado hasta aquí desde un enlace del programa y no consigues entrar, escribe a quien te dio acceso al curso.'|t }}
+    </p>
+  {% endif %}
+
+</div>

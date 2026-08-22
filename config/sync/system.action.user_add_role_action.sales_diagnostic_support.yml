@@ -1,0 +1,14 @@
+uuid: 755b4e41-78a4-4274-a636-ccb7ac3715de
+langcode: es
+status: true
+dependencies:
+  config:
+    - user.role.sales_diagnostic_support
+  module:
+    - user
+id: user_add_role_action.sales_diagnostic_support
+label: 'Añade el rol Soporte Diagnostic AI al(los) usuario(s) seleccionado(s)'
+type: user
+plugin: user_add_role_action
+configuration:
+  rid: sales_diagnostic_support

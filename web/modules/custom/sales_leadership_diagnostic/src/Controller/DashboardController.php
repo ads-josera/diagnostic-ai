@@ -14,6 +14,7 @@ use Drupal\sales_leadership_diagnostic\Repository\DiagnosticResultRepository;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticSessionRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
+use Drupal\sales_leadership_diagnostic\Service\Branding\Branding;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
 use Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -40,6 +41,7 @@ final class DashboardController extends ControllerBase {
     private readonly DiagnosticAccessChecker $accessChecker,
     private readonly DateFormatterInterface $dateFormatter,
     private readonly TimeInterface $time,
+    private readonly Branding $branding,
   ) {}
 
   /**
@@ -54,6 +56,7 @@ final class DashboardController extends ControllerBase {
       $container->get(DiagnosticAccessChecker::class),
       $container->get('date.formatter'),
       $container->get('datetime.time'),
+      $container->get(Branding::class),
     );
   }
 
@@ -73,6 +76,11 @@ final class DashboardController extends ControllerBase {
       // nombre real permitiría suplantaciones. Para saludar se usa el nombre
       // que envió WordPress, guardado junto a la correspondencia.
       '#user_name' => $this->provisioner->getDisplayName($account),
+      '#logo_url' => $this->branding->getLogoUrl(),
+      '#logo_alt' => $this->branding->getLogoAlt(),
+      // Texto plano: lo escapa Twig. No se admite marcado ni Markdown, para no
+      // abrir otra vía de HTML arbitrario en la página del alumno.
+      '#welcome_text' => $this->branding->getWelcomeText(),
       '#can_start' => $this->readiness->isReady(),
       '#unavailable_notice' => $this->buildUnavailableNotice(),
       '#expiry_notice' => $this->buildExpiryNotice($account),
@@ -87,6 +95,9 @@ final class DashboardController extends ControllerBase {
         'tags' => array_merge(
           ['sld_diagnostic_session_list', 'sld_diagnostic_result_list'],
           $this->readiness->getCacheTags(),
+          // Sin esto, cambiar el logotipo no se vería hasta que el panel
+          // caducase por otro motivo.
+          $this->branding->getCacheTags(),
         ),
       ],
     ];

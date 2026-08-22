@@ -193,3 +193,14 @@ services:
   Drupal\sales_leadership_diagnostic\Repository\DiagnosticResultRepository:
     arguments:
       - '@entity_type.manager'
+
+  # --- Marca ---------------------------------------------------------------
+
+  # Personalización visual del diagnóstico. Valida los colores antes de
+  # emitirlos: acaban dentro de un bloque <style> y un valor arbitrario podría
+  # cerrar la declaración e inyectar reglas.
+  Drupal\sales_leadership_diagnostic\Service\Branding\Branding:
+    arguments:
+      - '@config.factory'
+      - '@entity_type.manager'
+      - '@file_url_generator'

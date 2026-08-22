@@ -9,3 +9,9 @@ sales_leadership_diagnostic.agent_tab:
   route_name: sales_leadership_diagnostic.agent_settings
   base_route: sales_leadership_diagnostic.settings
   weight: 10
+
+sales_leadership_diagnostic.branding_tab:
+  title: 'Marca'
+  route_name: sales_leadership_diagnostic.branding
+  base_route: sales_leadership_diagnostic.settings
+  weight: 20

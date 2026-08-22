@@ -155,3 +155,22 @@ sales_leadership_diagnostic.agent_settings:
     _title: 'Agente de diagnóstico'
   requirements:
     _permission: 'administer sales leadership diagnostic'
+
+sales_leadership_diagnostic.branding:
+  path: '/admin/config/salesbumm/diagnostic/marca'
+  defaults:
+    _form: '\Drupal\sales_leadership_diagnostic\Form\BrandingForm'
+    _title: 'Marca'
+  requirements:
+    _permission: 'administer sales leadership diagnostic'
+
+# Portada del sitio. Pública: quien llega puede no haber entrado nunca.
+sales_leadership_diagnostic.welcome:
+  path: '/bienvenida'
+  methods: [GET]
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\WelcomeController::view'
+    _title: 'Diagnóstico de liderazgo comercial'
+  requirements:
+    # No muestra ningún dato: solo un mensaje fijo y un enlace de vuelta.
+    _access: 'TRUE'

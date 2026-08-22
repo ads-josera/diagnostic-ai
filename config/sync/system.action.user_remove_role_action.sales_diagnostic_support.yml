@@ -1,0 +1,14 @@
+uuid: 942f972f-ea5c-4f1f-a4d9-498540759b27
+langcode: es
+status: true
+dependencies:
+  config:
+    - user.role.sales_diagnostic_support
+  module:
+    - user
+id: user_remove_role_action.sales_diagnostic_support
+label: 'Elimina el rol Soporte Diagnostic AI al(los) usuario(s) seleccionado(s)'
+type: user
+plugin: user_remove_role_action
+configuration:
+  rid: sales_diagnostic_support

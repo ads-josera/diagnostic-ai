@@ -34,6 +34,9 @@ final class DiagnosticThemeHooks {
       'sld_dashboard' => [
         'variables' => [
           'user_name' => '',
+          'logo_url' => NULL,
+          'logo_alt' => '',
+          'welcome_text' => NULL,
           'can_start' => FALSE,
           'unavailable_notice' => NULL,
           'expiry_notice' => NULL,
@@ -56,6 +59,14 @@ final class DiagnosticThemeHooks {
           'sections' => [],
           'version' => '',
           'created' => '',
+        ],
+      ],
+      'sld_welcome' => [
+        'variables' => [
+          'logo_url' => NULL,
+          'logo_alt' => '',
+          'origin_url' => NULL,
+          'has_access' => FALSE,
         ],
       ],
       'sld_sso_denied' => [

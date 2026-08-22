@@ -25,3 +25,10 @@ result:
     theme:
       css/sld-base.css: {}
       css/sld-result.css: {}
+
+welcome:
+  version: 1.x
+  css:
+    theme:
+      css/sld-base.css: {}
+      css/sld-welcome.css: {}

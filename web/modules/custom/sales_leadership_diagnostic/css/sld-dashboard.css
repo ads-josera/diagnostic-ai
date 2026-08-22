@@ -101,3 +101,23 @@
     font-weight: 600;
   }
 }
+
+/**
+ * Marca del cliente.
+ *
+ * El logotipo se limita en altura y no en anchura: así un logotipo apaisado y
+ * uno cuadrado ocupan un espacio visualmente comparable sin deformarse.
+ */
+.sld-dashboard__logo {
+  display: block;
+  max-height: 56px;
+  max-width: 100%;
+  width: auto;
+  margin-bottom: var(--sld-space-md);
+}
+
+.sld-dashboard__welcome {
+  max-width: 60ch;
+  margin: var(--sld-space-sm) 0 0;
+  color: var(--sld-color-text-muted);
+}

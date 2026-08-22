@@ -5,6 +5,9 @@
  *
  * Variables disponibles:
  * - user_name: nombre para el saludo.
+ * - logo_url: logotipo de marca, o nulo si no se ha configurado.
+ * - logo_alt: texto alternativo del logotipo.
+ * - welcome_text: mensaje de bienvenida personalizado, o nulo.
  * - can_start: si puede iniciarse un diagnóstico ahora mismo.
  * - unavailable_notice: motivo, si no puede. Un alumno recibe un mensaje
  *   neutro; un administrador, el detalle técnico.
@@ -24,7 +27,21 @@
     anuncie el título dos veces.
   #}
   <header class="sld-dashboard__header">
+    {#
+      El logotipo es decorativo junto a un saludo que ya identifica el sitio,
+      pero lleva alt real y no vacío: para muchos clientes es la única marca
+      visible de la página, y quien no ve la imagen debe saber de quién es.
+    #}
+    {% if logo_url %}
+      <img class="sld-dashboard__logo" src="{{ logo_url }}" alt="{{ logo_alt }}">
+    {% endif %}
+
     <p class="sld-dashboard__greeting">{{ 'Bienvenido, @name'|t({'@name': user_name}) }}</p>
+
+    {# Texto plano: Twig lo escapa. No se admite marcado a propósito. #}
+    {% if welcome_text %}
+      <p class="sld-dashboard__welcome">{{ welcome_text }}</p>
+    {% endif %}
   </header>
 
   {% if expiry_notice %}
