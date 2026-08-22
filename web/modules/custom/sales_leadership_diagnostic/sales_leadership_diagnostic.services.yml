@@ -15,6 +15,33 @@ services:
       - '@flood'
       - '@config.factory'
 
+  # --- Integración con WordPress -------------------------------------------
+
+  # Firma las peticiones salientes. El contrato es simétrico al del plugin y no
+  # debe cambiarse en un solo lado.
+  Drupal\sales_leadership_diagnostic\Service\WordPress\HmacSigner:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
+
+  # Única clase del módulo que hace peticiones HTTP a WordPress (§8).
+  Drupal\sales_leadership_diagnostic\Service\WordPress\WordPressApiClient:
+    arguments:
+      - '@http_client'
+      - '@Drupal\sales_leadership_diagnostic\Service\WordPress\HmacSigner'
+      - '@config.factory'
+      - '@logger.factory'
+
+  # --- Autorización ---------------------------------------------------------
+
+  Drupal\sales_leadership_diagnostic\Service\Authorization\LearnDashAccessProvider:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\WordPress\WordPressApiClient'
+      - '@datetime.time'
+
+  # El resto del módulo depende de la interfaz, no de LearnDash. Cambiar de LMS
+  # será escribir otra implementación y mover este alias.
+  Drupal\sales_leadership_diagnostic\Service\Authorization\CourseAccessProviderInterface: '@Drupal\sales_leadership_diagnostic\Service\Authorization\LearnDashAccessProvider'
+
   # --- Diagnóstico ---------------------------------------------------------
 
   # Define en un solo sitio qué significa que el módulo esté listo para

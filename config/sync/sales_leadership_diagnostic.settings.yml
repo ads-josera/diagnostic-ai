@@ -1,8 +1,8 @@
 _core:
   default_config_hash: ZGk5nQThDoFLIO6MCculeozJNJWI7CL3UUYwPgvfZZk
 wordpress:
-  api_base_url: ''
-  course_id: ''
+  api_base_url: 'https://salesbumm.com'
+  course_id: '35884'
   timeout: 10
   cache_ttl_granted: 900
   cache_ttl_denied: 60
