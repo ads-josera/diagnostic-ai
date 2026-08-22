@@ -368,6 +368,19 @@ siempre en el access handler, incluso para quien tenga el permiso de acceso.
 
 Un único plugin `salesbumm-sld` con **dos responsabilidades y nada más**:
 
+> **Corrección aplicada durante la implementación — plugin normal, no mu-plugin.**
+> Se entrega como plugin estándar en `wordpress-plugin/salesbumm-sld/`, porque es
+> más fácil de instalar, actualizar y soportar, y aparece en la lista de plugins
+> del cliente. Si se prefiere que no pueda desactivarse, se coloca en
+> `mu-plugins/` con un cargador de una línea; el README lo documenta.
+
+> **Trampa de caché evitada por diseño.** El token **no** se genera al pintar el
+> botón sino cuando el alumno lo pulsa. Si el enlace lo llevara incrustado,
+> cualquier caché de página —que casi todo WordPress en producción tiene— serviría
+> a todos los visitantes el token del primer alumno que cargó la página: una
+> suplantación de identidad servida por la propia infraestructura, y silenciosa. El
+> botón apunta a `admin-post.php`, que WordPress nunca cachea.
+
 **① Botón "Acceder al Diagnostic AI"** — genera el JWT y redirige:
 
 ```
@@ -483,6 +496,11 @@ Clave de cache: `sld:authorization:{wp_user_id}:{course_id}` (§14).
 
 - **Algoritmo:** HS256 con secreto compartido. Simétrico porque ambos sistemas son del
   mismo propietario; no hay problema de distribución de claves públicas.
+- **Longitud mínima del secreto: 32 caracteres.** `firebase/php-jwt` valida la
+  longitud de la clave HMAC (`strlen($key) * 8 >= 256` para HS256) y lanza
+  `DomainException` si es menor. Un secreto corto no produce un error de
+  autenticación legible sino una excepción genérica en pleno login, muy difícil de
+  diagnosticar. El plugin de WordPress lo comprueba y avisa antes de que ocurra.
 - **TTL:** 90 s por defecto (configurable, tope 300 s). Solo tiene que sobrevivir a un redirect.
 - **Leeway de reloj:** 30 s, porque WP y Drupal son máquinas distintas.
 
