@@ -70,6 +70,7 @@ services:
     arguments:
       - '@Drupal\sales_leadership_diagnostic\Service\WordPress\WordPressApiClient'
       - '@datetime.time'
+      - '@Drupal\sales_leadership_diagnostic\Service\WordPress\PluginVersionTracker'
 
   # Decorador: envuelve al proveedor real con cache y política de degradación.
   # Al implementar la misma interfaz, quien la consume no sabe si la respuesta
@@ -222,3 +223,11 @@ services:
       - '@lock'
       - '@datetime.time'
       - '@logger.factory'
+
+  # Recuerda qué versión del plugin de WordPress respondió por última vez, para
+  # que un plugin desactualizado se vea en el informe de estado en lugar de
+  # notarse como un comportamiento raro.
+  Drupal\sales_leadership_diagnostic\Service\WordPress\PluginVersionTracker:
+    arguments:
+      - '@state'
+      - '@datetime.time'

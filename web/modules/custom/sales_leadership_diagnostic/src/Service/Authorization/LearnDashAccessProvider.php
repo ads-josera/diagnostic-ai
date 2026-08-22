@@ -7,6 +7,7 @@ namespace Drupal\sales_leadership_diagnostic\Service\Authorization;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\sales_leadership_diagnostic\DTO\AccessDecision;
 use Drupal\sales_leadership_diagnostic\Exception\WordPressUnavailableException;
+use Drupal\sales_leadership_diagnostic\Service\WordPress\PluginVersionTracker;
 use Drupal\sales_leadership_diagnostic\Service\WordPress\WordPressApiClient;
 
 /**
@@ -21,6 +22,7 @@ final class LearnDashAccessProvider implements CourseAccessProviderInterface {
   public function __construct(
     private readonly WordPressApiClient $client,
     private readonly TimeInterface $time,
+    private readonly PluginVersionTracker $versions,
   ) {}
 
   /**
@@ -38,6 +40,10 @@ final class LearnDashAccessProvider implements CourseAccessProviderInterface {
     }
 
     $response = $this->client->requestAccess($externalUserId, $courseId);
+
+    // Se anota antes de validar el resto: aunque la respuesta resulte
+    // inservible, saber QUÉ versión la produjo es justo lo que explica por qué.
+    $this->versions->record($response['plugin_version'] ?? NULL);
 
     if (!is_bool($response['has_access'])) {
       // El contrato dice booleano. Un valor de otro tipo significa que las dos

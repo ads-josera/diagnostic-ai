@@ -42,6 +42,19 @@ final class SalesLeadershipDiagnostic {
   public const SUPPORT_ROLE_LABEL = 'Soporte Diagnostic AI';
 
   /**
+   * Versión mínima del plugin de WordPress que el módulo necesita.
+   *
+   * Se sube cuando el módulo empieza a depender de algo que el plugin añadió,
+   * NO cada vez que el plugin publica una versión: exigir la última obligaría
+   * al cliente a actualizar por cambios que no le afectan.
+   *
+   * 1.1.0 es la primera que envía `started_at`, sin el cual no puede aplicarse
+   * la política de un diagnóstico por periodo, y la primera que informa de su
+   * propia versión.
+   */
+  public const MINIMUM_PLUGIN_VERSION = '1.1.0';
+
+  /**
    * Permite usar el diagnóstico y consultar los resultados propios.
    */
   public const PERMISSION_ACCESS = 'access sales leadership diagnostic';

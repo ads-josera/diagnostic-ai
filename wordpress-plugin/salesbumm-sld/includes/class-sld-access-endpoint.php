@@ -116,19 +116,26 @@ class AccessEndpoint {
 
 		return new \WP_REST_Response(
 			array(
-				'has_access' => $decision['has_access'],
-				'wp_user_id' => $user_id,
+				'has_access'     => $decision['has_access'],
+				'wp_user_id'     => $user_id,
 				// Curso que concedió el acceso, o null si ninguno lo hizo.
-				'course_id'  => null === $decision['course_id'] ? null : (string) $decision['course_id'],
+				'course_id'      => null === $decision['course_id'] ? null : (string) $decision['course_id'],
 				// Momento en que EMPEZÓ el periodo de acceso, en ISO 8601.
 				// Drupal lo usa para saber qué diagnósticos pertenecen al
 				// periodo vigente cuando se limita a uno por compra.
-				'started_at' => null === $decision['started_at'] ? null : gmdate( 'c', $decision['started_at'] ),
+				'started_at'     => null === $decision['started_at'] ? null : gmdate( 'c', $decision['started_at'] ),
 				// Momento en que caduca, en formato ISO 8601. Null significa
 				// que no caduca o que no llegó a concederse. Drupal lo usa
 				// para avisar al alumno antes de que expire.
-				'expires_at' => null === $decision['expires_at'] ? null : gmdate( 'c', $decision['expires_at'] ),
-				'checked_at' => gmdate( 'c' ),
+				'expires_at'     => null === $decision['expires_at'] ? null : gmdate( 'c', $decision['expires_at'] ),
+				// Versión del plugin que responde. Drupal la guarda y avisa en
+				// su informe de estado si es anterior a la que necesita.
+				//
+				// Sin este dato, un plugin desactualizado solo se nota cuando
+				// falta algo que Drupal esperaba, y para entonces ya es un
+				// fallo. Con él, se ve antes de que rompa nada.
+				'plugin_version' => SLD_VERSION,
+				'checked_at'     => gmdate( 'c' ),
 			),
 			200
 		);

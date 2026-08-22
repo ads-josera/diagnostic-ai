@@ -191,6 +191,65 @@ drush cache:rebuild
 
 ---
 
+## Publicar una versión del plugin de WordPress
+
+El plugin vive en el WordPress del cliente y se instala subiendo un archivo,
+sin repositorio ni actualizador automático. Eso hace que el número de versión
+sea lo ÚNICO que permite saber qué hay corriendo en su sitio.
+
+**Subir la versión no es opcional.** WordPress no distingue dos archivos con la
+misma versión: si no cambia, quien administra el sitio ve el mismo número antes
+y después de actualizar, y nadie —tampoco Drupal— puede saber cuál está
+instalado.
+
+### Procedimiento
+
+1. **Elegir el número** según lo que cambió:
+
+   | Parte | Cuándo |
+   |---|---|
+   | PARCHE | corrección que no cambia lo que Drupal recibe |
+   | MENOR | dato o capacidad nueva que Drupal puede aprovechar |
+   | MAYOR | cambio que rompe lo que Drupal esperaba |
+
+2. **Cambiarlo en los dos sitios** de `salesbumm-sld.php`: la cabecera
+   `Version:` y la constante `SLD_VERSION`.
+
+3. **Comprobar que coinciden**:
+
+   ```bash
+   php bin/comprobar-version-plugin.php
+   ```
+
+   Falla con código 1 si los dos números difieren o si el formato no es
+   `MAYOR.MENOR.PARCHE`.
+
+4. **Anotar el cambio** en `wordpress-plugin/salesbumm-sld/CHANGELOG.md`.
+
+5. Si el módulo de Drupal **empieza a depender** de algo que añade esta
+   versión, subir también `SalesLeadershipDiagnostic::MINIMUM_PLUGIN_VERSION`.
+   Solo en ese caso: exigir la última versión por costumbre obligaría al
+   cliente a actualizar por cambios que no le afectan.
+
+6. Comprimir la carpeta `salesbumm-sld` y subirla en **Plugins → Añadir nuevo →
+   Subir plugin**, marcando la opción de reemplazar.
+
+### Después de subirla
+
+Entrar en **Informes → Informe de estado** del Drupal y buscar
+«Diagnostic AI: plugin de WordPress». Debe mostrar la versión que se acaba de
+subir. Si dice «Anterior a X», el archivo que se subió no es el que se
+preparó, o el sitio conserva el anterior en cache.
+
+El dato se actualiza la primera vez que se comprueba una autorización, así que
+puede hacer falta que un alumno entre —o forzarlo con:
+
+```bash
+drush eval '\Drupal\Core\Cache\Cache::invalidateTags(["sld_authorization"]);'
+```
+
+---
+
 ## Lista de comprobación
 
 - [ ] HTTPS activo y `DRUPAL_TRUSTED_HOST` configurado
@@ -205,3 +264,5 @@ drush cache:rebuild
 - [ ] URL de acceso configurada en WordPress
 - [ ] Prueba de humo superada con un alumno real
 - [ ] Copia de la base de datos guardada
+- [ ] Versión del plugin subida y anotada en su CHANGELOG
+- [ ] El informe de estado muestra la versión correcta del plugin

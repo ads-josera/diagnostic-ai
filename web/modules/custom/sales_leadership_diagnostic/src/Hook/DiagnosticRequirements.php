@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Drupal\sales_leadership_diagnostic\Hook;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
 use Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory;
+use Drupal\sales_leadership_diagnostic\Service\WordPress\PluginVersionTracker;
 
 /**
  * Informe de estado del módulo en /admin/reports/status.
@@ -31,6 +34,8 @@ final class DiagnosticRequirements {
     private readonly DiagnosticReadiness $readiness,
     private readonly ConfigFactoryInterface $configFactory,
     private readonly DiagnosticEngineFactory $engineFactory,
+    private readonly PluginVersionTracker $pluginVersions,
+    private readonly DateFormatterInterface $dateFormatter,
   ) {}
 
   /**
@@ -42,6 +47,7 @@ final class DiagnosticRequirements {
       'sales_leadership_diagnostic_secrets' => $this->checkSecrets(),
       'sales_leadership_diagnostic_wordpress' => $this->checkWordPress(),
       'sales_leadership_diagnostic_agent' => $this->checkAgent(),
+      'sales_leadership_diagnostic_plugin' => $this->checkPluginVersion(),
     ];
 
     if ($this->engineFactory->isMockActive()) {
@@ -49,6 +55,67 @@ final class DiagnosticRequirements {
     }
 
     return $requirements;
+  }
+
+  /**
+   * Informa de la versión del plugin de WordPress instalada en el cliente.
+   *
+   * Este requisito nació de un problema concreto: el módulo empezó a necesitar
+   * un dato que el plugin del cliente todavía no enviaba, y Drupal no tenía
+   * forma de saberlo. Degradó sin romper —que era lo correcto— pero nadie se
+   * enteró hasta leer el registro.
+   */
+  private function checkPluginVersion(): array {
+    $title = $this->t('Diagnostic AI: plugin de WordPress');
+    $minimum = SalesLeadershipDiagnostic::MINIMUM_PLUGIN_VERSION;
+
+    if (!$this->pluginVersions->hasObserved()) {
+      return [
+        'title' => $title,
+        'value' => $this->t('Sin datos todavía'),
+        'severity' => RequirementSeverity::OK,
+        'description' => $this->t('La versión se conocerá la primera vez que un alumno acceda o que se compruebe una autorización.'),
+      ];
+    }
+
+    $seenAt = $this->pluginVersions->getSeenAt();
+    $version = $this->pluginVersions->getVersion();
+
+    if ($version === NULL) {
+      // Informar de la versión se añadió en la 1.1.0, de modo que no decirla
+      // identifica sin ambigüedad a un plugin anterior.
+      return [
+        'title' => $title,
+        'value' => $this->t('Anterior a @minima', ['@minima' => $minimum]),
+        'severity' => RequirementSeverity::Warning,
+        'description' => $this->t('El plugin instalado no informa de su versión, lo que solo ocurre en versiones anteriores a la @minima. Algunas funciones se comportarán de forma degradada: por ejemplo, el límite de un diagnóstico por periodo no puede aplicarse porque falta la fecha de inicio del acceso. Actualiza el plugin en el WordPress del cliente.', [
+          '@minima' => $minimum,
+        ]),
+      ];
+    }
+
+    if (!$this->pluginVersions->meetsMinimum($minimum)) {
+      return [
+        'title' => $title,
+        'value' => $this->t('@version (se necesita @minima)', [
+          '@version' => $version,
+          '@minima' => $minimum,
+        ]),
+        'severity' => RequirementSeverity::Warning,
+        'description' => $this->t('El plugin instalado en WordPress es anterior al que este módulo necesita. Actualízalo para que todas las funciones se comporten como corresponde.'),
+      ];
+    }
+
+    return [
+      'title' => $title,
+      'value' => $version,
+      'severity' => RequirementSeverity::OK,
+      'description' => $this->t('Comprobado por última vez el @fecha.', [
+        '@fecha' => $seenAt === NULL
+          ? $this->t('(desconocido)')
+          : $this->dateFormatter->format($seenAt, 'short'),
+      ]),
+    ];
   }
 
   /**

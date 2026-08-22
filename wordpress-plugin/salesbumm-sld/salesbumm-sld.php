@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Salesbumm — Sales Leadership Diagnostic AI (puente)
  * Description:       Puente entre WordPress/LearnDash y el módulo de diagnóstico en Drupal. Emite el token de acceso del alumno y responde a la consulta de autorización de Drupal. No añade funcionalidad visible fuera del botón de acceso.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Salesbumm
@@ -30,7 +30,25 @@ if ( ! defined( 'ABSPATH' ) ) {
  * promovidas, ni readonly, aunque el proyecto los use del otro lado.
  */
 
-const SLD_VERSION     = '1.0.0';
+/**
+ * Versión del plugin.
+ *
+ * DEBE coincidir con la cabecera «Version:» de arriba. WordPress lee la
+ * cabecera y el código lee esta constante, así que son dos sitios que pueden
+ * separarse sin que nada se queje. `bin/comprobar-version-plugin.php` los
+ * compara y falla si difieren.
+ *
+ * Se sigue versionado semántico:
+ *
+ *   PATCH  corrección que no cambia lo que Drupal recibe.
+ *   MINOR  dato o capacidad nueva que Drupal puede aprovechar si existe.
+ *   MAYOR  cambio que rompe lo que Drupal esperaba.
+ *
+ * SUBIRLA ES OBLIGATORIO al publicar cualquier cambio: WordPress no distingue
+ * dos archivos con la misma versión, y sin ese número nadie puede saber qué
+ * hay instalado en el sitio del cliente.
+ */
+const SLD_VERSION     = '1.1.0';
 const SLD_PLUGIN_FILE = __FILE__;
 const SLD_TEXT_DOMAIN = 'salesbumm-sld';
 
