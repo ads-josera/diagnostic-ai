@@ -8,8 +8,11 @@ wordpress:
   cache_ttl_denied: 60
   cache_grace_period: 3600
 openai:
-  model: ''
-  available_models: {  }
+  model: gpt-5.6-terra
+  available_models:
+    - gpt-5.6-sol
+    - gpt-5.6-terra
+    - gpt-5.6-luna
   timeout: 60
   max_retries: 2
 security:
