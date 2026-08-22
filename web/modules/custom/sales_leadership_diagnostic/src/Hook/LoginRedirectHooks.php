@@ -69,7 +69,9 @@ final class LoginRedirectHooks {
   }
 
   /**
-   * Ruta de destino para una cuenta, o NULL para dejar el comportamiento de core.
+   * Ruta de destino para una cuenta.
+   *
+   * Devuelve NULL para dejar el comportamiento por defecto de core.
    *
    * El orden importa: se comprueba primero el permiso más amplio. Alguien que
    * administre el módulo Y sea gestor debe acabar donde pueda hacer más cosas.
