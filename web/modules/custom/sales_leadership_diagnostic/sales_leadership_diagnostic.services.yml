@@ -204,3 +204,21 @@ services:
       - '@config.factory'
       - '@entity_type.manager'
       - '@file_url_generator'
+
+  # --- Inicio del diagnóstico ----------------------------------------------
+
+  # Único punto del módulo que crea sesiones. Concentra las cuatro condiciones
+  # previas —configuración, autorización, política de repetición y límite de
+  # uso— para que no sea posible saltárselas llamando a la ruta directamente.
+  Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticStarter:
+    arguments:
+      - '@entity_type.manager'
+      - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness'
+      - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManager'
+      - '@Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker'
+      - '@Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner'
+      - '@Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter'
+      - '@config.factory'
+      - '@lock'
+      - '@datetime.time'
+      - '@logger.factory'

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Controller;
 
-use Drupal\Core\Controller\ControllerBase;
 use Drupal\Component\Datetime\TimeInterface;
+use Drupal\Core\Access\CsrfTokenGenerator;
+use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Url;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\ReadinessBlocker;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticResultRepository;
@@ -16,6 +18,7 @@ use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
 use Drupal\sales_leadership_diagnostic\Service\Branding\Branding;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
+use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticStarter;
 use Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -42,6 +45,8 @@ final class DashboardController extends ControllerBase {
     private readonly DateFormatterInterface $dateFormatter,
     private readonly TimeInterface $time,
     private readonly Branding $branding,
+    private readonly DiagnosticStarter $starter,
+    private readonly CsrfTokenGenerator $csrfToken,
   ) {}
 
   /**
@@ -57,6 +62,8 @@ final class DashboardController extends ControllerBase {
       $container->get('date.formatter'),
       $container->get('datetime.time'),
       $container->get(Branding::class),
+      $container->get(DiagnosticStarter::class),
+      $container->get('csrf_token'),
     );
   }
 
@@ -82,6 +89,9 @@ final class DashboardController extends ControllerBase {
       // abrir otra vía de HTML arbitrario en la página del alumno.
       '#welcome_text' => $this->branding->getWelcomeText(),
       '#can_start' => $this->readiness->isReady(),
+      '#start_url' => $this->buildStartUrl(),
+      '#resume_session_id' => $this->findResumableId($sessions),
+      '#repeat_notice' => $this->buildRepeatNotice(),
       '#unavailable_notice' => $this->buildUnavailableNotice(),
       '#expiry_notice' => $this->buildExpiryNotice($account),
       '#history' => $this->buildHistory($sessions, $results),
@@ -98,9 +108,65 @@ final class DashboardController extends ControllerBase {
           // Sin esto, cambiar el logotipo no se vería hasta que el panel
           // caducase por otro motivo.
           $this->branding->getCacheTags(),
+          // Igual con la política de repetición: cambiarla debe reflejarse en
+          // el aviso que lee el alumno.
+          $this->starter->getCacheTags(),
         ),
       ],
     ];
+  }
+
+  /**
+   * URL del formulario de inicio, con su token CSRF.
+   *
+   * El token viaja en la URL porque la ruta lo valida con `_csrf_token`, que
+   * es el mecanismo de Drupal para rutas que no son formularios de la Form
+   * API. El valor se calcula sobre la ruta interna, sin la barra inicial, que
+   * es lo que espera el validador.
+   */
+  private function buildStartUrl(): string {
+    $internal = ltrim(Url::fromRoute('sales_leadership_diagnostic.start')->getInternalPath(), '/');
+
+    return Url::fromRoute(
+      'sales_leadership_diagnostic.start',
+      [],
+      ['query' => ['token' => $this->csrfToken->get($internal)]],
+    )->toString();
+  }
+
+  /**
+   * Identificador de la sesión que el alumno tiene a medias, si la hay.
+   *
+   * Sirve solo para cambiar el texto del botón: quien dejó una conversación
+   * empezada lee «Continuar» en vez de «Iniciar», y así no teme perderla al
+   * pulsar. Quién puede empezar de verdad lo decide el servidor.
+   *
+   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[] $sessions
+   *   Sesiones del alumno.
+   */
+  private function findResumableId(array $sessions): ?int {
+    foreach ($sessions as $session) {
+      if ($session->getStatus()->acceptsMessages()) {
+        return (int) $session->id();
+      }
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Aviso sobre la política de repetición, o NULL si no hay límite.
+   *
+   * Se dice por adelantado y no solo al rechazar: descubrir que el diagnóstico
+   * era único DESPUÉS de gastarlo es una mala sorpresa, y quien lo sabe antes
+   * puede elegir cuándo dedicarle el rato que necesita.
+   */
+  private function buildRepeatNotice(): ?string {
+    if (!$this->starter->isLimitedToOnePerPeriod()) {
+      return NULL;
+    }
+
+    return (string) $this->t('Tu acceso incluye un diagnóstico. Podrás realizar uno nuevo cuando renueves.');
   }
 
   /**

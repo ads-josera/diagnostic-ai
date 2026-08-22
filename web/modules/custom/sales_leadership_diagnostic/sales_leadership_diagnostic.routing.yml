@@ -47,6 +47,22 @@ sales_leadership_diagnostic.dashboard:
     # ella el contenedor no lo encuentra e instancia la clase sin argumentos.
     _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::access'
 
+# Inicio de un diagnóstico.
+#
+# Solo POST y con token CSRF: crear una sesión cambia el estado del sistema, y
+# con GET la crearía cualquier cosa que precargue enlaces —el navegador, un
+# antivirus que inspecciona el correo, un rastreador—. El token impide además
+# que otro sitio la dispare desde el navegador del alumno.
+sales_leadership_diagnostic.start:
+  path: '/sales-diagnostic/start'
+  methods: [POST]
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\StartController::start'
+  requirements:
+    _permission: 'access sales leadership diagnostic'
+    _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::access'
+    _csrf_token: 'TRUE'
+
 # Vista de conversación.
 #
 # El nombre del parámetro coincide con el ID del tipo de entidad, así que

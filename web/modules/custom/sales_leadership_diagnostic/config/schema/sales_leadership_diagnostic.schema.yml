@@ -46,6 +46,16 @@ sales_leadership_diagnostic.settings:
         max_completion_tokens:
           type: integer
           label: 'Tokens máximos por respuesta'
+    diagnostic:
+      type: mapping
+      label: 'Reglas de uso del diagnóstico'
+      mapping:
+        repeat_policy:
+          # Decisión comercial, no técnica: define si el diagnóstico se vende
+          # como herramienta de seguimiento o como entregable de cada compra.
+          type: string
+          label: 'Cuántos diagnósticos puede hacer un alumno'
+
     security:
       type: mapping
       label: 'Seguridad y límites de uso'

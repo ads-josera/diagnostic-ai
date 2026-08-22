@@ -61,7 +61,7 @@ class CourseAccess {
 	 *
 	 * @param int $user_id Identificador del usuario en WordPress.
 	 *
-	 * @return array{has_access: bool, expires_at: ?int, course_id: ?int, reason: string}|null
+	 * @return array{has_access: bool, started_at: ?int, expires_at: ?int, course_id: ?int, reason: string}|null
 	 *   La decisión, o NULL si no se ha podido determinar (por ejemplo, si
 	 *   LearnDash no está disponible). NULL y "sin acceso" son cosas distintas
 	 *   y Drupal las trata de forma distinta.
@@ -97,6 +97,7 @@ class CourseAccess {
 		if ( ! $this->clock->is_active( $user_id ) ) {
 			return array(
 				'has_access' => false,
+				'started_at' => $this->clock->get_started_at( $user_id ),
 				'expires_at' => $this->clock->get_expires_at( $user_id ),
 				'course_id'  => $owned,
 				'reason'     => 'periodo de acceso caducado',
@@ -105,6 +106,11 @@ class CourseAccess {
 
 		return array(
 			'has_access' => true,
+			// Cuando EMPEZO el periodo, no solo cuando acaba. Drupal lo
+			// necesita para poder limitar el diagnostico a uno por periodo:
+			// sin este dato no hay forma de saber que sesiones pertenecen al
+			// periodo vigente y cuales son de una compra anterior.
+			'started_at' => $this->clock->get_started_at( $user_id ),
 			'expires_at' => $this->clock->get_expires_at( $user_id ),
 			'course_id'  => $owned,
 			'reason'     => 'acceso vigente',
@@ -212,6 +218,7 @@ class CourseAccess {
 	private function deny( string $reason ): array {
 		return array(
 			'has_access' => false,
+			'started_at' => null,
 			'expires_at' => null,
 			'course_id'  => null,
 			'reason'     => $reason,

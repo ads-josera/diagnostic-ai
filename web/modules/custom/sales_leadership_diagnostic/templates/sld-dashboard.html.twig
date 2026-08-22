@@ -9,6 +9,9 @@
  * - logo_alt: texto alternativo del logotipo.
  * - welcome_text: mensaje de bienvenida personalizado, o nulo.
  * - can_start: si puede iniciarse un diagnóstico ahora mismo.
+ * - start_url: destino del formulario de inicio, con su token CSRF.
+ * - resume_session_id: identificador de la sesión a medias, o nulo.
+ * - repeat_notice: aviso sobre la política de repetición, o nulo.
  * - unavailable_notice: motivo, si no puede. Un alumno recibe un mensaje
  *   neutro; un administrador, el detalle técnico.
  * - history: filas del historial, cada una con id, date, status,
@@ -65,14 +68,23 @@
 
   <div class="sld-dashboard__start">
     {% if can_start %}
-      {# El destino real llega con la capa de conversación. Hasta entonces el
-         control no debe existir como enlace activo: crear una sesión sin pasar
-         por la comprobación de autorización sería exactamente lo que §12 y §13
-         prohíben. #}
-      <button type="button" class="sld__button" aria-disabled="true" disabled>
-        {{ 'Iniciar diagnóstico'|t }}
-      </button>
-      <p class="sld__muted">{{ 'Disponible al completar la integración.'|t }}</p>
+      {#
+        Un formulario y no un enlace: iniciar un diagnóstico crea una sesión, y
+        con GET la crearía cualquier cosa que precargue enlaces. El token CSRF
+        impide además que otro sitio lo dispare desde el navegador del alumno.
+
+        Toda la política se aplica en el servidor, en DiagnosticStarter. Este
+        botón solo evita ofrecer algo que se va a rechazar; no es la defensa.
+      #}
+      <form action="{{ start_url }}" method="post">
+        <button type="submit" class="sld__button">
+          {{ resume_session_id ? 'Continuar mi diagnóstico'|t : 'Iniciar diagnóstico'|t }}
+        </button>
+      </form>
+
+      {% if repeat_notice %}
+        <p class="sld__muted">{{ repeat_notice }}</p>
+      {% endif %}
     {% else %}
       <button type="button" class="sld__button" aria-disabled="true" disabled>
         {{ 'Iniciar diagnóstico'|t }}

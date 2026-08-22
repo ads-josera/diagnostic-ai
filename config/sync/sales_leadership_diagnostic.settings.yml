@@ -16,6 +16,8 @@ openai:
   timeout: 60
   max_retries: 2
   max_completion_tokens: 2000
+diagnostic:
+  repeat_policy: unlimited
 security:
   messages_per_window: 20
   window_seconds: 300

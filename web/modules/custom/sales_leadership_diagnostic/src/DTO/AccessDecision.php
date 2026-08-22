@@ -43,6 +43,11 @@ final readonly class AccessDecision {
    * @param int|null $expiresAt
    *   Momento en que caduca el acceso. NULL si no caduca o si no llegó a
    *   concederse.
+   * @param int|null $startedAt
+   *   Momento en que empezó el periodo de acceso vigente. NULL si nunca
+   *   empezó. Identifica el periodo: una compra nueva reinicia el reloj en
+   *   WordPress y con ello cambia este valor, que es lo que permite saber si
+   *   un diagnóstico anterior pertenece al periodo actual o a uno pasado.
    */
   public function __construct(
     public bool $granted,
@@ -50,6 +55,7 @@ final readonly class AccessDecision {
     public int $checkedAt,
     public string $source = self::SOURCE_LIVE,
     public ?int $expiresAt = NULL,
+    public ?int $startedAt = NULL,
   ) {}
 
   /**
@@ -62,6 +68,7 @@ final readonly class AccessDecision {
       $this->checkedAt,
       self::SOURCE_CACHE,
       $this->expiresAt,
+      $this->startedAt,
     );
   }
 
@@ -91,6 +98,7 @@ final readonly class AccessDecision {
       'courseId' => $this->courseId,
       'checkedAt' => $this->checkedAt,
       'expiresAt' => $this->expiresAt,
+      'startedAt' => $this->startedAt,
     ];
   }
 
@@ -102,6 +110,10 @@ final readonly class AccessDecision {
    */
   public static function fromArray(array $data): self {
     $expiresAt = $data['expiresAt'] ?? NULL;
+    // Ausente en las entradas guardadas antes de que existiera este dato. Se
+    // trata como «desconocido» y no como error: la cache anterior sigue
+    // sirviendo hasta que caduque sola.
+    $startedAt = $data['startedAt'] ?? NULL;
 
     return new self(
       granted: (bool) ($data['granted'] ?? FALSE),
@@ -109,6 +121,7 @@ final readonly class AccessDecision {
       checkedAt: (int) ($data['checkedAt'] ?? 0),
       source: self::SOURCE_CACHE,
       expiresAt: is_numeric($expiresAt) ? (int) $expiresAt : NULL,
+      startedAt: is_numeric($startedAt) ? (int) $startedAt : NULL,
     );
   }
 

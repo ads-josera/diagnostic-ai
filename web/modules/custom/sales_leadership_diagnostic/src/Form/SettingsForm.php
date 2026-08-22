@@ -9,6 +9,7 @@ use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\ConfigTarget;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\sales_leadership_diagnostic\RepeatPolicy;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -83,6 +84,7 @@ final class SettingsForm extends ConfigFormBase {
     $form['secrets'] = $this->buildSecretsStatus();
     $form['wordpress'] = $this->buildWordPressSection();
     $form['openai'] = $this->buildEngineSection();
+    $form['diagnostic'] = $this->buildDiagnosticSection();
     $form['security'] = $this->buildSecuritySection();
 
     return parent::buildForm($form, $form_state);
@@ -265,6 +267,40 @@ final class SettingsForm extends ConfigFormBase {
         '#min' => 0,
         '#max' => 5,
         '#config_target' => self::CONFIG_NAME . ':openai.max_retries',
+      ],
+    ];
+  }
+
+  /**
+   * Reglas de uso del diagnóstico.
+   *
+   * Separada de «Seguridad y límites de uso» aunque ambas restrinjan: aquellos
+   * límites protegen el sistema del abuso y los fija quien administra; esta
+   * regla define qué se ha vendido y la fija el cliente. Mezclarlas llevaría a
+   * tocar una creyendo tocar la otra.
+   */
+  private function buildDiagnosticSection(): array {
+    $descriptions = [];
+
+    foreach (RepeatPolicy::cases() as $case) {
+      $descriptions[$case->value] = $case->description();
+    }
+
+    return [
+      '#type' => 'details',
+      '#title' => $this->t('Reglas de uso del diagnóstico'),
+      '#open' => TRUE,
+      '#tree' => TRUE,
+
+      'repeat_policy' => [
+        '#type' => 'radios',
+        '#title' => $this->t('Cuántos diagnósticos puede hacer un alumno'),
+        '#options' => RepeatPolicy::options(),
+        // Las descripciones van por opción, no en el conjunto: cada una
+        // explica una decisión comercial distinta y ponerlas juntas obligaría
+        // a leerlas todas para entender la que se está eligiendo.
+        '#options_descriptions' => $descriptions,
+        '#config_target' => self::CONFIG_NAME . ':diagnostic.repeat_policy',
       ],
     ];
   }

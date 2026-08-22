@@ -120,6 +120,10 @@ class AccessEndpoint {
 				'wp_user_id' => $user_id,
 				// Curso que concedió el acceso, o null si ninguno lo hizo.
 				'course_id'  => null === $decision['course_id'] ? null : (string) $decision['course_id'],
+				// Momento en que EMPEZÓ el periodo de acceso, en ISO 8601.
+				// Drupal lo usa para saber qué diagnósticos pertenecen al
+				// periodo vigente cuando se limita a uno por compra.
+				'started_at' => null === $decision['started_at'] ? null : gmdate( 'c', $decision['started_at'] ),
 				// Momento en que caduca, en formato ISO 8601. Null significa
 				// que no caduca o que no llegó a concederse. Drupal lo usa
 				// para avisar al alumno antes de que expire.

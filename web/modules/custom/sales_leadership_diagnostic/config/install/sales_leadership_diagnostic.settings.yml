@@ -27,3 +27,10 @@ security:
   session_timeout: 3600
   sso_token_ttl: 90
   sso_token_leeway: 30
+
+# Reglas de uso del diagnóstico.
+diagnostic:
+  # Por defecto sin límite, que es el comportamiento que el módulo ha tenido
+  # siempre: activar un límite de fábrica cambiaría en silencio lo que ya
+  # funciona en una instalación existente.
+  repeat_policy: unlimited
