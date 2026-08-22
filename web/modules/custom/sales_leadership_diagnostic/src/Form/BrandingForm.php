@@ -33,12 +33,13 @@ final class BrandingForm extends ConfigFormBase {
   /**
    * Extensiones admitidas para el logotipo.
    *
-   * SVG queda fuera a propósito: un SVG es un documento XML que puede contener
-   * scripts, y se serviría desde el mismo dominio que el diagnóstico. El
-   * beneficio —un logotipo nítido a cualquier tamaño— no compensa abrir esa vía
-   * en un sitio que maneja datos de alumnos.
+   * SVG entra, pero no sin más: cada archivo pasa por SldSafeSvg, que rechaza
+   * el que contenga scripts, manejadores de evento o referencias externas. Un
+   * SVG es un documento XML y es el único formato de imagen capaz de ejecutar
+   * código; el propio Drupal usa SVG para el logotipo de Olivero, de modo que
+   * excluirlo por completo habría sido más estricto que core sin buen motivo.
    */
-  private const LOGO_EXTENSIONS = 'png jpg jpeg webp';
+  private const LOGO_EXTENSIONS = 'png jpg jpeg webp svg';
 
   /**
    * Tamaño máximo del logotipo.
@@ -102,8 +103,12 @@ final class BrandingForm extends ConfigFormBase {
       '#upload_validators' => [
         'FileExtension' => ['extensions' => self::LOGO_EXTENSIONS],
         'FileSizeLimit' => ['fileLimit' => self::LOGO_MAX_SIZE],
+        // Se aplica a todos los archivos y solo actúa sobre los SVG. Rechaza
+        // el archivo entero en lugar de limpiarlo: alterar en silencio el
+        // logotipo del cliente sería devolverle algo que no subió.
+        'SldSafeSvg' => [],
       ],
-      '#description' => $this->t('Formatos admitidos: @formatos. Máximo @tamano. No se admite SVG por seguridad: puede contener scripts.', [
+      '#description' => $this->t('Formatos admitidos: @formatos. Máximo @tamano. Los SVG se revisan y se rechazan si contienen scripts o enlaces externos.', [
         '@formatos' => str_replace(' ', ', ', self::LOGO_EXTENSIONS),
         '@tamano' => self::LOGO_MAX_SIZE,
       ]),
