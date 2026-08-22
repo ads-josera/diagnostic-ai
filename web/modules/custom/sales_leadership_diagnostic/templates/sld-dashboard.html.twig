@@ -27,6 +27,12 @@
     <p class="sld-dashboard__greeting">{{ 'Bienvenido, @name'|t({'@name': user_name}) }}</p>
   </header>
 
+  {% if expiry_notice %}
+    <div class="sld__notice sld__notice--warning" role="status">
+      <p>{{ expiry_notice.message }}</p>
+    </div>
+  {% endif %}
+
   {% if unavailable_notice %}
     <div class="sld__notice sld__notice--warning" role="status">
       <p>{{ unavailable_notice.message }}</p>

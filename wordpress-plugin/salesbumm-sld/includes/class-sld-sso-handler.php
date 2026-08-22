@@ -91,21 +91,20 @@ class SsoHandler {
 			$this->fail( __( 'El enlace ha caducado. Vuelve a la página anterior e inténtalo de nuevo.', 'salesbumm-sld' ), 403 );
 		}
 
-		$user      = wp_get_current_user();
-		$course_id = $this->settings->get_course_id();
-		$target    = $this->settings->get_drupal_sso_url();
-		$secret    = Secrets::get( Secrets::JWT );
+		$user   = wp_get_current_user();
+		$target = $this->settings->get_drupal_sso_url();
+		$secret = Secrets::get( Secrets::JWT );
 
-		if ( '' === $target || $course_id <= 0 || '' === $secret ) {
+		if ( '' === $target || array() === $this->settings->get_course_ids() || '' === $secret ) {
 			// Configuración incompleta. Se le dice al alumno que no está
 			// disponible; el detalle queda para el administrador.
 			$this->log( 'Configuración incompleta: falta URL de destino, curso o secreto.' );
 			$this->fail( __( 'El diagnóstico no está disponible en este momento.', 'salesbumm-sld' ), 503 );
 		}
 
-		$has_access = $this->access->user_has_access( (int) $user->ID, $course_id );
+		$decision = $this->access->evaluate( (int) $user->ID );
 
-		if ( true !== $has_access ) {
+		if ( null === $decision || true !== $decision['has_access'] ) {
 			// WordPress ya sabe aquí que el alumno no tiene el curso, así que
 			// se evita el viaje a Drupal para que le deniegue el acceso.
 			$this->fail(
@@ -163,13 +162,13 @@ class SsoHandler {
 			return '';
 		}
 
-		$course_id = $this->settings->get_course_id();
-
-		// Un alumno sin el curso no ve el botón. No es un control de
+		// Un alumno sin acceso vigente no ve el botón. No es un control de
 		// seguridad —el control real está en handle_redirect()— sino una
 		// cortesía: ofrecer un botón que va a denegar el acceso es peor
 		// experiencia que no ofrecerlo.
-		if ( $course_id <= 0 || true !== $this->access->user_has_access( get_current_user_id(), $course_id ) ) {
+		$decision = $this->access->evaluate( get_current_user_id() );
+
+		if ( null === $decision || true !== $decision['has_access'] ) {
 			return '';
 		}
 

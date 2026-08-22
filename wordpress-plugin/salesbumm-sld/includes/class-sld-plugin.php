@@ -52,10 +52,21 @@ class Plugin {
 	/**
 	 * Constructor.
 	 */
+	/**
+	 * Consulta de acceso, expuesta para los enganches de reactivación.
+	 *
+	 * @var CourseAccess
+	 */
+	private $course_access;
+
+	/**
+	 * Constructor.
+	 */
 	private function __construct() {
 		$this->settings = new Settings();
 
-		$course_access = new CourseAccess();
+		$course_access       = new CourseAccess( $this->settings, new AccessClock( $this->settings ) );
+		$this->course_access = $course_access;
 
 		$this->sso = new SsoHandler(
 			new JwtSigner(),
@@ -97,6 +108,41 @@ class Plugin {
 		add_shortcode( 'salesbumm_diagnostic_button', array( $this->sso, 'render_button' ) );
 
 		add_action( 'admin_notices', array( $this, 'render_configuration_notice' ) );
+
+		// Reactivación: volver a darle acceso a un curso autorizador reinicia
+		// el periodo. Es lo que ocurre cuando el alumno compra de nuevo.
+		add_action( 'learndash_update_course_access', array( $this, 'on_course_access_granted' ), 10, 4 );
+	}
+
+	/**
+	 * Reinicia el periodo cuando se concede acceso a un curso autorizador.
+	 *
+	 * LearnDash dispara esta acción tanto en una compra como en una alta
+	 * manual o por grupo. Se filtra por los cursos configurados para no
+	 * reactivar por la compra de un curso cualquiera del catálogo.
+	 *
+	 * @param int  $user_id   Usuario.
+	 * @param int  $course_id Curso.
+	 * @param array $access_list Lista de accesos. No se usa.
+	 * @param bool $remove    TRUE si se está RETIRANDO el acceso.
+	 */
+	public function on_course_access_granted( $user_id, $course_id, $access_list = array(), $remove = false ): void {
+		// Retirar el acceso a un curso no debe reiniciar nada.
+		if ( $remove ) {
+			return;
+		}
+
+		$user_id   = (int) $user_id;
+		$course_id = (int) $course_id;
+
+		if ( $user_id <= 0 || ! in_array( $course_id, $this->settings->get_course_ids(), true ) ) {
+			return;
+		}
+
+		$this->course_access->reactivate(
+			$user_id,
+			sprintf( 'reactivación por acceso al curso %d', $course_id )
+		);
 	}
 
 	/**
@@ -124,8 +170,8 @@ class Plugin {
 			$problems[] = __( 'falta la URL de acceso en Drupal', 'salesbumm-sld' );
 		}
 
-		if ( $this->settings->get_course_id() <= 0 ) {
-			$problems[] = __( 'falta el curso que da acceso', 'salesbumm-sld' );
+		if ( array() === $this->settings->get_course_ids() ) {
+			$problems[] = __( 'faltan los cursos que dan acceso', 'salesbumm-sld' );
 		}
 
 		if ( ! function_exists( 'sfwd_lms_has_access' ) ) {

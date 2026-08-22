@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\sales_leadership_diagnostic\Service\Authorization;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\sales_leadership_diagnostic\DTO\AccessDecision;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\Exception\WordPressUnavailableException;
@@ -45,12 +46,22 @@ final class DiagnosticAccessChecker {
    *   otra circunstancia devuelve FALSE (§13).
    */
   public function isAuthorized(string $externalUserId): bool {
+    return $this->decide($externalUserId)?->granted === TRUE;
+  }
+
+  /**
+   * Devuelve la decisión completa, incluida la fecha de caducidad.
+   *
+   * NULL significa que no se ha podido determinar. Lo usa el panel para
+   * avisar al alumno cuando su acceso está a punto de expirar.
+   */
+  public function decide(string $externalUserId): ?AccessDecision {
     $courseId = $this->getCourseId();
 
     if ($courseId === '') {
       $this->logger->error('No hay curso autorizador configurado; se deniega el acceso.');
 
-      return FALSE;
+      return NULL;
     }
 
     try {
@@ -61,25 +72,24 @@ final class DiagnosticAccessChecker {
         '@reason' => $e->getMessage(),
       ]);
 
-      return FALSE;
+      return NULL;
     }
 
     if (!$decision->granted) {
-      $this->logger->info('Acceso denegado al usuario externo @uid para el curso @course.', [
+      $this->logger->info('Acceso denegado al usuario externo @uid.', [
         '@uid' => $externalUserId,
-        '@course' => $courseId,
       ]);
 
-      return FALSE;
+      return $decision;
     }
 
-    $this->logger->info('Acceso concedido al usuario externo @uid para el curso @course (origen: @source).', [
+    $this->logger->info('Acceso concedido al usuario externo @uid (curso @course, origen @source).', [
       '@uid' => $externalUserId,
-      '@course' => $courseId,
+      '@course' => $decision->courseId,
       '@source' => $decision->source,
     ]);
 
-    return TRUE;
+    return $decision;
   }
 
   /**

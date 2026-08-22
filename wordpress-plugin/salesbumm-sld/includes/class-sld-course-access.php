@@ -1,6 +1,6 @@
 <?php
 /**
- * Consulta del derecho de acceso a un curso de LearnDash.
+ * Decide si un alumno tiene derecho al diagnóstico.
  *
  * @package Salesbumm\SLD
  */
@@ -16,9 +16,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Responde a la única pregunta que Drupal le hace a WordPress.
  *
- * Es deliberadamente estrecha: recibe un usuario y un curso, y devuelve sí o
- * no. No expone el perfil del alumno, ni su progreso, ni la lista de cursos
- * que tiene. Cuanto menos viaje por el canal, menos hay que proteger.
+ * La respuesta se compone de dos condiciones independientes:
+ *
+ *  1. El alumno posee alguno de los cursos autorizadores.
+ *  2. Su acceso al diagnóstico sigue dentro del periodo de vigencia.
+ *
+ * Que sean independientes es el punto central del diseño. El alumno conserva
+ * el curso —sus vídeos, sus materiales— indefinidamente, pero el acceso al
+ * diagnóstico caduca. Derivar la caducidad del curso sería imposible
+ * precisamente porque el curso no caduca.
  *
  * Toda la lógica de LearnDash queda encapsulada aquí. Si el cliente cambiara
  * de LMS, se reescribe esta clase y el módulo de Drupal no se entera.
@@ -26,60 +32,166 @@ if ( ! defined( 'ABSPATH' ) ) {
 class CourseAccess {
 
 	/**
-	 * Comprueba si un usuario tiene acceso a un curso.
+	 * Ajustes del plugin.
 	 *
-	 * @param int $user_id   Identificador del usuario en WordPress.
-	 * @param int $course_id Identificador del curso en LearnDash.
-	 *
-	 * @return bool|null TRUE o FALSE con una respuesta fiable; NULL si no se
-	 *                   puede determinar, por ejemplo si LearnDash no está
-	 *                   activo.
+	 * @var Settings
 	 */
-	public function user_has_access( int $user_id, int $course_id ): ?bool {
-		if ( $user_id <= 0 || $course_id <= 0 ) {
-			return false;
+	private $settings;
+
+	/**
+	 * Reloj de vigencia.
+	 *
+	 * @var AccessClock
+	 */
+	private $clock;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param Settings    $settings Ajustes.
+	 * @param AccessClock $clock    Reloj de vigencia.
+	 */
+	public function __construct( Settings $settings, AccessClock $clock ) {
+		$this->settings = $settings;
+		$this->clock    = $clock;
+	}
+
+	/**
+	 * Evalúa el derecho de acceso al diagnóstico de un usuario.
+	 *
+	 * @param int $user_id Identificador del usuario en WordPress.
+	 *
+	 * @return array{has_access: bool, expires_at: ?int, course_id: ?int, reason: string}|null
+	 *   La decisión, o NULL si no se ha podido determinar (por ejemplo, si
+	 *   LearnDash no está disponible). NULL y "sin acceso" son cosas distintas
+	 *   y Drupal las trata de forma distinta.
+	 */
+	public function evaluate( int $user_id ): ?array {
+		if ( $user_id <= 0 || ! get_userdata( $user_id ) ) {
+			return $this->deny( 'usuario inexistente' );
 		}
 
-		// Un usuario que no existe no tiene acceso, y conviene comprobarlo
-		// antes de preguntar a LearnDash.
-		if ( ! get_userdata( $user_id ) ) {
-			return false;
-		}
+		$courses = $this->settings->get_course_ids();
 
-		if ( ! $this->course_exists( $course_id ) ) {
-			return false;
+		if ( array() === $courses ) {
+			return $this->deny( 'sin cursos autorizadores configurados' );
 		}
 
 		if ( ! function_exists( 'sfwd_lms_has_access' ) ) {
-			// LearnDash no está disponible. Se devuelve NULL en lugar de FALSE
-			// para que el endpoint pueda distinguir "no tiene acceso" de "no
-			// he podido comprobarlo": son situaciones distintas y Drupal las
-			// trata de forma distinta.
+			// No se puede determinar. Se distingue de una denegación para que
+			// Drupal pueda aplicar su política ante averías.
 			return null;
 		}
 
-		// sfwd_lms_has_access() es la vía canónica de LearnDash y ya contempla
-		// las distintas formas de obtener acceso: inscripción directa, compra,
-		// pertenencia a un grupo o acceso abierto.
-		return (bool) sfwd_lms_has_access( $course_id, $user_id );
+		$owned = $this->find_owned_course( $user_id, $courses );
+
+		if ( null === $owned ) {
+			return $this->deny( 'no posee ningún curso autorizador' );
+		}
+
+		// El alumno tiene el curso: si nunca se le inició el reloj, se inicia
+		// ahora. El origen de esa fecha es una decisión de negocio y por eso
+		// es configurable.
+		$this->clock->start_if_absent( $user_id, $this->resolve_start( $user_id, $owned ) );
+
+		if ( ! $this->clock->is_active( $user_id ) ) {
+			return array(
+				'has_access' => false,
+				'expires_at' => $this->clock->get_expires_at( $user_id ),
+				'course_id'  => $owned,
+				'reason'     => 'periodo de acceso caducado',
+			);
+		}
+
+		return array(
+			'has_access' => true,
+			'expires_at' => $this->clock->get_expires_at( $user_id ),
+			'course_id'  => $owned,
+			'reason'     => 'acceso vigente',
+		);
+	}
+
+	/**
+	 * Reinicia el periodo de acceso de un usuario.
+	 *
+	 * Es lo que ocurre cuando el alumno vuelve a comprar: recupera el periodo
+	 * completo desde ese momento.
+	 *
+	 * @param int    $user_id Usuario.
+	 * @param string $reason  Motivo, para soporte.
+	 */
+	public function reactivate( int $user_id, string $reason ): void {
+		$this->clock->start( $user_id, $reason );
+	}
+
+	/**
+	 * Devuelve el primer curso autorizador que posea el alumno.
+	 *
+	 * @param int   $user_id Usuario.
+	 * @param int[] $courses Cursos configurados.
+	 */
+	private function find_owned_course( int $user_id, array $courses ): ?int {
+		foreach ( $courses as $course_id ) {
+			if ( ! $this->course_exists( $course_id ) ) {
+				continue;
+			}
+
+			// sfwd_lms_has_access() es la vía canónica de LearnDash y ya
+			// contempla inscripción directa, compra, grupo y acceso abierto.
+			if ( sfwd_lms_has_access( $course_id, $user_id ) ) {
+				return $course_id;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Decide desde cuándo cuenta el periodo de acceso de un alumno nuevo.
+	 *
+	 * Es una decisión de negocio, no técnica, y por eso se configura:
+	 *
+	 *  - Desde el alta en el curso: quien compró hace más de un año queda
+	 *    caducado de inmediato. Es lo que dice el requisito al pie de la letra.
+	 *  - Desde ahora: todos los alumnos existentes reciben el periodo completo
+	 *    a partir del día en que se active la caducidad.
+	 *
+	 * Si se pide la fecha de alta y LearnDash no la expone, se cae a "ahora"
+	 * en lugar de fallar: es preferible conceder de más a bloquear a un alumno
+	 * por un dato que no hemos podido leer.
+	 *
+	 * @param int $user_id   Usuario.
+	 * @param int $course_id Curso que le da acceso.
+	 */
+	private function resolve_start( int $user_id, int $course_id ): int {
+		if ( 'enrollment' !== $this->settings->get_access_start_origin() ) {
+			return time();
+		}
+
+		if ( function_exists( 'ld_course_access_from' ) ) {
+			$from = ld_course_access_from( $course_id, $user_id );
+
+			if ( is_numeric( $from ) && (int) $from > 0 ) {
+				return (int) $from;
+			}
+		}
+
+		return time();
 	}
 
 	/**
 	 * Comprueba que el identificador corresponda a un curso publicado.
 	 *
-	 * Evita responder afirmativamente sobre un identificador que apunte a otro
-	 * tipo de contenido o a un curso en papelera.
-	 *
 	 * @param int $course_id Identificador del curso.
 	 */
 	private function course_exists( int $course_id ): bool {
-		$post = get_post( $course_id );
-
-		if ( ! $post instanceof \WP_Post ) {
+		if ( $course_id <= 0 ) {
 			return false;
 		}
 
-		if ( 'publish' !== $post->post_status ) {
+		$post = get_post( $course_id );
+
+		if ( ! $post instanceof \WP_Post || 'publish' !== $post->post_status ) {
 			return false;
 		}
 
@@ -88,5 +200,21 @@ class CourseAccess {
 			: 'sfwd-courses';
 
 		return $post->post_type === $course_post_type;
+	}
+
+	/**
+	 * Construye una denegación.
+	 *
+	 * @param string $reason Motivo interno.
+	 *
+	 * @return array{has_access: bool, expires_at: ?int, course_id: ?int, reason: string}
+	 */
+	private function deny( string $reason ): array {
+		return array(
+			'has_access' => false,
+			'expires_at' => null,
+			'course_id'  => null,
+			'reason'     => $reason,
+		);
 	}
 }

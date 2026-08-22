@@ -65,8 +65,12 @@ class AccessEndpoint {
 						'type'              => 'integer',
 						'sanitize_callback' => 'absint',
 					),
+					// course_id ya no es obligatorio. La lista de cursos que
+					// autorizan y la vigencia son reglas de negocio y viven
+					// aquí, no en Drupal: WordPress es quien sabe qué compró
+					// cada alumno y cuándo.
 					'course_id'  => array(
-						'required'          => true,
+						'required'          => false,
 						'type'              => 'integer',
 						'sanitize_callback' => 'absint',
 					),
@@ -92,12 +96,11 @@ class AccessEndpoint {
 	 * @param \WP_REST_Request $request Petición.
 	 */
 	public function handle( \WP_REST_Request $request ): \WP_REST_Response {
-		$user_id   = (int) $request->get_param( 'wp_user_id' );
-		$course_id = (int) $request->get_param( 'course_id' );
+		$user_id = (int) $request->get_param( 'wp_user_id' );
 
-		$has_access = $this->access->user_has_access( $user_id, $course_id );
+		$decision = $this->access->evaluate( $user_id );
 
-		if ( null === $has_access ) {
+		if ( null === $decision ) {
 			// No se ha podido determinar. Se responde con un error explícito
 			// en lugar de con "false": Drupal debe poder distinguir una
 			// denegación real de una avería, porque ante una avería puede
@@ -113,9 +116,14 @@ class AccessEndpoint {
 
 		return new \WP_REST_Response(
 			array(
-				'has_access' => $has_access,
+				'has_access' => $decision['has_access'],
 				'wp_user_id' => $user_id,
-				'course_id'  => (string) $course_id,
+				// Curso que concedió el acceso, o null si ninguno lo hizo.
+				'course_id'  => null === $decision['course_id'] ? null : (string) $decision['course_id'],
+				// Momento en que caduca, en formato ISO 8601. Null significa
+				// que no caduca o que no llegó a concederse. Drupal lo usa
+				// para avisar al alumno antes de que expire.
+				'expires_at' => null === $decision['expires_at'] ? null : gmdate( 'c', $decision['expires_at'] ),
 				'checked_at' => gmdate( 'c' ),
 			),
 			200

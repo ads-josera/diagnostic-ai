@@ -48,9 +48,29 @@ final class LearnDashAccessProvider implements CourseAccessProviderInterface {
 
     return new AccessDecision(
       granted: $response['has_access'],
+      // El curso lo dice WordPress: con varios cursos autorizadores, el que
+      // concedió el acceso puede no ser el que Drupal tenga configurado.
       courseId: (string) ($response['course_id'] ?? $courseId),
       checkedAt: $this->time->getRequestTime(),
+      expiresAt: $this->parseExpiry($response['expires_at'] ?? NULL),
     );
+  }
+
+  /**
+   * Interpreta la fecha de caducidad que devuelve WordPress.
+   *
+   * Llega en formato ISO 8601. Una fecha ilegible se trata como ausencia de
+   * caducidad y no como error: el acceso ya se concedió, y bloquearlo por no
+   * poder interpretar un dato accesorio sería desproporcionado.
+   */
+  private function parseExpiry(mixed $value): ?int {
+    if (!is_string($value) || trim($value) === '') {
+      return NULL;
+    }
+
+    $timestamp = strtotime($value);
+
+    return $timestamp === FALSE ? NULL : $timestamp;
   }
 
 }

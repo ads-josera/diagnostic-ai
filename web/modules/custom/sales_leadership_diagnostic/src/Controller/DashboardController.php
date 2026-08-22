@@ -6,11 +6,13 @@ namespace Drupal\sales_leadership_diagnostic\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\ReadinessBlocker;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticResultRepository;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticSessionRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
 use Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -24,11 +26,17 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 final class DashboardController extends ControllerBase {
 
+  /**
+   * Días de antelación con los que se avisa de la caducidad.
+   */
+  private const EXPIRY_WARNING_DAYS = 30;
+
   public function __construct(
     private readonly DiagnosticSessionRepository $sessions,
     private readonly DiagnosticResultRepository $results,
     private readonly DiagnosticReadiness $readiness,
     private readonly UserProvisioner $provisioner,
+    private readonly DiagnosticAccessChecker $accessChecker,
     private readonly DateFormatterInterface $dateFormatter,
   ) {}
 
@@ -41,6 +49,7 @@ final class DashboardController extends ControllerBase {
       $container->get(DiagnosticResultRepository::class),
       $container->get(DiagnosticReadiness::class),
       $container->get(UserProvisioner::class),
+      $container->get(DiagnosticAccessChecker::class),
       $container->get('date.formatter'),
     );
   }
@@ -63,6 +72,7 @@ final class DashboardController extends ControllerBase {
       '#user_name' => $this->provisioner->getDisplayName($account),
       '#can_start' => $this->readiness->isReady(),
       '#unavailable_notice' => $this->buildUnavailableNotice(),
+      '#expiry_notice' => $this->buildExpiryNotice($account),
       '#history' => $this->buildHistory($sessions, $results),
       '#attached' => [
         'library' => ['sales_leadership_diagnostic/dashboard'],
@@ -108,6 +118,55 @@ final class DashboardController extends ControllerBase {
     }
 
     return $rows;
+  }
+
+  /**
+   * Aviso de caducidad próxima del acceso.
+   *
+   * El acceso al diagnóstico caduca aunque el del curso no lo haga, así que
+   * un alumno podría descubrirlo al intentar entrar y encontrarse fuera. El
+   * aviso adelanta ese descubrimiento a cuando todavía puede hacer algo.
+   *
+   * Solo aparece en la recta final: mostrarlo durante todo el año lo
+   * convertiría en ruido que nadie lee.
+   */
+  private function buildExpiryNotice(AccountInterface $account): ?array {
+    $externalUserId = $this->provisioner->getExternalUserId($account);
+
+    if ($externalUserId === NULL) {
+      return NULL;
+    }
+
+    $decision = $this->accessChecker->decide($externalUserId);
+
+    if ($decision === NULL || !$decision->granted) {
+      return NULL;
+    }
+
+    $dias = $decision->daysUntilExpiry($this->time());
+
+    if ($dias === NULL || $dias > self::EXPIRY_WARNING_DAYS) {
+      return NULL;
+    }
+
+    if ($dias <= 0) {
+      return ['message' => $this->t('Tu acceso al diagnóstico caduca hoy.')];
+    }
+
+    return [
+      'message' => $this->formatPlural(
+        $dias,
+        'Tu acceso al diagnóstico caduca mañana.',
+        'Tu acceso al diagnóstico caduca en @count días.',
+      ),
+    ];
+  }
+
+  /**
+   * Momento actual, en segundos.
+   */
+  private function time(): int {
+    return (int) \Drupal::time()->getRequestTime();
   }
 
   /**

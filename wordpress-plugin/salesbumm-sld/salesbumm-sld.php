@@ -43,6 +43,7 @@ require_once __DIR__ . '/includes/class-sld-secrets.php';
 require_once __DIR__ . '/includes/class-sld-settings.php';
 require_once __DIR__ . '/includes/class-sld-jwt-signer.php';
 require_once __DIR__ . '/includes/class-sld-request-verifier.php';
+require_once __DIR__ . '/includes/class-sld-access-clock.php';
 require_once __DIR__ . '/includes/class-sld-course-access.php';
 require_once __DIR__ . '/includes/class-sld-access-endpoint.php';
 require_once __DIR__ . '/includes/class-sld-sso-handler.php';

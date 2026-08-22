@@ -36,6 +36,7 @@ final class DiagnosticThemeHooks {
           'user_name' => '',
           'can_start' => FALSE,
           'unavailable_notice' => NULL,
+          'expiry_notice' => NULL,
           'history' => [],
         ],
       ],
