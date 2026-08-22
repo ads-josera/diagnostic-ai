@@ -83,6 +83,23 @@ sales_leadership_diagnostic.session_message:
     _entity_access: 'sld_diagnostic_session.update'
     _csrf_request_header_token: 'TRUE'
 
+# Resultado de un diagnóstico.
+#
+# No existe una ruta /sales-diagnostic/results aparte, pese a figurar en el
+# encargo: el panel YA es el historial (§36, §37). Duplicar esa lista en otra
+# página añadiría mantenimiento sin dar nada nuevo al alumno, y dos vistas del
+# mismo dato tienden a divergir con el tiempo.
+sales_leadership_diagnostic.result:
+  path: '/sales-diagnostic/results/{sld_diagnostic_result}'
+  methods: [GET]
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\ResultsController::view'
+    _title_callback: 'Drupal\sales_leadership_diagnostic\Controller\ResultsController::title'
+  requirements:
+    _permission: 'access sales leadership diagnostic'
+    _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::access'
+    _entity_access: 'sld_diagnostic_result.view'
+
 # ---------------------------------------------------------------------------
 # Administración
 # ---------------------------------------------------------------------------

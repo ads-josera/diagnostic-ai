@@ -1,0 +1,170 @@
+/**
+ * Resultado del diagnóstico (§35).
+ *
+ * El objetivo es que se lea como un informe breve y ordenado, no como un
+ * volcado de datos. Las secciones se separan con claridad y las listas se
+ * distinguen entre sí por un acento de color discreto, para que fortalezas y
+ * oportunidades no se confundan al hojear.
+ */
+
+.sld-result__header {
+  padding-bottom: var(--sld-space-md);
+  border-bottom: 1px solid var(--sld-color-border);
+}
+
+.sld-result__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sld-space-sm);
+  margin: 0;
+  color: var(--sld-color-text-muted);
+  font-size: 0.9rem;
+}
+
+.sld-result__version {
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--sld-color-border);
+  border-radius: 999px;
+  font-size: 0.78rem;
+}
+
+.sld-result__section,
+.sld-result__summary,
+.sld-result__score {
+  margin-top: var(--sld-space-xl);
+}
+
+.sld-result__section-title {
+  margin: 0 0 var(--sld-space-md);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Puntuación ----------------------------------------------------------- */
+
+.sld-score {
+  display: flex;
+  align-items: center;
+  gap: var(--sld-space-lg);
+  flex-wrap: wrap;
+}
+
+.sld-score__value {
+  flex: 0 0 auto;
+  color: var(--sld-color-primary);
+  font-size: 2.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sld-score__max {
+  color: var(--sld-color-text-muted);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.sld-score__bar {
+  flex: 1 1 12rem;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--sld-color-surface);
+  overflow: hidden;
+}
+
+.sld-score__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sld-color-primary);
+}
+
+/* Resumen -------------------------------------------------------------- */
+
+.sld-result__prose {
+  line-height: 1.7;
+}
+
+.sld-result__prose > :first-child {
+  margin-top: 0;
+}
+
+.sld-result__prose > :last-child {
+  margin-bottom: 0;
+}
+
+/* Listas --------------------------------------------------------------- */
+
+.sld-result__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--sld-space-sm);
+}
+
+.sld-result__list li {
+  position: relative;
+  padding: var(--sld-space-md);
+  padding-inline-start: calc(var(--sld-space-md) + 4px);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-bg);
+  line-height: 1.6;
+}
+
+/* Un acento de color por tipo de sección: al hojear el informe, el lector
+   distingue de un vistazo qué está leyendo sin releer el encabezado. */
+.sld-result__list li::before {
+  content: "";
+  position: absolute;
+  inset-block: -1px;
+  inset-inline-start: -1px;
+  width: 4px;
+  border-start-start-radius: var(--sld-radius-sm);
+  border-end-start-radius: var(--sld-radius-sm);
+  background: var(--sld-color-border);
+}
+
+.sld-result__list--strengths li::before {
+  background: var(--sld-color-success);
+}
+
+.sld-result__list--opportunities li::before {
+  background: var(--sld-color-warning);
+}
+
+.sld-result__list--recommendations li::before {
+  background: var(--sld-color-info);
+}
+
+.sld-result__list--priority_actions li::before {
+  background: var(--sld-color-primary);
+}
+
+/* Pie ------------------------------------------------------------------ */
+
+.sld-result__footer {
+  margin-top: var(--sld-space-xl);
+  padding-top: var(--sld-space-lg);
+  border-top: 1px solid var(--sld-color-border);
+}
+
+.sld-result__disclaimer {
+  margin: var(--sld-space-md) 0 0;
+  font-size: 0.85rem;
+}
+
+/* Impresión: el alumno querrá llevarse el informe. Se retiran los elementos
+   de navegación y los fondos, que solo gastan tinta. */
+@media print {
+  .sld-result__footer,
+  .sld-score__bar {
+    display: none;
+  }
+
+  .sld-result__list li {
+    break-inside: avoid;
+    background: none;
+  }
+}

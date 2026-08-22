@@ -1,6 +1,6 @@
 _core:
   default_config_hash: Ch1lcvb16bxS-CZpkM4n5NGWOw6WU4aB_fjCpUbTrlM
-version: '1.0'
-system_prompt: ''
-instructions: ''
-output_contract: ''
+version: 0.0-PRUEBAS
+system_prompt: null
+instructions: null
+output_contract: null

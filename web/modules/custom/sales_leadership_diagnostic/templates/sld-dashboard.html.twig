@@ -91,9 +91,13 @@
                 <td data-label="{{ 'Versión'|t }}">{{ row.version }}</td>
                 <td data-label="{{ 'Acciones'|t }}">
                   {% if row.result_id %}
-                    <span class="sld__muted">{{ 'Resultado disponible'|t }}</span>
+                    <a class="sld__link" href="{{ path('sales_leadership_diagnostic.result', {'sld_diagnostic_result': row.result_id}) }}">
+                      {{ 'Ver resultado'|t }}
+                    </a>
                   {% elseif row.is_resumable %}
-                    <span class="sld__muted">{{ 'Sin terminar'|t }}</span>
+                    <a class="sld__link" href="{{ path('sales_leadership_diagnostic.session', {'sld_diagnostic_session': row.id}) }}">
+                      {{ 'Continuar'|t }}
+                    </a>
                   {% else %}
                     <span class="sld__muted">—</span>
                   {% endif %}

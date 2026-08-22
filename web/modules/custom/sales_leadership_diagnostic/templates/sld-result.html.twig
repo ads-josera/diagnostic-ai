@@ -1,0 +1,79 @@
+{#
+/**
+ * @file
+ * Resultado de un diagnóstico completado (§35).
+ *
+ * Variables:
+ * - summary: resumen ya saneado. Es Markup, así que Twig no vuelve a escaparlo.
+ * - score: puntuación, o null si la metodología no contempla ninguna.
+ * - sections: lista de secciones con label e items.
+ * - version: versión del diagnóstico con la que se generó.
+ * - created: fecha de generación.
+ *
+ * Los elementos de las listas son texto plano y Twig los escapa. Proceden del
+ * motor de IA y no se tratan como marcado.
+ */
+#}
+<div class="sld sld-result">
+
+  <header class="sld-result__header">
+    <p class="sld-result__meta">
+      {{ 'Generado el @date'|t({'@date': created}) }}
+      <span class="sld-result__version">{{ 'versión @v'|t({'@v': version}) }}</span>
+    </p>
+  </header>
+
+  {% if score is not null %}
+    <section class="sld-result__score" aria-labelledby="sld-score-label">
+      <h2 class="sld-result__section-title" id="sld-score-label">
+        {{ 'Puntuación de madurez comercial'|t }}
+      </h2>
+      <div class="sld-score">
+        <div class="sld-score__value">{{ score }}<span class="sld-score__max">/100</span></div>
+        {#
+          El indicador es decorativo: el valor ya está escrito arriba en texto,
+          de modo que quien no vea la barra no pierde información.
+        #}
+        <div class="sld-score__bar" aria-hidden="true">
+          <div class="sld-score__fill" style="width: {{ score }}%"></div>
+        </div>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if summary %}
+    <section class="sld-result__summary" aria-labelledby="sld-summary-label">
+      <h2 class="sld-result__section-title" id="sld-summary-label">{{ 'Resumen'|t }}</h2>
+      <div class="sld-result__prose">{{ summary }}</div>
+    </section>
+  {% endif %}
+
+  {% for section in sections %}
+    <section class="sld-result__section" aria-labelledby="sld-sec-{{ section.key }}">
+      <h2 class="sld-result__section-title" id="sld-sec-{{ section.key }}">
+        {{ section.label }}
+      </h2>
+      <ul class="sld-result__list sld-result__list--{{ section.key }}">
+        {% for item in section.items %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endfor %}
+
+  {% if sections is empty and not summary %}
+    <div class="sld__notice" role="status">
+      <p>{{ 'Este diagnóstico no tiene contenido que mostrar.'|t }}</p>
+    </div>
+  {% endif %}
+
+  <footer class="sld-result__footer">
+    <a class="sld__button sld__button--secondary" href="{{ path('sales_leadership_diagnostic.dashboard') }}">
+      {{ '← Volver al panel'|t }}
+    </a>
+    <p class="sld__muted sld-result__disclaimer">
+      {{ 'Este análisis se ha generado a partir de tus respuestas durante la conversación.'|t }}
+    </p>
+  </footer>
+
+</div>

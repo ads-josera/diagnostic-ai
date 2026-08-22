@@ -48,6 +48,15 @@ final class DiagnosticThemeHooks {
           'messages' => [],
         ],
       ],
+      'sld_result' => [
+        'variables' => [
+          'summary' => NULL,
+          'score' => NULL,
+          'sections' => [],
+          'version' => '',
+          'created' => '',
+        ],
+      ],
       'sld_sso_denied' => [
         'variables' => [
           'message' => '',

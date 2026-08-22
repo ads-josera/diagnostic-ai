@@ -18,3 +18,10 @@ chat:
     - core/drupal
     - core/once
     - core/drupalSettings
+
+result:
+  version: 1.x
+  css:
+    theme:
+      css/sld-base.css: {}
+      css/sld-result.css: {}
