@@ -7,4 +7,10 @@ configure: sales_leadership_diagnostic.settings
 dependencies:
   - drupal:system
   - drupal:user
+  # Aporta el tipo de campo list_string que usa el estado de la sesión. El
+  # perfil standard lo activa, de modo que la falta de esta declaración no se
+  # notaba en desarrollo; en una instalación mínima el módulo no habría podido
+  # instalarse. Lo detectaron los tests de Kernel, que arrancan solo con lo
+  # declarado aquí.
+  - drupal:options
   - externalauth:externalauth

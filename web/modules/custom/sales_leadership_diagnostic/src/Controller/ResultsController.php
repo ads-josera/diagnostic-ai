@@ -7,6 +7,7 @@ namespace Drupal\sales_leadership_diagnostic\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Render\Markup;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -26,17 +27,24 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 final class ResultsController extends ControllerBase {
 
   /**
-   * Secciones del resultado, en el orden en que se muestran.
+   * Claves de las secciones del resultado, en el orden en que se muestran.
    *
    * La estructura definitiva depende de la metodología del cliente (§32). Las
    * secciones que no vengan en el resultado simplemente no se pintan, de modo
    * que una metodología con menos apartados no produce huecos vacíos.
+   *
+   * Las etiquetas NO viven aquí sino en sectionLabel(), como literales: el
+   * extractor de traducciones de Drupal analiza el código fuente buscando
+   * llamadas a t() con una cadena literal, de modo que una etiqueta pasada
+   * como variable nunca llegaría al catálogo y no podría traducirse.
+   *
+   * @var string[]
    */
-  private const SECTIONS = [
-    'strengths' => 'Fortalezas',
-    'opportunities' => 'Oportunidades de mejora',
-    'recommendations' => 'Recomendaciones',
-    'priority_actions' => 'Acciones prioritarias',
+  private const SECTION_KEYS = [
+    'strengths',
+    'opportunities',
+    'recommendations',
+    'priority_actions',
   ];
 
   public function __construct(
@@ -97,7 +105,7 @@ final class ResultsController extends ControllerBase {
   private function buildSections(array $payload): array {
     $sections = [];
 
-    foreach (self::SECTIONS as $key => $label) {
+    foreach (self::SECTION_KEYS as $key) {
       $items = $payload[$key] ?? NULL;
 
       if (!is_array($items) || $items === []) {
@@ -106,7 +114,7 @@ final class ResultsController extends ControllerBase {
 
       $sections[] = [
         'key' => $key,
-        'label' => $this->t($label),
+        'label' => $this->sectionLabel($key),
         'items' => array_values(array_filter(
           array_map(static fn ($item): string => is_scalar($item) ? trim((string) $item) : '', $items),
           static fn (string $item): bool => $item !== '',
@@ -115,6 +123,28 @@ final class ResultsController extends ControllerBase {
     }
 
     return $sections;
+  }
+
+  /**
+   * Etiqueta traducible de una sección.
+   *
+   * Cada rama contiene un literal para que el extractor de traducciones pueda
+   * encontrarlas al analizar el código.
+   *
+   * @param string $key
+   *   Clave de la sección.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   Etiqueta lista para mostrar.
+   */
+  private function sectionLabel(string $key): TranslatableMarkup {
+    return match ($key) {
+      'strengths' => $this->t('Fortalezas'),
+      'opportunities' => $this->t('Oportunidades de mejora'),
+      'recommendations' => $this->t('Recomendaciones'),
+      'priority_actions' => $this->t('Acciones prioritarias'),
+      default => $this->t('Otros hallazgos'),
+    };
   }
 
 }

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Configuración de tests del proyecto.
+
+  Se limita a los tests del módulo custom: ejecutar además la suite de Drupal
+  core tardaría horas y no prueba nada de lo que escribimos nosotros.
+
+  Uso:
+    ddev exec vendor/bin/phpunit                 → toda la suite
+    ddev exec vendor/bin/phpunit "-""-testsuite" unit  → solo unitarios, sin BD
+
+  (El doble guion de las opciones no puede escribirse dentro de un comentario
+  XML, de ahí la partición de la cadena en la línea anterior.)
+
+  SIMPLETEST_DB apunta a la base de datos de DDEV. Los tests de tipo Kernel
+  crean su propio esquema con un prefijo aleatorio y lo destruyen al terminar,
+  así que NO tocan los datos del sitio de desarrollo.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="web/core/tests/bootstrap.php"
+         colors="true"
+         beStrictAboutTestsThatDoNotTestAnything="true"
+         beStrictAboutOutputDuringTests="true"
+         failOnWarning="true"
+         failOnRisky="true"
+         cacheDirectory=".phpunit.cache">
+
+  <php>
+    <ini name="error_reporting" value="32767"/>
+    <ini name="memory_limit" value="-1"/>
+    <env name="SIMPLETEST_DB" value="mysql://db:db@db/db"/>
+    <env name="SIMPLETEST_BASE_URL" value="https://diagnostic-ai.ddev.site"/>
+    <env name="BROWSERTEST_OUTPUT_DIRECTORY" value="/tmp"/>
+    <!-- Los avisos de deprecación de dependencias externas no deben hacer
+         fallar nuestra suite: no están bajo nuestro control. -->
+    <env name="SYMFONY_DEPRECATIONS_HELPER" value="weak"/>
+  </php>
+
+  <testsuites>
+    <testsuite name="unit">
+      <directory>web/modules/custom/sales_leadership_diagnostic/tests/src/Unit</directory>
+    </testsuite>
+    <testsuite name="kernel">
+      <directory>web/modules/custom/sales_leadership_diagnostic/tests/src/Kernel</directory>
+    </testsuite>
+  </testsuites>
+
+  <source>
+    <include>
+      <directory>web/modules/custom/sales_leadership_diagnostic/src</directory>
+    </include>
+  </source>
+</phpunit>
