@@ -42,6 +42,36 @@ final class SalesLeadershipDiagnostic {
   public const SUPPORT_ROLE_LABEL = 'Soporte Diagnostic AI';
 
   /**
+   * Rol de gestión del cliente.
+   *
+   * Es un rol DISTINTO del de soporte, no un renombrado. Hoy ambos llevan el
+   * mismo permiso, pero responden a puestos distintos dentro de la
+   * organización del cliente y sus permisos pueden separarse más adelante sin
+   * tener que reasignar usuarios.
+   *
+   * No se toca el rol de administrador de Drupal: el gestor recibe lo justo
+   * para consultar diagnósticos, y nada del prompt ni de las credenciales de
+   * integración.
+   */
+  public const MANAGER_ROLE_ID = 'gestor_sam';
+
+  /**
+   * Etiqueta del rol de gestión.
+   */
+  public const MANAGER_ROLE_LABEL = 'Gestor SAM';
+
+  /**
+   * Permiso de core que hace usable el listado a quien no es administrador.
+   *
+   * Sin el tema de administración, el listado de resultados se pinta con el
+   * tema del alumno y desentona. NO se concede «access administration pages»:
+   * el gestor no necesita el resto del panel y dárselo ampliaría su alcance
+   * sin motivo.
+   */
+  public const ADMIN_THEME_PERMISSION =
+    'view the administration theme';
+
+  /**
    * Versión mínima del plugin de WordPress que el módulo necesita.
    *
    * Se sube cuando el módulo empieza a depender de algo que el plugin añadió,

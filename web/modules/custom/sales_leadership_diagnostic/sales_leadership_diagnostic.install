@@ -116,6 +116,18 @@ function sales_leadership_diagnostic_install(): void {
     SalesLeadershipDiagnostic::PERMISSION_VIEW_ALL_RESULTS,
     6,
   );
+
+  // Rol de gestión del cliente. Es distinto del de soporte a propósito: hoy
+  // llevan el mismo permiso, pero son puestos distintos y podrán separarse sin
+  // reasignar usuarios. El tema de administración se le da para que el listado
+  // de resultados no se pinte con el tema del alumno.
+  _sales_leadership_diagnostic_ensure_role(
+    SalesLeadershipDiagnostic::MANAGER_ROLE_ID,
+    SalesLeadershipDiagnostic::MANAGER_ROLE_LABEL,
+    SalesLeadershipDiagnostic::PERMISSION_VIEW_ALL_RESULTS,
+    7,
+    [SalesLeadershipDiagnostic::ADMIN_THEME_PERMISSION],
+  );
 }
 
 /**
@@ -132,8 +144,10 @@ function sales_leadership_diagnostic_install(): void {
  *   Permiso que debe tener.
  * @param int $weight
  *   Peso en el listado de roles.
+ * @param string[] $extra
+ *   Permisos adicionales, si el rol necesita alguno de core.
  */
-function _sales_leadership_diagnostic_ensure_role(string $id, string $label, string $permission, int $weight): void {
+function _sales_leadership_diagnostic_ensure_role(string $id, string $label, string $permission, int $weight, array $extra = []): void {
   $role = Role::load($id);
 
   if ($role === NULL) {
@@ -145,6 +159,11 @@ function _sales_leadership_diagnostic_ensure_role(string $id, string $label, str
   }
 
   $role->grantPermission($permission);
+
+  foreach ($extra as $additional) {
+    $role->grantPermission($additional);
+  }
+
   $role->save();
 }
 
@@ -162,6 +181,7 @@ function sales_leadership_diagnostic_uninstall(): void {
   $ids = [
     SalesLeadershipDiagnostic::STUDENT_ROLE_ID,
     SalesLeadershipDiagnostic::SUPPORT_ROLE_ID,
+    SalesLeadershipDiagnostic::MANAGER_ROLE_ID,
   ];
 
   foreach ($ids as $id) {
@@ -301,4 +321,29 @@ function sales_leadership_diagnostic_update_10004(): string {
     'Creado el rol "%s" con permiso para consultar los diagnósticos de cualquier alumno. No se ha asignado a ningún usuario.',
     SalesLeadershipDiagnostic::SUPPORT_ROLE_LABEL,
   );
+}
+
+/**
+ * Crea el rol Gestor SAM para las instalaciones existentes.
+ *
+ * Rol propio y NO un renombrado del de soporte: son puestos distintos en la
+ * organización del cliente, y fundirlos habría impedido separar sus permisos
+ * más adelante sin reasignar a las personas.
+ *
+ * Se crea vacío: el módulo no decide quién es gestor.
+ */
+function sales_leadership_diagnostic_update_10005(): string {
+  if (Role::load(SalesLeadershipDiagnostic::MANAGER_ROLE_ID) !== NULL) {
+    return 'El rol Gestor SAM ya existía; no se ha modificado.';
+  }
+
+  _sales_leadership_diagnostic_ensure_role(
+    SalesLeadershipDiagnostic::MANAGER_ROLE_ID,
+    SalesLeadershipDiagnostic::MANAGER_ROLE_LABEL,
+    SalesLeadershipDiagnostic::PERMISSION_VIEW_ALL_RESULTS,
+    7,
+    [SalesLeadershipDiagnostic::ADMIN_THEME_PERMISSION],
+  );
+
+  return 'Creado el rol "Gestor SAM" con permiso para consultar los diagnósticos de cualquier alumno. No se ha asignado a ningún usuario.';
 }
