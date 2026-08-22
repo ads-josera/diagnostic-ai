@@ -76,6 +76,8 @@ final class ResultsController extends ControllerBase {
     $result = $sld_diagnostic_result;
     $payload = $result->getPayload();
 
+    $this->logForeignAccess($result);
+
     return [
       '#theme' => 'sld_result',
       '#summary' => Markup::create($this->markdown->render($result->getSummary())),
@@ -91,6 +93,34 @@ final class ResultsController extends ControllerBase {
         'tags' => ['sld_diagnostic_result:' . $result->id()],
       ],
     ];
+  }
+
+  /**
+   * Deja constancia de que alguien ha leído el diagnóstico de otra persona.
+   *
+   * Un resultado contiene el análisis del negocio del alumno. Que soporte pueda
+   * consultarlo es necesario para atenderle; que nadie sepa nunca quién lo ha
+   * consultado, no. El registro convierte ese acceso en un hecho auditable sin
+   * estorbar el trabajo de nadie.
+   *
+   * Se anota la lectura, no el contenido: el mensaje lleva identificadores, y
+   * jamás el resumen ni la puntuación (§43).
+   */
+  private function logForeignAccess(DiagnosticResultInterface $result): void {
+    $viewer = $this->currentUser();
+
+    if ((string) $viewer->id() === (string) $result->getOwnerId()) {
+      return;
+    }
+
+    $this->getLogger('sales_leadership_diagnostic')->info(
+      'La cuenta @viewer ha consultado el resultado @result, propiedad de la cuenta @owner.',
+      [
+        '@viewer' => $viewer->id(),
+        '@result' => $result->id(),
+        '@owner' => $result->getOwnerId(),
+      ],
+    );
   }
 
   /**

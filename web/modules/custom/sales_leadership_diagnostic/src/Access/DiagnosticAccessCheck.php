@@ -67,4 +67,27 @@ final class DiagnosticAccessCheck implements AccessInterface {
     return AccessResult::allowed()->cachePerUser()->setCacheMaxAge(0);
   }
 
+  /**
+   * Variante para la ruta de un resultado concreto.
+   *
+   * Existe porque el personal de soporte no es alumno. Con la comprobación
+   * general, alguien con «ver los resultados de cualquier alumno» quedaba
+   * rechazado por la ruta antes de llegar al control que se lo concedía: el
+   * permiso existía pero no servía para nada.
+   *
+   * Aquí solo se decide si la persona puede entrar por esta puerta. QUÉ
+   * resultado concreto puede leer lo sigue decidiendo el handler de acceso de
+   * la entidad, que el enrutador aplica a continuación.
+   */
+  public function accessResult(AccountInterface $account): AccessResultInterface {
+    if ($account->hasPermission(SalesLeadershipDiagnostic::PERMISSION_VIEW_ALL_RESULTS)) {
+      return AccessResult::allowed()->cachePerPermissions();
+    }
+
+    // Para el alumno, un resultado es parte del diagnóstico: si perdió el
+    // acceso, deja de ver también sus resultados anteriores. Es la política
+    // acordada, y se obtiene sin código extra reutilizando la cadena completa.
+    return $this->access($account);
+  }
+
 }

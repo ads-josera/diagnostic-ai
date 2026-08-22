@@ -11,3 +11,12 @@ sales_leadership_diagnostic.settings:
   parent: sales_leadership_diagnostic.admin_section
   route_name: sales_leadership_diagnostic.settings
   weight: 0
+
+# Bajo Contenido, no bajo Configuración: son datos de los alumnos. Quien
+# atiende soporte no necesita —ni debe tener— acceso a los ajustes.
+sales_leadership_diagnostic.admin_results:
+  title: 'Resultados de diagnóstico'
+  description: 'Consultar los diagnósticos completados por los alumnos.'
+  parent: system.admin_content
+  route_name: sales_leadership_diagnostic.admin_results
+  weight: 10

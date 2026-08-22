@@ -99,32 +99,84 @@ function sales_leadership_diagnostic_schema(): array {
  * permiso.
  */
 function sales_leadership_diagnostic_install(): void {
-  $role = Role::load(SalesLeadershipDiagnostic::STUDENT_ROLE_ID);
+  _sales_leadership_diagnostic_ensure_role(
+    SalesLeadershipDiagnostic::STUDENT_ROLE_ID,
+    SalesLeadershipDiagnostic::STUDENT_ROLE_LABEL,
+    SalesLeadershipDiagnostic::PERMISSION_ACCESS,
+    5,
+  );
+
+  // El rol de soporte se crea sin usuarios asignados. Sin él, el permiso de
+  // leer diagnósticos ajenos solo podía concederse inventando un rol a mano, y
+  // la vía cómoda —dar el rol de administrador a quien atiende soporte— le
+  // habría entregado también el prompt y las credenciales de integración.
+  _sales_leadership_diagnostic_ensure_role(
+    SalesLeadershipDiagnostic::SUPPORT_ROLE_ID,
+    SalesLeadershipDiagnostic::SUPPORT_ROLE_LABEL,
+    SalesLeadershipDiagnostic::PERMISSION_VIEW_ALL_RESULTS,
+    6,
+  );
+}
+
+/**
+ * Crea un rol si no existe y le garantiza un permiso.
+ *
+ * Idempotente a propósito: también repara un rol huérfano de una instalación
+ * anterior devolviéndole el permiso que la desinstalación le retiró.
+ *
+ * @param string $id
+ *   Identificador del rol.
+ * @param string $label
+ *   Etiqueta visible.
+ * @param string $permission
+ *   Permiso que debe tener.
+ * @param int $weight
+ *   Peso en el listado de roles.
+ */
+function _sales_leadership_diagnostic_ensure_role(string $id, string $label, string $permission, int $weight): void {
+  $role = Role::load($id);
 
   if ($role === NULL) {
     $role = Role::create([
-      'id' => SalesLeadershipDiagnostic::STUDENT_ROLE_ID,
-      'label' => SalesLeadershipDiagnostic::STUDENT_ROLE_LABEL,
-      'weight' => 5,
+      'id' => $id,
+      'label' => $label,
+      'weight' => $weight,
     ]);
   }
 
-  $role->grantPermission(SalesLeadershipDiagnostic::PERMISSION_ACCESS);
+  $role->grantPermission($permission);
   $role->save();
 }
 
 /**
  * Implements hook_uninstall().
  *
- * Retira los permisos del módulo del rol de alumno y elimina el rol únicamente
- * si ningún usuario lo tiene asignado.
+ * Retira los permisos del módulo de los roles que crea y elimina cada rol
+ * únicamente si ningún usuario lo tiene asignado.
  *
  * Borrar un rol que sigue asignado destruiría información irreversible, así
  * que en ese caso se conserva vacío y se deja la decisión al administrador.
  * Las cuentas provisionadas desde WordPress nunca se eliminan.
  */
 function sales_leadership_diagnostic_uninstall(): void {
-  $role = Role::load(SalesLeadershipDiagnostic::STUDENT_ROLE_ID);
+  $ids = [
+    SalesLeadershipDiagnostic::STUDENT_ROLE_ID,
+    SalesLeadershipDiagnostic::SUPPORT_ROLE_ID,
+  ];
+
+  foreach ($ids as $id) {
+    _sales_leadership_diagnostic_retire_role($id);
+  }
+}
+
+/**
+ * Deja un rol sin permisos del módulo, y lo borra si ya no lo usa nadie.
+ *
+ * @param string $id
+ *   Identificador del rol.
+ */
+function _sales_leadership_diagnostic_retire_role(string $id): void {
+  $role = Role::load($id);
 
   if ($role === NULL) {
     return;
@@ -136,7 +188,7 @@ function sales_leadership_diagnostic_uninstall(): void {
 
   $assigned = \Drupal::entityQuery('user')
     ->accessCheck(FALSE)
-    ->condition('roles', SalesLeadershipDiagnostic::STUDENT_ROLE_ID)
+    ->condition('roles', $id)
     ->range(0, 1)
     ->execute();
 
@@ -149,7 +201,7 @@ function sales_leadership_diagnostic_uninstall(): void {
 
   \Drupal::logger(SalesLeadershipDiagnostic::LOGGER_CHANNEL)->notice(
     'El rol %role se conserva porque sigue asignado a uno o más usuarios. Se le han retirado los permisos del módulo.',
-    ['%role' => SalesLeadershipDiagnostic::STUDENT_ROLE_ID],
+    ['%role' => $id],
   );
 }
 
@@ -221,4 +273,32 @@ function sales_leadership_diagnostic_update_10003(): string {
   $config->set('openai.max_completion_tokens', 2000)->save();
 
   return 'Añadido el límite de tokens por respuesta con un valor de 2000.';
+}
+
+/**
+ * Crea el rol de soporte para las instalaciones anteriores.
+ *
+ * El permiso de leer diagnósticos ajenos existía desde el principio, pero no
+ * había ningún rol que lo llevase ni ninguna página donde ejercerlo. Quien
+ * quisiera dar soporte tenía que conceder el rol de administrador completo,
+ * que además entrega el prompt y las credenciales de integración.
+ *
+ * El rol se crea vacío: no se asigna a nadie automáticamente.
+ */
+function sales_leadership_diagnostic_update_10004(): string {
+  if (Role::load(SalesLeadershipDiagnostic::SUPPORT_ROLE_ID) !== NULL) {
+    return 'El rol de soporte ya existía; no se ha modificado.';
+  }
+
+  _sales_leadership_diagnostic_ensure_role(
+    SalesLeadershipDiagnostic::SUPPORT_ROLE_ID,
+    SalesLeadershipDiagnostic::SUPPORT_ROLE_LABEL,
+    SalesLeadershipDiagnostic::PERMISSION_VIEW_ALL_RESULTS,
+    6,
+  );
+
+  return sprintf(
+    'Creado el rol "%s" con permiso para consultar los diagnósticos de cualquier alumno. No se ha asignado a ningún usuario.',
+    SalesLeadershipDiagnostic::SUPPORT_ROLE_LABEL,
+  );
 }

@@ -103,9 +103,27 @@ sales_leadership_diagnostic.result:
     _controller: 'Drupal\sales_leadership_diagnostic\Controller\ResultsController::view'
     _title_callback: 'Drupal\sales_leadership_diagnostic\Controller\ResultsController::title'
   requirements:
-    _permission: 'access sales leadership diagnostic'
-    _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::access'
+    # Deliberadamente SIN _permission aquí: el permiso de alumno lo exige
+    # accessResult() para los alumnos, pero el personal de soporte llega con
+    # otro permiso distinto y exigir ambos lo dejaría fuera. Quién puede ver
+    # QUÉ resultado lo decide _entity_access, que es donde vive la regla.
+    _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::accessResult'
     _entity_access: 'sld_diagnostic_result.view'
+
+# ---------------------------------------------------------------------------
+# Listado de resultados para administración y soporte
+# ---------------------------------------------------------------------------
+# Vive bajo /admin/content porque lista contenido, no configuración. Meterlo
+# en /admin/config/salesbumm habría agrupado la sección, pero mezcla dos cosas
+# que Drupal separa a propósito: ajustes que se exportan y datos que no.
+sales_leadership_diagnostic.admin_results:
+  path: '/admin/content/sales-diagnostic'
+  methods: [GET]
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\AdminResultsController::view'
+    _title: 'Resultados de diagnóstico'
+  requirements:
+    _permission: 'view all diagnostic results+administer sales leadership diagnostic'
 
 # ---------------------------------------------------------------------------
 # Administración

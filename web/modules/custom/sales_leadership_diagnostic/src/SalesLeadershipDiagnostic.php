@@ -27,6 +27,21 @@ final class SalesLeadershipDiagnostic {
   public const STUDENT_ROLE_LABEL = 'Alumno Diagnostic AI';
 
   /**
+   * Rol para quien atiende soporte.
+   *
+   * Se crea vacío de usuarios: el módulo no asigna a nadie a este rol, porque
+   * quién atiende soporte es una decisión del cliente. Existe para que el
+   * permiso de leer diagnósticos ajenos pueda concederse sin tener que
+   * inventar un rol ni, mucho peor, repartir el de administrador.
+   */
+  public const SUPPORT_ROLE_ID = 'sales_diagnostic_support';
+
+  /**
+   * Etiqueta del rol de soporte.
+   */
+  public const SUPPORT_ROLE_LABEL = 'Soporte Diagnostic AI';
+
+  /**
    * Permite usar el diagnóstico y consultar los resultados propios.
    */
   public const PERMISSION_ACCESS = 'access sales leadership diagnostic';
