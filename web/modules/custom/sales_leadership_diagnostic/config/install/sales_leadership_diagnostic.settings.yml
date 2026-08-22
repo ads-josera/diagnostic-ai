@@ -9,6 +9,7 @@ wordpress:
   timeout: 10
   cache_ttl_granted: 900
   cache_ttl_denied: 60
+  cache_grace_period: 3600
 openai:
   model: ''
   timeout: 60

@@ -21,6 +21,9 @@ sales_leadership_diagnostic.settings:
         cache_ttl_denied:
           type: integer
           label: 'TTL de cache para autorizaciones denegadas (segundos)'
+        cache_grace_period:
+          type: integer
+          label: 'Periodo de gracia si WordPress no responde (segundos)'
     openai:
       type: mapping
       label: 'Proveedor de IA'

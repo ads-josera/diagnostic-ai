@@ -152,3 +152,23 @@ function sales_leadership_diagnostic_uninstall(): void {
     ['%role' => SalesLeadershipDiagnostic::STUDENT_ROLE_ID],
   );
 }
+
+/**
+ * Añade el periodo de gracia de autorización.
+ *
+ * Sin este valor, una caída de WordPress denegaría el acceso a todos los
+ * alumnos de inmediato, incluidos los que acababan de ser verificados. El
+ * valor por defecto reutiliza una concesión reciente durante una hora; poner
+ * cero desactiva la excepción y restaura el fail closed estricto (§13).
+ */
+function sales_leadership_diagnostic_update_10001(): string {
+  $config = \Drupal::configFactory()->getEditable('sales_leadership_diagnostic.settings');
+
+  if ($config->get('wordpress.cache_grace_period') === NULL) {
+    $config->set('wordpress.cache_grace_period', 3600)->save();
+
+    return 'Añadido el periodo de gracia de autorización con un valor de 3600 segundos.';
+  }
+
+  return 'El periodo de gracia ya estaba configurado; no se ha modificado.';
+}

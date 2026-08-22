@@ -190,6 +190,15 @@ final class SettingsForm extends ConfigFormBase {
         '#max' => 3600,
         '#config_target' => self::CONFIG_NAME . ':wordpress.cache_ttl_denied',
       ],
+
+      'cache_grace_period' => [
+        '#type' => 'number',
+        '#title' => $this->t('Periodo de gracia si WordPress no responde (segundos)'),
+        '#description' => $this->t('Si WordPress no está disponible, un alumno verificado dentro de este plazo conserva el acceso; el resto lo pierde. Solo se reutilizan autorizaciones concedidas, nunca denegaciones, así que una caída jamás da acceso a quien no lo tenía. Poner <strong>0</strong> desactiva la excepción y deniega siempre que no se pueda comprobar.'),
+        '#min' => 0,
+        '#max' => 86400,
+        '#config_target' => self::CONFIG_NAME . ':wordpress.cache_grace_period',
+      ],
     ];
   }
 

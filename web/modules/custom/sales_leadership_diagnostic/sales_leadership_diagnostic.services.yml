@@ -38,9 +38,30 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\WordPress\WordPressApiClient'
       - '@datetime.time'
 
-  # El resto del módulo depende de la interfaz, no de LearnDash. Cambiar de LMS
-  # será escribir otra implementación y mover este alias.
-  Drupal\sales_leadership_diagnostic\Service\Authorization\CourseAccessProviderInterface: '@Drupal\sales_leadership_diagnostic\Service\Authorization\LearnDashAccessProvider'
+  # Decorador: envuelve al proveedor real con cache y política de degradación.
+  # Al implementar la misma interfaz, quien la consume no sabe si la respuesta
+  # viene de la red o de una consulta anterior.
+  Drupal\sales_leadership_diagnostic\Service\Authorization\CachedCourseAccessProvider:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Authorization\LearnDashAccessProvider'
+      - '@cache.default'
+      - '@config.factory'
+      - '@datetime.time'
+      - '@logger.factory'
+
+  # El resto del módulo depende de la interfaz, no de LearnDash ni de la cache.
+  # Cambiar de LMS será escribir otra implementación y mover el proveedor
+  # interno del decorador.
+  Drupal\sales_leadership_diagnostic\Service\Authorization\CourseAccessProviderInterface: '@Drupal\sales_leadership_diagnostic\Service\Authorization\CachedCourseAccessProvider'
+
+  # Fachada de autorización: el único punto donde una avería se convierte en
+  # denegación. Concentrarlo aquí evita que un catch mal escrito en cualquier
+  # otro sitio conceda acceso por error.
+  Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Authorization\CourseAccessProviderInterface'
+      - '@config.factory'
+      - '@logger.factory'
 
   # --- Diagnóstico ---------------------------------------------------------
 
