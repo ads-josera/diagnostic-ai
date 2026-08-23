@@ -16,18 +16,6 @@ sales_leadership_diagnostic.branding_tab:
   base_route: sales_leadership_diagnostic.settings
   weight: 20
 
-sales_leadership_diagnostic.studio_tab:
-  title: 'Estudio del prompt'
-  route_name: sales_leadership_diagnostic.studio
-  base_route: sales_leadership_diagnostic.settings
-  weight: 5
-
-sales_leadership_diagnostic.chat_welcome_tab:
-  title: 'Bienvenida del chat'
-  route_name: sales_leadership_diagnostic.chat_welcome
-  base_route: sales_leadership_diagnostic.settings
-  weight: 6
-
 # ---------------------------------------------------------------------------
 # Pestañas del gestor
 # ---------------------------------------------------------------------------
@@ -36,10 +24,21 @@ sales_leadership_diagnostic.chat_welcome_tab:
 # pintan nunca: podia entrar al estudio escribiendo la URL, pero no habia un
 # solo enlace que le llevara.
 #
-# Estas repiten los mismos destinos colgando de su listado de resultados, que
-# es donde aterriza al iniciar sesión. Son entradas distintas y no duplicados:
-# una tarea local pertenece a un unico conjunto de pestañas, asi que cada
-# publico necesita las suyas.
+# Por eso el estudio y la bienvenida cuelgan de su listado de resultados, que
+# es donde aterriza al iniciar sesión, y NO de la página de ajustes.
+#
+# Una ruta solo puede pertenecer a UN conjunto de pestañas. Declararla en dos
+# hace que Drupal pinte los dos conjuntos a la vez y las pestañas aparezcan
+# repetidas, que es lo que ocurrió al intentar servir a los dos públicos con
+# declaraciones separadas.
+#
+# El reparto queda así, y se lee solo:
+#
+#   Contenido → Resultados    Resultados · Estudio · Bienvenida   (gestor)
+#   Configuración → Salesbumm Integración · Agente · Marca        (admin)
+#
+# Un administrador llega igualmente al estudio: tiene el permiso, y el listado
+# de resultados está en su menú de Contenido.
 sales_leadership_diagnostic.results_default_tab:
   title: 'Resultados'
   route_name: sales_leadership_diagnostic.admin_results

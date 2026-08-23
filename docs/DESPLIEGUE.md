@@ -250,6 +250,33 @@ drush eval '\Drupal\Core\Cache\Cache::invalidateTags(["sld_authorization"]);'
 
 ---
 
+## Prueba de humo de la interfaz
+
+Hay una clase de fallos que ni los tests ni las comprobaciones por línea de
+órdenes ven, y en este proyecto los encontró siempre el cliente usando el
+producto: un error fatal servido con código 200, un formulario que carga pero
+no guarda, una subida que falla en su petición AJAX, texto ilegible solo con el
+sistema en modo oscuro, o una función a la que se tiene permiso pero a la que
+no lleva ningún enlace.
+
+`bin/humo.mjs` los reproduce todos. Hay que pasarla antes de dar por cerrado
+cualquier cambio que toque interfaz, formularios, permisos o CSS:
+
+```bash
+ULI=$(ddev drush uli --no-browser --uri=https://diagnostic-ai.ddev.site)
+SLD_ULI="$ULI" node ~/.claude/skills/browser-automation/browser.mjs \
+  https://diagnostic-ai.ddev.site/ --script bin/humo.mjs
+```
+
+Solo cuenta como pasar `"resultado": "TODO BIEN"` con la lista de fallos vacía.
+
+Inicia sesión de verdad con cada rol, envía los formularios de administración,
+mide el contraste en modo claro y oscuro, y comprueba que el gestor llegue a
+sus herramientas **por enlace** y no escribiendo la URL. No envía mensajes al
+proveedor de IA, así que no cuesta llamadas.
+
+---
+
 ## Lista de comprobación
 
 - [ ] HTTPS activo y `DRUPAL_TRUSTED_HOST` configurado
@@ -264,5 +291,6 @@ drush eval '\Drupal\Core\Cache\Cache::invalidateTags(["sld_authorization"]);'
 - [ ] URL de acceso configurada en WordPress
 - [ ] Prueba de humo superada con un alumno real
 - [ ] Copia de la base de datos guardada
+- [ ] `bin/humo.mjs` en verde
 - [ ] Versión del plugin subida y anotada en su CHANGELOG
 - [ ] El informe de estado muestra la versión correcta del plugin
