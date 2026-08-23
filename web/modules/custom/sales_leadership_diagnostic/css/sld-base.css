@@ -57,6 +57,24 @@
   font-family: var(--sld-font);
 }
 
+/**
+ * Los títulos toman el color del módulo, no el del tema del sitio.
+ *
+ * `color` en el contenedor no basta: los temas fijan un color EXPLÍCITO para
+ * los encabezados, y una declaración explícita gana siempre a un valor
+ * heredado. El síntoma es feo y aparece solo en algunas condiciones: con el
+ * tema claro los dos colores se parecen y nadie lo nota, pero en modo oscuro
+ * el fondo del módulo se vuelve oscuro y el título sigue siendo el negro del
+ * tema, así que desaparece.
+ *
+ * Se corrige aquí, en la raíz, y no en cada componente: el fallo lo tenían los
+ * cuatro títulos del módulo a la vez, y arreglarlos uno a uno habría dejado el
+ * mismo agujero abierto para el siguiente que se escriba.
+ */
+.sld :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--sld-color-text);
+}
+
 .sld *,
 .sld *::before,
 .sld *::after {
