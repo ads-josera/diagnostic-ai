@@ -14,6 +14,9 @@
  *     medirlo: mirarlo no basta.
  *   · Una función inalcanzable da «sí» en toda comprobación de permisos si lo
  *     que falta es el enlace que lleva a ella.
+ *   · Un <style> puede inyectarse con los valores correctos y no pintar nada.
+ *     Hay que medir el color EFECTIVO del elemento, no la presencia del
+ *     bloque.
  *
  * Uso:
  *   node ~/.claude/skills/browser-automation/browser.mjs \
@@ -166,6 +169,42 @@ export default async function run(page) {
     );
   } else {
     fallos.push('admin: falta SLD_ULI en el entorno, no se comprobó nada como administrador');
+  }
+
+  // --- La marca se APLICA, no solo se inyecta ------------------------------
+  //
+  // Se comprueba el color efectivo y no la presencia del <style>. La diferencia
+  // no es teórica: durante días el bloque se inyectó con los valores correctos
+  // y no pintó nada, porque los escribía en `:root` mientras el módulo declara
+  // sus tokens en `.sld`, y una variable declarada en el propio elemento gana
+  // siempre a la heredada. Mirar que el <style> existiera daba «bien».
+  for (const [ruta, selector, quien] of [
+    ['/', '.sld-home__frame', 'portada'],
+    ['/sales-diagnostic', '.sld', 'panel del alumno'],
+  ]) {
+    await page.goto(`${SITIO}${ruta}`, { waitUntil: 'networkidle' });
+
+    const comparacion = await page.evaluate((sel) => {
+      const bloque = document.querySelector('style[data-sld-branding]');
+      if (!bloque) return { sinMarca: true };
+
+      const pedido = (bloque.textContent.match(/--sld-color-primary:\s*(#[0-9a-fA-F]{3,6})/) || [])[1];
+      const el = document.querySelector(sel);
+      if (!pedido || !el) return { sinMarca: true };
+
+      return {
+        pedido: pedido.toLowerCase(),
+        efectivo: getComputedStyle(el).getPropertyValue('--sld-color-primary').trim().toLowerCase(),
+      };
+    }, selector);
+
+    if (comparacion.sinMarca) {
+      // Sin marca configurada no hay nada que comprobar: es un estado válido.
+      continue;
+    }
+
+    anotar(comparacion.pedido === comparacion.efectivo, `marca aplicada: ${quien}`,
+      `el <style> pide ${comparacion.pedido} y el elemento usa ${comparacion.efectivo}`);
   }
 
   // --- Gestor: llega a sus herramientas por ENLACE, no escribiendo la URL ---
