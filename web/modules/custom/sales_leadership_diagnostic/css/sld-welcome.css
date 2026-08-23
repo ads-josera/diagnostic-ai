@@ -240,3 +240,136 @@
     margin-inline: 0.75rem;
   }
 }
+
+/* Inicio de sesión ------------------------------------------------------ */
+
+/**
+ * El formulario lo genera Drupal, así que aquí se le da forma en lugar de
+ * escribir el marcado. Se estilan los elementos por tipo y no por clase de
+ * Drupal: las clases del tema cambian entre versiones, y `input[type=text]`
+ * no.
+ */
+.sld-login {
+  max-width: 42rem;
+  text-align: left;
+}
+
+/**
+ * Deshace, solo aquí, el `display: contents` de la portada.
+ *
+ * Allí sirve para que el marco ocupe el ancho completo saltándose los
+ * envoltorios del tema. Aquí hacía lo contrario de lo que se busca: al retirar
+ * `.block` y `.block__content` de la maquetación, el formulario pasaba a ser
+ * hijo directo de `.region`, que en Olivero es una rejilla de doce columnas, y
+ * caía dentro de UNA sola. El campo de usuario acababa midiendo 31 píxeles.
+ *
+ * Dentro de la tarjeta no hace falta romper nada: el formulario debe ocupar el
+ * ancho de su contenedor y punto.
+ */
+.sld-login .region,
+.sld-login .block,
+.sld-login .block__content {
+  display: block;
+  width: 100%;
+}
+
+.sld-login .sld-home__title {
+  text-align: center;
+}
+
+/* Las pestañas «Iniciar sesión / Restablecer contraseña» que Drupal añade
+   sobre el formulario sobran: la tarjeta ya dice dónde está el usuario, y el
+   enlace para recuperar la contraseña va debajo, que es donde se busca. */
+.sld-login .tabs,
+.sld-login .block-local-tasks-block {
+  display: none;
+}
+
+.sld-login .form-item {
+  margin: 0 0 1.25rem;
+}
+
+.sld-login label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: #414141;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.sld-login input[type="text"],
+.sld-login input[type="password"],
+.sld-login input[type="email"] {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #d7e0f5;
+  border-radius: 8px;
+  background: #e8eeff;
+  color: #1c1f24;
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.sld-login input[type="text"]:focus,
+.sld-login input[type="password"]:focus,
+.sld-login input[type="email"]:focus {
+  outline: 2px solid var(--sld-color-primary);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.sld-login .description {
+  margin-top: 0.35rem;
+  color: #6b7280;
+  font-size: 0.8125rem;
+}
+
+.sld-login input[type="submit"],
+.sld-login button[type="submit"] {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--sld-color-primary);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.sld-login input[type="submit"]:hover,
+.sld-login button[type="submit"]:hover {
+  background: var(--sld-color-primary-hover);
+}
+
+/* Enlace de recuperación de contraseña, bajo el botón. */
+.sld-login .sld-login__links {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.sld-login .sld-login__links a {
+  color: var(--sld-color-primary);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.sld-login .sld-login__links a:hover {
+  text-decoration: underline;
+}
+
+/**
+ * Mensajes de Drupal dentro de la tarjeta.
+ *
+ * Se recortan sus márgenes: vienen pensados para una página ancha y dentro de
+ * la tarjeta dejaban un hueco desproporcionado justo encima del formulario.
+ */
+.sld-login .messages {
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+}

@@ -1,0 +1,60 @@
+{#
+/**
+ * @file
+ * Inicio de sesión, con el marco de la portada.
+ *
+ * Reutiliza la estructura de la portada en lugar de inventar otra: quien llega
+ * aquí viene de la portada, y encontrarse el formulario genérico de Drupal
+ * rompía la continuidad justo en la página que pide una contraseña, que es
+ * donde peor sienta que el sitio parezca otro.
+ *
+ * Variables añadidas por DiagnosticThemeHooks::preprocessPage():
+ * - sld_background: imagen de fondo de la portada, o nulo.
+ * - sld_header_logo: logotipo claro de la barra, o nulo.
+ * - sld_footer_logo: logotipo a color del pie, o nulo.
+ * - sld_accent_color, sld_band_color: los dos colores propios de la portada.
+ *
+ * Es el mismo contenido configurable que la portada, a propósito: son la misma
+ * página en dos momentos distintos y deben verse igual sin que haya que
+ * cargar las imágenes dos veces.
+ */
+#}
+<div class="sld-home">
+  <div class="sld-home__frame"
+       {% if sld_background %}style="background-image: url('{{ sld_background }}')"{% endif %}>
+
+    <header class="sld-home__bar">
+      <a class="sld-home__brand" href="{{ path('<front>') }}">
+        {% if sld_header_logo %}
+          <img src="{{ sld_header_logo }}" alt="{{ 'Salesbumm'|t }}">
+        {% else %}
+          <span class="sld-home__brand-text">{{ 'Salesbumm'|t }}</span>
+        {% endif %}
+      </a>
+
+      <nav class="sld-home__nav">
+        <a class="sld-home__nav-link" href="{{ path('<front>') }}">{{ 'Inicio'|t }}</a>
+      </nav>
+    </header>
+
+    <main class="sld-home__main" role="main">
+      <div class="sld-home__card sld-login">
+        <h1 class="sld-home__title">{{ 'Iniciar sesión'|t }}</h1>
+
+        {# Los mensajes van DENTRO de la tarjeta: un error de credenciales
+           colgando fuera, sobre la imagen de fondo, se lee mal y parece de
+           otra página. #}
+        {{ page.highlighted }}
+        {{ page.content }}
+      </div>
+    </main>
+
+    <footer class="sld-home__footer" style="background-color: {{ sld_band_color }}">
+      {% if sld_footer_logo %}
+        <img class="sld-home__footer-logo" src="{{ sld_footer_logo }}" alt="{{ 'Salesbumm'|t }}">
+      {% endif %}
+    </footer>
+
+    <div class="sld-home__strip" aria-hidden="true"></div>
+  </div>
+</div>

@@ -6,6 +6,7 @@ namespace Drupal\sales_leadership_diagnostic\Hook;
 
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\sales_leadership_diagnostic\Service\Branding\HomePage;
 
 /**
  * Plantillas que aporta el módulo.
@@ -26,8 +27,24 @@ final class DiagnosticThemeHooks {
    */
   private const HOME_ROUTE = 'sales_leadership_diagnostic.welcome';
 
+  /**
+   * Rutas de inicio de sesion que comparten el marco de la portada.
+   *
+   * Se incluye tambien la peticion de contrasena: son la misma puerta y
+   * dejarla con el marco generico de Drupal habria delatado justo lo que este
+   * trabajo pretende ocultar.
+   *
+   * @var string[]
+   */
+  private const LOGIN_ROUTES = [
+    'user.login',
+    'user.pass',
+    'user.reset.form',
+  ];
+
   public function __construct(
     private readonly RouteMatchInterface $routeMatch,
+    private readonly HomePage $home,
   ) {}
 
   /**
@@ -113,6 +130,13 @@ final class DiagnosticThemeHooks {
         'template' => 'page--sales-diagnostic-home',
         'base hook' => 'page',
       ],
+      // El inicio de sesion reutiliza el marco de la portada. Drupal ya busca
+      // por si mismo la sugerencia page--user-login, asi que basta con
+      // declarar la plantilla para que la encuentre.
+      'page__user__login' => [
+        'template' => 'page--user-login',
+        'base hook' => 'page',
+      ],
     ];
   }
 
@@ -131,6 +155,42 @@ final class DiagnosticThemeHooks {
     if ($this->routeMatch->getRouteName() === self::HOME_ROUTE) {
       $suggestions[] = 'page__sales_diagnostic_home';
     }
+
+    if (in_array($this->routeMatch->getRouteName(), self::LOGIN_ROUTES, TRUE)) {
+      $suggestions[] = 'page__user__login';
+    }
+  }
+
+  /**
+   * Implements hook_preprocess_HOOK() for page.
+   *
+   * Lleva a la plantilla del inicio de sesion las imagenes y los colores que
+   * ya administra la portada. Son la misma pagina en dos momentos distintos:
+   * duplicar los ajustes habria obligado a subir las imagenes dos veces y a
+   * acordarse de cambiarlas en dos sitios.
+   */
+  #[Hook('preprocess_page')]
+  public function preprocessPage(array &$variables): void {
+    if (!in_array($this->routeMatch->getRouteName(), self::LOGIN_ROUTES, TRUE)) {
+      return;
+    }
+
+    $variables['sld_background'] = $this->home->getBackgroundUrl();
+    $variables['sld_header_logo'] = $this->home->getHeaderLogoUrl();
+    $variables['sld_footer_logo'] = $this->home->getFooterLogoUrl();
+    $variables['sld_accent_color'] = $this->home->getAccentColor();
+    $variables['sld_band_color'] = $this->home->getBandColor();
+
+    // La hoja de estilos de la portada no se carga sola en una ruta que no es
+    // del modulo, asi que se adjunta aqui.
+    $variables['#attached']['library'][] = 'sales_leadership_diagnostic/welcome';
+
+    // Sin estas etiquetas, cambiar el fondo o el logotipo no se veria en esta
+    // pagina hasta que caducara por otro motivo.
+    $variables['#cache']['tags'] = array_merge(
+      $variables['#cache']['tags'] ?? [],
+      $this->home->getCacheTags(),
+    );
   }
 
 }

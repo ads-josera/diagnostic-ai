@@ -35,6 +35,12 @@ final class BrandingHooks {
     // marca, así que sin esta línea se quedaban con el azul de fábrica y la
     // paleta del cliente no llegaba a la primera página que alguien ve.
     'sales_leadership_diagnostic.welcome',
+    // El inicio de sesión comparte el marco de la portada, así que necesita la
+    // misma paleta. Sin estas líneas su botón se quedaba con el azul de
+    // fábrica mientras la barra de arriba llevaba el del cliente.
+    'user.login',
+    'user.pass',
+    'user.reset.form',
   ];
 
   public function __construct(

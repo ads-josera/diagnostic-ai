@@ -207,6 +207,38 @@ export default async function run(page) {
       `el <style> pide ${comparacion.pedido} y el elemento usa ${comparacion.efectivo}`);
   }
 
+  // --- El formulario de inicio de sesion es usable --------------------------
+  //
+  // Se miden las etiquetas. Una regla de la portada llego a dejar el formulario
+  // dentro de una rejilla de doce columnas, ocupando una sola: el campo medía
+  // 31 pixeles y «Nombre de usuario» se rompia letra por letra en vertical. La
+  // pagina cargaba con codigo 200 y sin un solo error de consola.
+  await page.goto(`${SITIO}/user/logout/confirm`, { waitUntil: 'networkidle' }).catch(() => {});
+  await page.locator('input[type=submit], button[type=submit]').first().click().catch(() => {});
+  await page.goto(`${SITIO}/user/login`, { waitUntil: 'networkidle' });
+
+  const formulario = await page.evaluate(() => {
+    const campo = document.querySelector('#edit-name');
+    const etiquetas = [...document.querySelectorAll('.sld-login label')];
+
+    return {
+      anchoCampo: campo ? Math.round(campo.getBoundingClientRect().width) : 0,
+      etiquetasRotas: etiquetas
+        .filter((l) => {
+          const r = l.getBoundingClientRect();
+          // Estrecha y alta significa texto partido en vertical.
+          return r.width < 60 && r.height > 40;
+        })
+        .map((l) => l.textContent.trim().slice(0, 24)),
+    };
+  });
+
+  anotar(formulario.anchoCampo > 200, 'login: el campo tiene ancho usable',
+    `el campo de usuario mide ${formulario.anchoCampo}px`);
+
+  anotar(formulario.etiquetasRotas.length === 0, 'login: las etiquetas se leen en horizontal',
+    `rotas en vertical: ${formulario.etiquetasRotas.join(', ')}`);
+
   // --- Gestor: llega a sus herramientas por ENLACE, no escribiendo la URL ---
   const dondeAterrizaGestor = await entrar(CUENTAS.gestor);
 
