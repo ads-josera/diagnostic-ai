@@ -21,6 +21,11 @@ final class DiagnosticThemeHooks {
    */
   private const CHAT_ROUTE = 'sales_leadership_diagnostic.session';
 
+  /**
+   * Ruta de la portada, que usa su propio marco de pagina.
+   */
+  private const HOME_ROUTE = 'sales_leadership_diagnostic.welcome';
+
   public function __construct(
     private readonly RouteMatchInterface $routeMatch,
   ) {}
@@ -77,8 +82,15 @@ final class DiagnosticThemeHooks {
       ],
       'sld_welcome' => [
         'variables' => [
-          'logo_url' => NULL,
-          'logo_alt' => '',
+          'background' => NULL,
+          'header_logo' => NULL,
+          'footer_logo' => NULL,
+          'title' => NULL,
+          'intro' => NULL,
+          'button_label' => '',
+          'help_text' => NULL,
+          'accent_color' => '',
+          'band_color' => '',
           'origin_url' => NULL,
           'has_access' => FALSE,
         ],
@@ -94,6 +106,13 @@ final class DiagnosticThemeHooks {
         'template' => 'page--sales-diagnostic-chat',
         'base hook' => 'page',
       ],
+      // La portada tambien prescinde del marco del tema: es lo primero que ve
+      // quien llega por un enlace suelto, y con la cabecera generica de Drupal
+      // parecia una instalacion a medio terminar.
+      'page__sales_diagnostic_home' => [
+        'template' => 'page--sales-diagnostic-home',
+        'base hook' => 'page',
+      ],
     ];
   }
 
@@ -107,6 +126,10 @@ final class DiagnosticThemeHooks {
   public function themeSuggestionsPageAlter(array &$suggestions): void {
     if ($this->routeMatch->getRouteName() === self::CHAT_ROUTE) {
       $suggestions[] = 'page__sales_diagnostic_chat';
+    }
+
+    if ($this->routeMatch->getRouteName() === self::HOME_ROUTE) {
+      $suggestions[] = 'page__sales_diagnostic_home';
     }
   }
 

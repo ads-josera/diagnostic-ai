@@ -1,0 +1,19 @@
+{#
+/**
+ * @file
+ * Marco de página de la portada.
+ *
+ * Deja fuera la cabecera, el menú y el pie del tema del sitio. No es un
+ * capricho estético: quien llega a la raíz por un enlace suelto se encontraba
+ * el marco genérico de Drupal, y eso hace que un producto parezca una
+ * instalación a medio terminar.
+ *
+ * Se conserva `page.content`, que es donde el controlador pone la portada, y
+ * los mensajes del sistema: un aviso de sesión caducada tiene que poder verse
+ * aunque la página sea a pantalla completa.
+ */
+#}
+<div class="sld-home">
+  {{ page.highlighted }}
+  {{ page.content }}
+</div>

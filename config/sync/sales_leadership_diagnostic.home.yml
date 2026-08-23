@@ -1,0 +1,10 @@
+langcode: es
+background_fid: 20
+logo_light_fid: 21
+logo_color_fid: 22
+title: 'Diagnóstico de liderazgo comercial'
+intro: 'Este espacio aloja el diagnóstico de liderazgo comercial. Se accede desde tu cuenta del programa, no desde aquí.'
+button_label: 'Ir a mi cuenta'
+help_text: 'Si has llegado hasta aquí desde un enlace del programa y no consigues entrar, escribe a quien te dio acceso al curso.'
+accent_color: '#c9fc63'
+band_color: '#f4f0e5'

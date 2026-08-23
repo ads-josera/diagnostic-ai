@@ -240,3 +240,12 @@ sales_leadership_diagnostic.chat_welcome:
     _title: 'Bienvenida del chat'
   requirements:
     _permission: 'edit diagnostic prompt+administer sales leadership diagnostic'
+
+# Contenido de la portada. Lo administra quien lleva la marca del cliente.
+sales_leadership_diagnostic.home_settings:
+  path: '/admin/config/salesbumm/diagnostic/portada'
+  defaults:
+    _form: 'Drupal\sales_leadership_diagnostic\Form\HomePageForm'
+    _title: 'Portada'
+  requirements:
+    _permission: 'administer sales leadership diagnostic'

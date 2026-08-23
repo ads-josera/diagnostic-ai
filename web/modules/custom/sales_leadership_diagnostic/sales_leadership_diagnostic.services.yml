@@ -257,3 +257,11 @@ services:
       - '@config.factory'
       - '@entity_type.manager'
       - '@file_url_generator'
+
+  # Contenido de la portada. El color principal no vive aquí: sale de Marca,
+  # para que el azul de la marca se defina en un solo sitio.
+  Drupal\sales_leadership_diagnostic\Service\Branding\HomePage:
+    arguments:
+      - '@config.factory'
+      - '@entity_type.manager'
+      - '@file_url_generator'

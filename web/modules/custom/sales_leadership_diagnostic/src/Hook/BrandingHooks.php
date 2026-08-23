@@ -31,6 +31,10 @@ final class BrandingHooks {
     'sales_leadership_diagnostic.session',
     'sales_leadership_diagnostic.result',
     'sales_leadership_diagnostic.sso_denied',
+    // La portada también: su barra y su botón usan el color principal de la
+    // marca, así que sin esta línea se quedaban con el azul de fábrica y la
+    // paleta del cliente no llegaba a la primera página que alguien ve.
+    'sales_leadership_diagnostic.welcome',
   ];
 
   public function __construct(

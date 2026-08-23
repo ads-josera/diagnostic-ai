@@ -7,6 +7,7 @@ namespace Drupal\sales_leadership_diagnostic\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Branding\Branding;
+use Drupal\sales_leadership_diagnostic\Service\Branding\HomePage;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -28,6 +29,7 @@ final class WelcomeController extends ControllerBase {
 
   public function __construct(
     private readonly Branding $branding,
+    private readonly HomePage $home,
   ) {}
 
   /**
@@ -36,6 +38,7 @@ final class WelcomeController extends ControllerBase {
   public static function create(ContainerInterface $container): static {
     return new static(
       $container->get(Branding::class),
+      $container->get(HomePage::class),
     );
   }
 
@@ -48,8 +51,15 @@ final class WelcomeController extends ControllerBase {
 
     return [
       '#theme' => 'sld_welcome',
-      '#logo_url' => $this->branding->getLogoUrl(),
-      '#logo_alt' => $this->branding->getLogoAlt(),
+      '#background' => $this->home->getBackgroundUrl(),
+      '#header_logo' => $this->home->getHeaderLogoUrl(),
+      '#footer_logo' => $this->home->getFooterLogoUrl(),
+      '#title' => $this->home->getTitle(),
+      '#intro' => $this->home->getIntro(),
+      '#button_label' => $this->home->getButtonLabel(),
+      '#help_text' => $this->home->getHelpText(),
+      '#accent_color' => $this->home->getAccentColor(),
+      '#band_color' => $this->home->getBandColor(),
       // Solo se ofrece el enlace de vuelta si hay un origen configurado y es
       // https. Un enlace a http:// desde una página pública degradaría el
       // canal, y uno vacío llevaría a la propia portada en bucle.
@@ -64,7 +74,11 @@ final class WelcomeController extends ControllerBase {
         // Cambia según los permisos de quien mira, y cuando se toca la marca o
         // la URL de WordPress.
         'contexts' => ['user.permissions'],
-        'tags' => array_merge($config->getCacheTags(), $this->branding->getCacheTags()),
+        'tags' => array_merge(
+          $config->getCacheTags(),
+          $this->branding->getCacheTags(),
+          $this->home->getCacheTags(),
+        ),
       ],
     ];
   }

@@ -14,7 +14,8 @@
    contenido (.sld) y el marco de página del chat (.sld-page), que no anida
    dentro del primero. */
 .sld,
-.sld-page {
+.sld-page,
+.sld-home {
   /* Marca — pendiente de sustituir por la identidad de Salesbumm. */
   --sld-color-primary: #1f4788;
   --sld-color-primary-hover: #16345f;

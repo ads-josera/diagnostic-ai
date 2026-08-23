@@ -4,46 +4,105 @@
  * Portada del sitio.
  *
  * Variables disponibles:
- * - logo_url: logotipo de marca, o nulo.
- * - logo_alt: texto alternativo del logotipo.
- * - origin_url: URL del WordPress desde el que se entra, o nulo si no está
- *   configurada o no usa https.
+ * - background: URL de la imagen de fondo, o nulo.
+ * - header_logo: logotipo claro de la cabecera, o nulo.
+ * - footer_logo: logotipo a color del pie, o nulo.
+ * - title: titular de la tarjeta, o nulo.
+ * - intro: texto de presentación, o nulo.
+ * - button_label: etiqueta del botón principal; nunca vacía.
+ * - help_text: aclaración en letra pequeña, o nulo.
+ * - accent_color: color del botón de acceso de la cabecera.
+ * - band_color: color de la banda del pie.
+ * - origin_url: sitio donde el alumno tiene su cuenta, o nulo si no está
+ *   configurado o no usa https.
  * - has_access: si quien mira ya es alumno con acceso.
  *
- * El título de la página lo imprime Drupal desde la ruta, así que aquí no hay
- * <h1>: duplicarlo rompería el esquema del documento.
+ * Los dos colores viajan en atributos `style` porque son valores de
+ * configuración y cambian sin desplegar. Van validados desde el servicio: lo
+ * que no sea un color hexadecimal no llega hasta aquí.
  */
 #}
-<div class="sld sld-welcome">
+<div class="sld-home__frame"
+     {% if background %}style="background-image: url('{{ background }}')"{% endif %}>
 
-  {% if logo_url %}
-    <img class="sld-welcome__logo" src="{{ logo_url }}" alt="{{ logo_alt }}">
-  {% endif %}
-
-  {% if has_access %}
-    {#
-      Ya es alumno: se le lleva directo a su panel en vez de devolverlo a
-      WordPress para que repita el trayecto de entrada.
-    #}
-    <p class="sld-welcome__lead">{{ 'Ya tienes acceso al diagnóstico.'|t }}</p>
-
-    <a class="sld__button" href="{{ path('sales_leadership_diagnostic.dashboard') }}">
-      {{ 'Ir a mi diagnóstico'|t }}
+  <header class="sld-home__bar">
+    <a class="sld-home__brand" href="{{ path('<front>') }}">
+      {% if header_logo %}
+        <img src="{{ header_logo }}" alt="{{ 'Salesbumm'|t }}">
+      {% else %}
+        <span class="sld-home__brand-text">{{ 'Salesbumm'|t }}</span>
+      {% endif %}
     </a>
-  {% else %}
-    <p class="sld-welcome__lead">
-      {{ 'Este espacio aloja el diagnóstico de liderazgo comercial. Se accede desde tu cuenta del programa, no desde aquí.'|t }}
-    </p>
 
-    {% if origin_url %}
-      <a class="sld__button" href="{{ origin_url }}" rel="noopener">
-        {{ 'Ir a mi cuenta'|t }}
-      </a>
+    <nav class="sld-home__nav">
+      <a class="sld-home__nav-link" href="{{ path('<front>') }}">{{ 'Inicio'|t }}</a>
+
+      {#
+        El botón de acceso lleva al mismo sitio que el principal: a la cuenta
+        del alumno. No lleva al inicio de sesión de Drupal a propósito, porque
+        el alumno no tiene contraseña aquí —su cuenta se provisiona desde
+        WordPress— y ofrecérselo solo le haría fracasar.
+      #}
+      {% if has_access %}
+        <a class="sld-home__enter"
+           style="background-color: {{ accent_color }}"
+           href="{{ path('sales_leadership_diagnostic.dashboard') }}"
+           title="{{ 'Ir a mi diagnóstico'|t }}">
+          <span class="sld__visually-hidden">{{ 'Ir a mi diagnóstico'|t }}</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+          </svg>
+        </a>
+      {% elseif origin_url %}
+        <a class="sld-home__enter"
+           style="background-color: {{ accent_color }}"
+           href="{{ origin_url }}"
+           rel="noopener"
+           title="{{ 'Acceder a mi cuenta'|t }}">
+          <span class="sld__visually-hidden">{{ 'Acceder a mi cuenta'|t }}</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+          </svg>
+        </a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="sld-home__main" role="main">
+    <div class="sld-home__card">
+      {% if title %}
+        <h1 class="sld-home__title">{{ title }}</h1>
+      {% endif %}
+
+      {% if has_access %}
+        <p class="sld-home__intro">{{ 'Ya tienes acceso al diagnóstico.'|t }}</p>
+
+        <a class="sld-home__button" href="{{ path('sales_leadership_diagnostic.dashboard') }}">
+          {{ 'Ir a mi diagnóstico'|t }}
+        </a>
+      {% else %}
+        {% if intro %}
+          <p class="sld-home__intro">{{ intro }}</p>
+        {% endif %}
+
+        {% if origin_url %}
+          <a class="sld-home__button" href="{{ origin_url }}" rel="noopener">
+            {{ button_label }}
+          </a>
+        {% endif %}
+
+        {% if help_text %}
+          <p class="sld-home__help">{{ help_text }}</p>
+        {% endif %}
+      {% endif %}
+    </div>
+  </main>
+
+  <footer class="sld-home__footer" style="background-color: {{ band_color }}">
+    {% if footer_logo %}
+      <img class="sld-home__footer-logo" src="{{ footer_logo }}" alt="{{ 'Salesbumm'|t }}">
     {% endif %}
+  </footer>
 
-    <p class="sld-welcome__help">
-      {{ 'Si has llegado hasta aquí desde un enlace del programa y no consigues entrar, escribe a quien te dio acceso al curso.'|t }}
-    </p>
-  {% endif %}
-
+  <div class="sld-home__strip" aria-hidden="true"></div>
 </div>

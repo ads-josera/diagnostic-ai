@@ -1,0 +1,18 @@
+# Un objeto con valores traducibles DEBE declarar su idioma, o el formulario
+# no puede guardar. Fijar los valores por drush funciona igualmente, así que
+# sin esta línea el fallo tarda semanas en aparecer.
+langcode: es
+
+# Sin imágenes de fábrica: son material del cliente y se cargan desde la
+# pestaña «Portada». La página se degrada sola si falta alguna.
+background_fid: 0
+logo_light_fid: 0
+logo_color_fid: 0
+
+title: 'Diagnóstico de liderazgo comercial'
+intro: 'Este espacio aloja el diagnóstico de liderazgo comercial. Se accede desde tu cuenta del programa, no desde aquí.'
+button_label: 'Ir a mi cuenta'
+help_text: 'Si has llegado hasta aquí desde un enlace del programa y no consigues entrar, escribe a quien te dio acceso al curso.'
+
+accent_color: '#c9fc63'
+band_color: '#f4f0e5'

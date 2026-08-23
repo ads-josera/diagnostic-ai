@@ -2,33 +2,241 @@
  * @file
  * Portada del sitio.
  *
- * Centrada y corta a propósito: la página tiene un solo trabajo, que es
- * explicar en una frase dónde está el usuario y ofrecerle la salida correcta.
+ * Es la única página del módulo que no reutiliza el contenedor `.sld`: aquí no
+ * hay una columna de contenido dentro de la página de un tema, sino la página
+ * entera. Por eso trae sus propias medidas en lugar de heredar las del resto.
+ *
+ * El color principal sale de `--sld-color-primary`, la misma variable que usa
+ * el diagnóstico. Así el azul de la marca se define una vez, en Marca, y esta
+ * página lo sigue sin que haya que acordarse de cambiarlo en dos sitios.
  */
 
-.sld-welcome {
-  max-width: 34rem;
-  margin: 0 auto;
-  padding: var(--sld-space-xl) var(--sld-space-md);
-  text-align: center;
+.sld-home,
+.sld-home__frame {
+  min-height: 100vh;
 }
 
-.sld-welcome__logo {
+/**
+ * Neutraliza los envoltorios que el tema mete alrededor del contenido.
+ *
+ * Aunque la plantilla de página prescinde del marco de Drupal, el contenido
+ * sigue llegando envuelto en `.region > .block > .block__content`, y en Olivero
+ * la región es una rejilla de doce columnas que centra el bloque. El resultado
+ * era una portada de 965 px en una pantalla de 1366, con el fondo del tema
+ * asomando a los lados.
+ *
+ * `display: contents` retira esos tres nodos de la maquetación sin borrarlos
+ * del documento: el marco pasa a ser hijo directo y ocupa el ancho completo.
+ * Es la misma técnica que usa la vista de conversación.
+ */
+.sld-home > .region,
+.sld-home .block,
+.sld-home .block__content {
+  display: contents;
+}
+
+.sld-home__frame {
+  display: flex;
+  flex-direction: column;
+  /* La imagen se fija al centro y cubre: en un monitor apaisado y en un móvil
+     vertical se recorta por sitios distintos, pero nunca se deforma ni deja
+     franjas. */
+  background-color: #101425;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* Cabecera ------------------------------------------------------------- */
+
+/**
+ * Barra flotante: separada de los bordes y con esquinas redondeadas, en lugar
+ * de pegada al borde superior. Deja ver la imagen alrededor, que es lo que
+ * hace que la página parezca una portada y no la cabecera de un panel.
+ */
+.sld-home__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.5rem;
+  padding: 0.875rem 1.5rem;
+  border-radius: 14px;
+  background: var(--sld-color-primary);
+  color: #fff;
+}
+
+.sld-home__brand img {
   display: block;
-  max-height: 72px;
-  max-width: 100%;
+  max-height: 42px;
   width: auto;
-  margin: 0 auto var(--sld-space-lg);
 }
 
-.sld-welcome__lead {
-  margin: 0 0 var(--sld-space-lg);
-  font-size: 1.125rem;
+.sld-home__brand-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.sld-home__nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.sld-home__nav-link {
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sld-home__nav-link:hover {
+  text-decoration: underline;
+}
+
+/**
+ * Botón de acceso.
+ *
+ * Cuadrado y solo con icono. Lleva texto alternativo oculto y `title`: un
+ * botón sin etiqueta visible es invisible para un lector de pantalla, y este
+ * es la única forma de entrar que ofrece la cabecera.
+ */
+.sld-home__enter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  color: #16181c;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+
+.sld-home__enter:hover {
+  transform: translateY(-1px);
+}
+
+.sld-home__enter svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Tarjeta central ------------------------------------------------------ */
+
+.sld-home__main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.sld-home__card {
+  width: 100%;
+  max-width: 42rem;
+  padding: 3.5rem 3rem;
+  border-radius: 16px;
+  background: #f4f5f9;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+
+.sld-home__title {
+  margin: 0 0 1.75rem;
+  color: #414141;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.35;
+}
+
+.sld-home__intro {
+  margin: 0 auto 2.25rem;
+  max-width: 34rem;
+  color: #414141;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+
+.sld-home__button {
+  display: inline-block;
+  padding: 0.75rem 1.75rem;
+  border-radius: 8px;
+  background: var(--sld-color-primary);
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.sld-home__button:hover {
+  background: var(--sld-color-primary-hover);
+  color: #fff;
+}
+
+.sld-home__help {
+  margin: 2.5rem auto 0;
+  max-width: 32rem;
+  color: #6b7280;
+  font-size: 0.8125rem;
   line-height: 1.6;
 }
 
-.sld-welcome__help {
-  margin: var(--sld-space-lg) 0 0;
-  color: var(--sld-color-text-muted);
-  font-size: 0.9375rem;
+/* Pie ------------------------------------------------------------------ */
+
+.sld-home__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  border-radius: 14px 14px 0 0;
+  margin: 0 1.5rem;
+}
+
+.sld-home__footer-logo {
+  display: block;
+  max-height: 34px;
+  width: auto;
+}
+
+/* Franja de cierre, puramente decorativa. */
+.sld-home__strip {
+  height: 44px;
+  background: var(--sld-color-primary);
+}
+
+/* Pantallas estrechas -------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .sld-home__bar {
+    margin: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .sld-home__card {
+    padding: 2.5rem 1.5rem;
+  }
+
+  .sld-home__title {
+    font-size: 1.125rem;
+  }
+
+  .sld-home__intro {
+    font-size: 1rem;
+  }
+
+  .sld-home__footer,
+  .sld-home__bar {
+    margin-inline: 0.75rem;
+  }
 }

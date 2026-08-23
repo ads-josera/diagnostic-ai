@@ -14,8 +14,9 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
  *
  * El CSS del módulo está escrito sobre variables CSS desde el principio, así
  * que personalizar la marca no exige un tema propio: basta con redefinir un
- * puñado de variables en :root y el resto de las hojas de estilo las consume
- * sin cambios.
+ * puñado de variables y el resto de las hojas de estilo las consume sin
+ * cambios. Dónde se redefinen no es indiferente; está explicado en
+ * buildCss(), donde costó un fallo averiguarlo.
  *
  * Esa decisión tiene un coste que conviene reconocer: la personalización llega
  * hasta donde llegan las páginas del módulo. La cabecera, el pie y los menús
@@ -90,7 +91,29 @@ final class Branding {
       return '';
     }
 
-    return ":root {\n" . implode("\n", $declarations) . "\n}\n";
+    // Los selectores importan, y hay dos motivos encadenados por los que no
+    // puede ser `:root`.
+    //
+    // El primero: una variable declarada en el PROPIO elemento gana siempre a
+    // la heredada, sin que la especificidad de `:root` cuente para nada. El
+    // módulo declara sus tokens en `.sld`, `.sld-page` y `.sld-home`, así que
+    // una redefinición en `:root` no llegaba a aplicarse nunca.
+    //
+    // El segundo: escribiéndolos en esas mismas clases la especificidad
+    // empataba, y Drupal coloca este bloque ANTES de las hojas del módulo, con
+    // lo que seguía perdiendo. Por eso van duplicadas: `.sld.sld` es el mismo
+    // elemento con el doble de especificidad, y así gana sin depender del
+    // orden en que se sirvan los archivos.
+    //
+    // Se comprobó midiendo el color efectivo en el navegador. Comprobar que el
+    // <style> existía no bastaba: existía, y no hacía nada.
+    $selectores = implode(",\n", [
+      '.sld.sld',
+      '.sld-page.sld-page',
+      '.sld-home.sld-home',
+    ]);
+
+    return $selectores . " {\n" . implode("\n", $declarations) . "\n}\n";
   }
 
   /**

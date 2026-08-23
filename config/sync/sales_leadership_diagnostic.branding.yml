@@ -1,7 +1,7 @@
 langcode: es
-logo_fid: 0
-logo_alt: ''
-color_primary: '#1f4788'
-color_primary_hover: '#16345f'
+logo_fid: 19
+logo_alt: 'Diagnostic AI'
+color_primary: '#3b40e4'
+color_primary_hover: '#2f34c4'
 color_accent: '#1a7f4b'
 welcome_text: ''

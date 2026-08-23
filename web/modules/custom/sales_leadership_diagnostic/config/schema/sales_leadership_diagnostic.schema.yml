@@ -153,3 +153,38 @@ sales_leadership_diagnostic.branding:
     welcome_text:
       type: text
       label: 'Mensaje de bienvenida del panel'
+
+# Portada del sitio. Objeto propio y no una sección de «branding» porque son
+# cosas distintas: la marca aplica a todo el módulo, y esto es el contenido de
+# una única página.
+sales_leadership_diagnostic.home:
+  type: config_object
+  label: 'Portada del sitio'
+  mapping:
+    background_fid:
+      type: integer
+      label: 'Imagen de fondo'
+    logo_light_fid:
+      type: integer
+      label: 'Logotipo de la cabecera (fondo oscuro)'
+    logo_color_fid:
+      type: integer
+      label: 'Logotipo del pie (fondo claro)'
+    title:
+      type: label
+      label: 'Titular'
+    intro:
+      type: text
+      label: 'Texto de presentación'
+    button_label:
+      type: label
+      label: 'Etiqueta del botón principal'
+    help_text:
+      type: text
+      label: 'Aclaración bajo el botón'
+    accent_color:
+      type: string
+      label: 'Color de acento'
+    band_color:
+      type: string
+      label: 'Color de la banda del pie'
