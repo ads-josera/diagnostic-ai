@@ -81,10 +81,39 @@
   box-sizing: inherit;
 }
 
-/* Respeta la preferencia del sistema sin imponer un tema oscuro propio. */
+/**
+ * Paleta oscura, SOLO donde el módulo pinta el fondo de la página.
+ *
+ * La versión anterior la aplicaba tambien a `.sld`, y eso estaba mal por una
+ * razon que no se ve hasta poner el sistema en oscuro: ni Claro —el tema de
+ * administración— ni el marco de Olivero siguen `prefers-color-scheme`. Sus
+ * fondos son claros siempre.
+ *
+ * Asi que en cuanto el sistema estaba en oscuro, el módulo pintaba su texto
+ * casi blanco DENTRO de una página blanca: el estudio del prompt y el panel
+ * del alumno quedaban ilegibles. Medido: texto rgb(233,236,241) sobre fondo
+ * rgb(255,255,255).
+ *
+ * La regla correcta es la que se aplica aqui: el módulo solo cambia de paleta
+ * donde controla el fondo, que es unicamente la vista de conversacion
+ * (`.sld-page`). Alli el modo oscuro se ve entero y coherente. Donde el módulo
+ * va incrustado en la pagina de un tema, adopta la paleta clara de ese tema en
+ * lugar de contradecirla.
+ */
 @media (prefers-color-scheme: dark) {
-  .sld,
-  .sld-page {
+  /*
+   * Hacen falta los dos selectores. La paleta clara se declara en `.sld` Y en
+   * `.sld-page`, y el contenedor del chat lleva las dos clases anidadas: sin
+   * la segunda linea, `.sld` volvia a fijar los tokens claros por dentro y
+   * pisaba a los oscuros que heredaba del marco. El sintoma era un chat con
+   * fondo de pagina oscuro y burbujas blancas.
+   *
+   * Se acota a `.sld-page .sld` y no a `.sld` a secas para que el panel del
+   * alumno y el estudio del gestor, que van dentro de la pagina de un tema
+   * claro, conserven la paleta clara.
+   */
+  .sld-page,
+  .sld-page .sld {
     --sld-color-bg: #16181c;
     --sld-color-surface: #1f2228;
     --sld-color-border: #333941;

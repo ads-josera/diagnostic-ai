@@ -27,3 +27,33 @@ sales_leadership_diagnostic.chat_welcome_tab:
   route_name: sales_leadership_diagnostic.chat_welcome
   base_route: sales_leadership_diagnostic.settings
   weight: 6
+
+# ---------------------------------------------------------------------------
+# Pestañas del gestor
+# ---------------------------------------------------------------------------
+# Las de arriba cuelgan de la página de ajustes, que exige ser administrador.
+# El gestor no puede acceder a esa página, asi que esas pestañas NO se le
+# pintan nunca: podia entrar al estudio escribiendo la URL, pero no habia un
+# solo enlace que le llevara.
+#
+# Estas repiten los mismos destinos colgando de su listado de resultados, que
+# es donde aterriza al iniciar sesión. Son entradas distintas y no duplicados:
+# una tarea local pertenece a un unico conjunto de pestañas, asi que cada
+# publico necesita las suyas.
+sales_leadership_diagnostic.results_default_tab:
+  title: 'Resultados'
+  route_name: sales_leadership_diagnostic.admin_results
+  base_route: sales_leadership_diagnostic.admin_results
+  weight: 0
+
+sales_leadership_diagnostic.results_studio_tab:
+  title: 'Estudio del prompt'
+  route_name: sales_leadership_diagnostic.studio
+  base_route: sales_leadership_diagnostic.admin_results
+  weight: 10
+
+sales_leadership_diagnostic.results_welcome_tab:
+  title: 'Bienvenida del chat'
+  route_name: sales_leadership_diagnostic.chat_welcome
+  base_route: sales_leadership_diagnostic.admin_results
+  weight: 20

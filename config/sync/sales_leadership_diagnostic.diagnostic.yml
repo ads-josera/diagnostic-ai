@@ -1,5 +1,6 @@
 _core:
   default_config_hash: Ch1lcvb16bxS-CZpkM4n5NGWOw6WU4aB_fjCpUbTrlM
+langcode: es
 version: 0.0-PRUEBAS
 system_prompt: |-
   Eres un asesor senior especializado en diagnóstico de liderazgo comercial.

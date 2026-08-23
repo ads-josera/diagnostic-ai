@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Form;
 
+use Drupal\Component\Utility\Bytes;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -93,7 +94,10 @@ final class ChatWelcomeForm extends ConfigFormBase {
       '#upload_location' => 'public://sales-diagnostic/',
       '#upload_validators' => [
         'FileExtension' => ['extensions' => self::ICON_EXTENSIONS],
-        'FileSizeLimit' => ['fileLimit' => self::ICON_MAX_SIZE],
+        // El límite viaja en BYTES: la restricción de core lo declara
+        // como ?int y lanza un TypeError con una cadena como «2 MB»,
+        // que aborta la subida entera antes de comprobar nada.
+        'FileSizeLimit' => ['fileLimit' => (int) Bytes::toNumber(self::ICON_MAX_SIZE)],
         'SldSafeSvg' => [],
       ],
       '#description' => $this->t('Se muestra sobre el texto introductorio, a 72 píxeles de alto. Formatos: @formatos. Máximo @tamano.', [

@@ -1,3 +1,9 @@
+# Un objeto de configuración con valores traducibles DEBE declarar su idioma.
+# Sin esta línea, Drupal rechaza cada guardado del formulario con «must specify
+# a language code», y el error solo aparece al enviarlo: fijar los valores por
+# drush funciona igualmente, así que el fallo puede pasar desapercibido mucho
+# tiempo si nadie usa el formulario.
+langcode: es
 # Definición del agente de diagnóstico.
 #
 # El prompt, las instrucciones y la metodología son propiedad del cliente
