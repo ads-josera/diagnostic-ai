@@ -111,6 +111,22 @@ sales_leadership_diagnostic.diagnostic:
       type: string
       label: 'Contrato de salida (añadido técnico)'
 
+    # --- Pantalla de bienvenida del chat -----------------------------------
+    # Lo que ve el alumno antes de escribir nada. A diferencia del prompt, que
+    # es una instrucción para el modelo, esto es texto que lee una persona: por
+    # eso aquí sí es correcto declararlo traducible.
+    welcome_icon_fid:
+      type: integer
+      label: 'Icono de la pantalla de bienvenida'
+    welcome_intro:
+      type: text
+      label: 'Texto introductorio del chat'
+    welcome_suggestions:
+      type: sequence
+      label: 'Sugerencias para empezar'
+      sequence:
+        type: label
+
 # Personalización visual (§4). Vive en su propio objeto de configuración y no
 # junto a los ajustes de integración: son cosas que cambian por motivos
 # distintos y que suele tocar gente distinta.

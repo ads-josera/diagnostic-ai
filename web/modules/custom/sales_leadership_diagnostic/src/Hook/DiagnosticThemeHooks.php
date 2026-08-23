@@ -49,6 +49,9 @@ final class DiagnosticThemeHooks {
       'sld_chat' => [
         'variables' => [
           'session_id' => 0,
+          'welcome_icon' => NULL,
+          'welcome_intro' => NULL,
+          'welcome_suggestions' => [],
           'status' => '',
           'status_label' => '',
           'accepts_messages' => FALSE,

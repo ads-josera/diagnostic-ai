@@ -21,3 +21,9 @@ sales_leadership_diagnostic.studio_tab:
   route_name: sales_leadership_diagnostic.studio
   base_route: sales_leadership_diagnostic.settings
   weight: 5
+
+sales_leadership_diagnostic.chat_welcome_tab:
+  title: 'Bienvenida del chat'
+  route_name: sales_leadership_diagnostic.chat_welcome
+  base_route: sales_leadership_diagnostic.settings
+  weight: 6

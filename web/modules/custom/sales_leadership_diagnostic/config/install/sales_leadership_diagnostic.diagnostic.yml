@@ -10,3 +10,15 @@ version: '1.0'
 system_prompt: ''
 instructions: ''
 output_contract: ''
+
+# --- Pantalla de bienvenida del chat ---------------------------------------
+# Lo que ve el alumno antes de escribir nada. Sin esto, la conversación
+# arrancaba en blanco con un campo que pedía «tu respuesta» sin que nadie
+# hubiera preguntado.
+welcome_icon_fid: 0
+welcome_intro: 'Diagnostica la madurez de tu organización comercial B2B utilizando evidencia, métricas y criterio ejecutivo. Identifica fortalezas, fugas, riesgos y las tres prioridades que más pueden mejorar tu sistema comercial.'
+welcome_suggestions:
+  - 'Quiero realizar mi diagnóstico comercial completo.'
+  - 'Quiero volver a evaluar mi organización y comparar mi avance.'
+  - 'Quiero evaluar sólo Forecast, Pipeline y Excelencia Operativa.'
+  - 'Tengo información de mi CRM o Excel y quiero utilizarla en el diagnóstico.'

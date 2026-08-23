@@ -12,6 +12,7 @@ use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 use Drupal\sales_leadership_diagnostic\MessageRole;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
+use Drupal\sales_leadership_diagnostic\Service\Conversation\ChatWelcome;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -29,6 +30,7 @@ final class ChatController extends ControllerBase {
     private readonly DiagnosticMessageRepository $messages,
     private readonly MarkdownRenderer $markdown,
     private readonly DateFormatterInterface $dateFormatter,
+    private readonly ChatWelcome $welcome,
   ) {}
 
   /**
@@ -39,6 +41,7 @@ final class ChatController extends ControllerBase {
       $container->get(DiagnosticMessageRepository::class),
       $container->get(MarkdownRenderer::class),
       $container->get('date.formatter'),
+      $container->get(ChatWelcome::class),
     );
   }
 
@@ -46,6 +49,7 @@ final class ChatController extends ControllerBase {
    * Renderiza la conversación de una sesión.
    */
   public function view(DiagnosticSessionInterface $sld_diagnostic_session): array {
+    $messages = $this->buildMessages((int) $sld_diagnostic_session->id());
     $session = $sld_diagnostic_session;
     $status = $session->getStatus();
     $statusLabels = DiagnosticStatus::allowedValues();
@@ -56,7 +60,16 @@ final class ChatController extends ControllerBase {
       '#status' => $status->value,
       '#status_label' => $statusLabels[$status->value] ?? $status->value,
       '#accepts_messages' => $status->acceptsMessages(),
-      '#messages' => $this->buildMessages((int) $session->id()),
+      '#messages' => $messages,
+      // La bienvenida solo tiene sentido antes del primer turno: una vez que
+      // hay conversación, el alumno ya sabe de qué va esto y el cartel
+      // estorbaría al leer. Se resuelve aquí y no en la plantilla para que la
+      // decisión quede junto al resto de la lógica de la página.
+      '#welcome_icon' => $messages === [] ? $this->welcome->getIconUrl() : NULL,
+      '#welcome_intro' => $messages === [] ? $this->welcome->getIntro() : NULL,
+      '#welcome_suggestions' => $messages === [] && $status->acceptsMessages()
+        ? $this->welcome->getSuggestions()
+        : [],
       '#attached' => [
         'library' => ['sales_leadership_diagnostic/chat'],
         'drupalSettings' => [
@@ -81,7 +94,13 @@ final class ChatController extends ControllerBase {
         // La conversación cambia con la sesión. Los mensajes viven en una
         // tabla propia, así que su etiqueta de cache es la de la sesión que
         // los contiene: es la sesión la que se guarda en cada turno.
-        'tags' => ['sld_diagnostic_session:' . $session->id()],
+        'tags' => array_merge(
+          ['sld_diagnostic_session:' . $session->id()],
+          // Sin esto, cambiar la bienvenida no se vería hasta que la página
+          // caducase por otro motivo, que en una sesión sin turnos podría no
+          // ocurrir nunca.
+          $this->welcome->getCacheTags(),
+        ),
       ],
     ];
   }

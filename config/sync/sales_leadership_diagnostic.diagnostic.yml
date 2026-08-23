@@ -53,3 +53,10 @@ output_contract: |-
 
   El campo "message" es lo único que el directivo lee en la conversación.
   Escríbelo en su idioma, con el tono de un asesor, no como un informe.
+welcome_icon_fid: 10
+welcome_intro: 'Diagnostica la madurez de tu organización comercial B2B utilizando evidencia, métricas y criterio ejecutivo. Identifica fortalezas, fugas, riesgos y las tres prioridades que más pueden mejorar tu sistema comercial.'
+welcome_suggestions:
+  - 'Quiero realizar mi diagnóstico comercial completo.'
+  - 'Quiero volver a evaluar mi organización y comparar mi avance.'
+  - 'Quiero evaluar sólo Forecast, Pipeline y Excelencia Operativa.'
+  - 'Tengo información de mi CRM o Excel y quiero utilizarla en el diagnóstico.'

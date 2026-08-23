@@ -5,6 +5,9 @@
  *
  * Variables:
  * - session_id: identificador de la sesión.
+ * - welcome_icon: icono de la pantalla de bienvenida, o nulo.
+ * - welcome_intro: texto introductorio, o nulo.
+ * - welcome_suggestions: textos de los botones de sugerencia; vacío si no hay.
  * - status / status_label: estado de la sesión y su etiqueta.
  * - accepts_messages: si la sesión admite nuevos mensajes.
  * - messages: lista con role, is_assistant, body, time y sequence.
@@ -44,10 +47,56 @@
        aria-label="{{ 'Conversación del diagnóstico'|t }}"
        data-sld-log>
 
+    {#
+      Pantalla de bienvenida. SUSTITUYE al aviso de conversación vacía en lugar
+      de acompañarlo: decir «aún no ha comenzado» debajo de un texto que ya
+      explica qué hacer sobra, y ese aviso era antes lo único que veía el
+      alumno en una pantalla por lo demás en blanco.
+    #}
     {% if messages is empty %}
-      <p class="sld-chat__empty">
-        {{ 'La conversación aún no ha comenzado.'|t }}
-      </p>
+      {% if welcome_icon or welcome_intro or welcome_suggestions %}
+        <div class="sld-chat__welcome">
+          {% if welcome_icon %}
+            {#
+              Decorativo: lo que comunica el icono lo dice mejor el texto que
+              tiene debajo, y anunciarlo también lo repetiría en un lector de
+              pantalla sin aportar nada.
+            #}
+            <img class="sld-chat__welcome-icon" src="{{ welcome_icon }}" alt="" aria-hidden="true">
+          {% endif %}
+
+          {% if welcome_intro %}
+            <p class="sld-chat__welcome-intro">{{ welcome_intro }}</p>
+          {% endif %}
+
+          {% if welcome_suggestions %}
+            <h2 class="sld-chat__welcome-title">{{ 'Sugerencias para empezar'|t }}</h2>
+
+            <ul class="sld-chat__suggestions">
+              {% for suggestion in welcome_suggestions %}
+                <li>
+                  {#
+                    Botones y no enlaces: no llevan a ninguna parte, escriben
+                    el mensaje en el campo y lo envían. El texto viaja también
+                    en un atributo de datos para que se mande exactamente lo
+                    que se redactó, sin los recortes de espacios que hace el
+                    navegador al leer el contenido visible.
+                  #}
+                  <button type="button"
+                          class="sld-chat__suggestion"
+                          data-sld-suggestion="{{ suggestion }}">
+                    {{ suggestion }}
+                  </button>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% else %}
+        <p class="sld-chat__empty">
+          {{ 'La conversación aún no ha comenzado.'|t }}
+        </p>
+      {% endif %}
     {% endif %}
 
     {% for message in messages %}

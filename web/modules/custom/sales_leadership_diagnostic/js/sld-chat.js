@@ -72,6 +72,14 @@
    * nuevo cuando las fuentes están listas.
    */
   function scrollToEndWhenSettled(log) {
+    // Con la pantalla de bienvenida no se desplaza: llevar al final recortaría
+    // por arriba justo lo primero que hay que leer —el icono y la frase que
+    // explican de qué va esto—. Solo tiene sentido ir al final cuando hay
+    // conversación, que es donde lo último es lo relevante.
+    if (log.querySelector('.sld-chat__welcome')) {
+      return;
+    }
+
     scrollToEnd(log);
 
     requestAnimationFrame(() => {
@@ -94,6 +102,15 @@
     const empty = log.querySelector('.sld-chat__empty');
     if (empty) {
       empty.remove();
+    }
+
+    // La pantalla de bienvenida cumple su función hasta el primer turno. Si se
+    // dejara puesta, el alumno seguiría viendo botones de «empezar» sobre una
+    // conversación ya empezada, y pulsarlos mandaría un segundo mensaje de
+    // arranque en mitad del diagnóstico.
+    const welcome = log.querySelector('.sld-chat__welcome');
+    if (welcome) {
+      welcome.remove();
     }
 
     const article = document.createElement('article');
@@ -272,6 +289,29 @@
     composer.addEventListener('submit', (event) => {
       event.preventDefault();
       submit();
+    });
+
+    /**
+     * Sugerencias de la pantalla de bienvenida.
+     *
+     * Rellenan el campo y envían, en lugar de enviar directamente: así el
+     * alumno ve en el compositor lo mismo que va a mandarse, y si la petición
+     * falla el texto sigue ahí para reintentar en vez de haberse evaporado.
+     *
+     * El texto se toma del atributo de datos y no de la etiqueta visible,
+     * porque el navegador recorta espacios y saltos al leer textContent y el
+     * mensaje llegaría distinto de como se redactó.
+     */
+    root.querySelectorAll('[data-sld-suggestion]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (pending) {
+          return;
+        }
+
+        input.value = button.getAttribute('data-sld-suggestion') || '';
+        autoGrow(input);
+        submit();
+      });
     });
 
     input.addEventListener('input', () => autoGrow(input));

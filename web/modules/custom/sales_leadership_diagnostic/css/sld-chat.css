@@ -289,3 +289,83 @@
     display: none;
   }
 }
+
+/**
+ * Pantalla de bienvenida.
+ *
+ * Ocupa el espacio del registro vacío en lugar de añadirse encima: antes ese
+ * espacio estaba en blanco con una sola frase perdida en medio.
+ */
+.sld-chat__welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sld-space-md);
+  padding: var(--sld-space-xl) var(--sld-space-md);
+  text-align: center;
+}
+
+.sld-chat__welcome-icon {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.sld-chat__welcome-intro {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--sld-color-text-muted);
+  line-height: 1.6;
+}
+
+.sld-chat__welcome-title {
+  margin: var(--sld-space-md) 0 0;
+  font-size: 0.9375rem;
+}
+
+/**
+ * Las sugerencias van en rejilla con ancho mínimo en lugar de en columnas
+ * fijas: así cuatro caben en fila en pantalla ancha, dos en tableta y una en
+ * móvil, sin escribir un punto de ruptura para cada caso.
+ */
+.sld-chat__suggestions {
+  display: grid;
+  /* 9rem permite que las cuatro quepan en una fila dentro del ancho de la
+     conversación; con más, la cuarta caía sola a una segunda línea y rompía la
+     simetría de la pantalla. Por debajo de ese ancho, auto-fit reparte en dos
+     columnas y luego en una sin necesidad de puntos de ruptura. */
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--sld-space-sm);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sld-chat__suggestion {
+  width: 100%;
+  height: 100%;
+  padding: var(--sld-space-md);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-bg);
+  color: var(--sld-color-text);
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.sld-chat__suggestion:hover {
+  border-color: var(--sld-color-primary);
+  background: var(--sld-color-surface);
+}
+
+/* El foco se dibuja explícitamente: el botón lleva fondo propio y el contorno
+   por defecto del navegador puede quedar invisible sobre él. */
+.sld-chat__suggestion:focus-visible {
+  outline: 2px solid var(--sld-color-primary);
+  outline-offset: 2px;
+}

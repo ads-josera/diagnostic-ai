@@ -53,9 +53,15 @@ final class StartController extends ControllerBase {
       return $this->backToDashboard();
     }
     catch (RateLimitException $e) {
-      // El límite de uso tiene su propia excepción porque lo comparte con el
-      // envío de mensajes. Su mensaje ya está escrito para el alumno.
-      $this->messenger()->addWarning($e->getMessage());
+      // El mensaje de la excepción es técnico y nombra al usuario y al límite
+      // concreto: sirve para el registro, no para la pantalla del alumno
+      // (§58). Se registra tal cual y se le muestra una explicación neutra.
+      $this->getLogger('sales_leadership_diagnostic')->warning(
+        'Inicio de diagnóstico rechazado por límite de uso: @detalle',
+        ['@detalle' => $e->getMessage()],
+      );
+
+      $this->messenger()->addWarning($this->t('Has iniciado varios diagnósticos hoy. Vuelve a intentarlo mañana.'));
 
       return $this->backToDashboard();
     }

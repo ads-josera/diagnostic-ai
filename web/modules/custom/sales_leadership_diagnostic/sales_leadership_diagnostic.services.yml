@@ -250,3 +250,10 @@ services:
       - '@datetime.time'
 
   Drupal\sales_leadership_diagnostic\Access\SandboxSessionCheck: {}
+
+  # Pantalla que ve el alumno antes de escribir su primer mensaje.
+  Drupal\sales_leadership_diagnostic\Service\Conversation\ChatWelcome:
+    arguments:
+      - '@config.factory'
+      - '@entity_type.manager'
+      - '@file_url_generator'
