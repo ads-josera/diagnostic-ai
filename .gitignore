@@ -92,3 +92,6 @@ Thumbs.db
 *.sublime-*
 *.swp
 *~
+
+# Cache de PHPUnit: cambia en cada ejecución y no aporta nada al repositorio.
+.phpunit.cache/
