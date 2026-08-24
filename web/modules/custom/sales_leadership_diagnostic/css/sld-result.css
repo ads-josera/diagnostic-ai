@@ -12,6 +12,21 @@
   border-bottom: 1px solid var(--sld-color-border);
 }
 
+/**
+ * Encabezado de la página.
+ *
+ * Lo imprime la plantilla del módulo y no el bloque de título del tema: el
+ * marco interno no pinta la región `content_above`, donde ese bloque vive.
+ * Comparte tamaño con el saludo del panel para que las dos páginas internas
+ * se lean como parte del mismo producto.
+ */
+.sld-result__title {
+  margin: 0 0 var(--sld-space-md);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
 .sld-result__meta {
   display: flex;
   flex-wrap: wrap;

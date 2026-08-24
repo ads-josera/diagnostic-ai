@@ -1,0 +1,78 @@
+{#
+/**
+ * @file
+ * Marco de las páginas internas del alumno: el panel y el resultado.
+ *
+ * Una sola plantilla para las dos porque su marco es idéntico. Tenerla
+ * duplicada obligaría a repetir en dos sitios cualquier cambio de la barra o
+ * del pie, que es exactamente como se pierden de vista este tipo de páginas.
+ * Lo que cambia entre ellas es el contenido de la tarjeta, y eso ya lo deciden
+ * sus respectivos controladores.
+ *
+ * Deja fuera la cabecera, el menú y el pie del tema, igual que la portada y el
+ * inicio de sesión: son la misma experiencia y con el marco genérico de Drupal
+ * el producto parecía una instalación a medio terminar.
+ *
+ * Variables añadidas por DiagnosticThemeHooks::preprocessPage():
+ * - sld_header_logo: logotipo claro de la barra, o nulo.
+ * - sld_footer_logo: logotipo a color del pie, o nulo.
+ * - sld_accent_color, sld_band_color: los dos colores propios de la portada.
+ *
+ * `sld_background` llega pero NO se usa, a propósito. La portada y el inicio
+ * de sesión llevan la fotografía porque son páginas de escaparate; estas son
+ * la zona privada, y el diseño del cliente las quiere sobre un azul marino
+ * liso (medido en las maquetas: #222254). La imagen aquí competía con el
+ * contenido, que es lo que el alumno viene a leer.
+ */
+#}
+<div class="sld-home">
+  <div class="sld-home__frame sld-home__frame--liso">
+
+    <header class="sld-home__bar">
+      <a class="sld-home__brand" href="{{ path('<front>') }}">
+        {% if sld_header_logo %}
+          <img src="{{ sld_header_logo }}" alt="{{ 'Salesbumm'|t }}">
+        {% else %}
+          <span class="sld-home__brand-text">{{ 'Salesbumm'|t }}</span>
+        {% endif %}
+      </a>
+
+      {#
+        Enlace simple y no un formulario: `user.logout` es la ruta pública de
+        Drupal core para cerrar sesión, ya pensada para enlazarse por GET.
+      #}
+      <a class="sld-home__logout"
+         style="background-color: {{ sld_accent_color }}"
+         href="{{ path('user.logout') }}">
+        {{ 'Cerrar sesión'|t }}
+      </a>
+    </header>
+
+    <main class="sld-home__main" role="main">
+      {#
+        Destino del enlace «Pasar al contenido principal», que el tema imprime
+        siempre en la cabecera del documento. Al sustituir la plantilla de
+        página del tema se perdía el ancla y el enlace no llevaba a ninguna
+        parte: quien navega con teclado lo pulsaba y el foco no se movía.
+        `tabindex="-1"` permite enfocarlo por programa sin meterlo en el
+        recorrido del tabulador. Es el mismo marcado que usa Olivero.
+      #}
+      <a id="main-content" tabindex="-1"></a>
+
+      <div class="sld-home__card sld-home__card--wide sld-inner-frame">
+        {# Los mensajes del sistema van DENTRO de la tarjeta: un aviso suelto
+           sobre el fondo se lee mal y parece de otra página. #}
+        {{ page.highlighted }}
+        {{ page.content }}
+      </div>
+    </main>
+
+    <footer class="sld-home__footer" style="background-color: {{ sld_band_color }}">
+      {% if sld_footer_logo %}
+        <img class="sld-home__footer-logo" src="{{ sld_footer_logo }}" alt="{{ 'Salesbumm'|t }}">
+      {% endif %}
+    </footer>
+
+    <div class="sld-home__strip" aria-hidden="true"></div>
+  </div>
+</div>

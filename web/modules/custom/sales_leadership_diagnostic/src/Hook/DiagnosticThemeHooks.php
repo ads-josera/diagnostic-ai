@@ -28,6 +28,23 @@ final class DiagnosticThemeHooks {
   private const HOME_ROUTE = 'sales_leadership_diagnostic.welcome';
 
   /**
+   * Rutas internas del alumno: comparten marco entre ellas y con la portada.
+   *
+   * Decisión del cliente, 23-08-2026: todo lo que ve el alumno —portada,
+   * inicio de sesion, panel y resultado— debe verse como una sola
+   * experiencia. Antes el panel y el resultado eran paginas normales del
+   * sitio; ahora prescinden del marco generico de Drupal igual que las otras.
+   *
+   * Las dos usan la MISMA plantilla de pagina, porque su marco es identico.
+   *
+   * @var string[]
+   */
+  private const INNER_ROUTES = [
+    'sales_leadership_diagnostic.dashboard',
+    'sales_leadership_diagnostic.result',
+  ];
+
+  /**
    * Rutas de inicio de sesion que comparten el marco de la portada.
    *
    * Se incluye tambien la peticion de contrasena: son la misma puerta y
@@ -90,6 +107,10 @@ final class DiagnosticThemeHooks {
       ],
       'sld_result' => [
         'variables' => [
+          // El titulo lo imprime la plantilla y no el bloque del tema: ese
+          // bloque vive en la region `content_above`, que el marco interno no
+          // pinta. Sin esta variable la pagina se quedaba sin encabezado.
+          'title' => '',
           'summary' => NULL,
           'score' => NULL,
           'sections' => [],
@@ -137,26 +158,36 @@ final class DiagnosticThemeHooks {
         'template' => 'page--user-login',
         'base hook' => 'page',
       ],
+      // Marco compartido por el panel y el resultado. Una sola plantilla para
+      // las dos: su marco es identico y el contenido de la tarjeta lo ponen
+      // sus controladores con `sld_dashboard` y `sld_result`.
+      'page__sld_inner' => [
+        'template' => 'page--sld-inner',
+        'base hook' => 'page',
+      ],
     ];
   }
 
   /**
    * Implements hook_theme_suggestions_page_alter().
-   *
-   * Solo la conversación usa el marco reducido. El panel es una página normal
-   * del sitio y conserva el marco del tema.
    */
   #[Hook('theme_suggestions_page_alter')]
   public function themeSuggestionsPageAlter(array &$suggestions): void {
-    if ($this->routeMatch->getRouteName() === self::CHAT_ROUTE) {
+    $routeName = $this->routeMatch->getRouteName();
+
+    if ($routeName === self::CHAT_ROUTE) {
       $suggestions[] = 'page__sales_diagnostic_chat';
     }
 
-    if ($this->routeMatch->getRouteName() === self::HOME_ROUTE) {
+    if ($routeName === self::HOME_ROUTE) {
       $suggestions[] = 'page__sales_diagnostic_home';
     }
 
-    if (in_array($this->routeMatch->getRouteName(), self::LOGIN_ROUTES, TRUE)) {
+    if (in_array($routeName, self::INNER_ROUTES, TRUE)) {
+      $suggestions[] = 'page__sld_inner';
+    }
+
+    if (in_array($routeName, self::LOGIN_ROUTES, TRUE)) {
       $suggestions[] = 'page__user__login';
     }
   }
@@ -164,14 +195,15 @@ final class DiagnosticThemeHooks {
   /**
    * Implements hook_preprocess_HOOK() for page.
    *
-   * Lleva a la plantilla del inicio de sesion las imagenes y los colores que
-   * ya administra la portada. Son la misma pagina en dos momentos distintos:
-   * duplicar los ajustes habria obligado a subir las imagenes dos veces y a
-   * acordarse de cambiarlas en dos sitios.
+   * Lleva a las plantillas que comparten el marco de la portada —inicio de
+   * sesion y panel del alumno— las imagenes y los colores que ya administra
+   * la portada. Son la misma experiencia en momentos distintos: duplicar los
+   * ajustes habria obligado a subir las imagenes varias veces y a acordarse
+   * de cambiarlas en varios sitios.
    */
   #[Hook('preprocess_page')]
   public function preprocessPage(array &$variables): void {
-    if (!in_array($this->routeMatch->getRouteName(), self::LOGIN_ROUTES, TRUE)) {
+    if (!$this->usesHomeFrame()) {
       return;
     }
 
@@ -182,7 +214,9 @@ final class DiagnosticThemeHooks {
     $variables['sld_band_color'] = $this->home->getBandColor();
 
     // La hoja de estilos de la portada no se carga sola en una ruta que no es
-    // del modulo, asi que se adjunta aqui.
+    // del modulo, asi que se adjunta aqui. En el panel se suma a la libreria
+    // `dashboard` que ya adjunta el controlador: una trae el marco y la otra
+    // el contenido de la tarjeta.
     $variables['#attached']['library'][] = 'sales_leadership_diagnostic/welcome';
 
     // Sin estas etiquetas, cambiar el fondo o el logotipo no se veria en esta
@@ -190,6 +224,17 @@ final class DiagnosticThemeHooks {
     $variables['#cache']['tags'] = array_merge(
       $variables['#cache']['tags'] ?? [],
       $this->home->getCacheTags(),
+    );
+  }
+
+  /**
+   * Si la ruta actual usa el marco compartido de la portada.
+   */
+  private function usesHomeFrame(): bool {
+    return in_array(
+      $this->routeMatch->getRouteName(),
+      [...self::LOGIN_ROUTES, ...self::INNER_ROUTES],
+      TRUE,
     );
   }
 

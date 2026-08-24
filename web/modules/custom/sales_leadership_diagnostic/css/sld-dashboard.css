@@ -11,10 +11,18 @@
   margin-bottom: var(--sld-space-lg);
 }
 
+/**
+ * Es el único encabezado de la página: la plantilla que la envuelve
+ * (page--sales-diagnostic-dashboard.html.twig) ya no imprime el título de la
+ * ruta, así que este saludo hace de <h1> y se le da el peso visual que le
+ * corresponde.
+ */
 .sld-dashboard__greeting {
   margin: 0;
-  color: var(--sld-color-text-muted);
-  font-size: 1.05rem;
+  color: var(--sld-color-text);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .sld-dashboard__start {
@@ -100,20 +108,6 @@
     font-size: 0.85rem;
     font-weight: 600;
   }
-}
-
-/**
- * Marca del cliente.
- *
- * El logotipo se limita en altura y no en anchura: así un logotipo apaisado y
- * uno cuadrado ocupan un espacio visualmente comparable sin deformarse.
- */
-.sld-dashboard__logo {
-  display: block;
-  max-height: 56px;
-  max-width: 100%;
-  width: auto;
-  margin-bottom: var(--sld-space-md);
 }
 
 .sld-dashboard__welcome {

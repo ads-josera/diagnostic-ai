@@ -4,6 +4,9 @@
  * Resultado de un diagnóstico completado (§35).
  *
  * Variables:
+ * - title: encabezado de la página. Lo imprime esta plantilla porque el marco
+ *   interno no pinta la región donde el tema coloca su bloque de título; sin
+ *   él la página se quedaba sin `<h1>`.
  * - summary: resumen ya saneado. Es Markup, así que Twig no vuelve a escaparlo.
  * - score: puntuación, o null si la metodología no contempla ninguna.
  * - sections: lista de secciones con label e items.
@@ -17,6 +20,8 @@
 <div class="sld sld-result">
 
   <header class="sld-result__header">
+    <h1 class="sld-result__title">{{ title }}</h1>
+
     <p class="sld-result__meta">
       {{ 'Generado el @date'|t({'@date': created}) }}
       <span class="sld-result__version">{{ 'versión @v'|t({'@v': version}) }}</span>

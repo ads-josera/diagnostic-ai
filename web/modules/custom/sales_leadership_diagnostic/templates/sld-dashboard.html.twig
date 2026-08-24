@@ -3,10 +3,21 @@
  * @file
  * Panel del alumno (§37).
  *
+ * Desde que el panel comparte el marco de la portada
+ * (page--sales-diagnostic-dashboard.html.twig), Drupal ya no imprime el
+ * título de la ruta: esa plantilla, igual que la del inicio de sesión, solo
+ * pone `page.content` dentro de la tarjeta. El saludo es entonces el único
+ * encabezado de la página y se marca como `<h1>` por eso, no por estética.
+ *
+ * `logo_url` y `logo_alt` no se imprimen aquí a propósito: desde que la
+ * página lleva el marco de la portada, ese logotipo lo pone la barra
+ * superior (Portada → logotipo de la barra), y repetirlo dentro de la
+ * tarjeta duplicaba la marca. El controlador los sigue enviando —viven en
+ * "Marca" y no en "Portada"— por si hace falta usarlos en otro sitio; hoy no
+ * se muestran en ningún punto del producto.
+ *
  * Variables disponibles:
  * - user_name: nombre para el saludo.
- * - logo_url: logotipo de marca, o nulo si no se ha configurado.
- * - logo_alt: texto alternativo del logotipo.
  * - welcome_text: mensaje de bienvenida personalizado, o nulo.
  * - can_start: si puede iniciarse un diagnóstico ahora mismo.
  * - start_url: destino del formulario de inicio, con su token CSRF.
@@ -23,23 +34,8 @@
 #}
 <div class="sld sld-dashboard">
 
-  {#
-    El título de la página lo imprime Drupal a partir del `_title` de la ruta.
-    Repetirlo aquí produciría dos <h1> idénticos: además de la redundancia
-    visual, rompe el esquema del documento y hace que un lector de pantalla
-    anuncie el título dos veces.
-  #}
   <header class="sld-dashboard__header">
-    {#
-      El logotipo es decorativo junto a un saludo que ya identifica el sitio,
-      pero lleva alt real y no vacío: para muchos clientes es la única marca
-      visible de la página, y quien no ve la imagen debe saber de quién es.
-    #}
-    {% if logo_url %}
-      <img class="sld-dashboard__logo" src="{{ logo_url }}" alt="{{ logo_alt }}">
-    {% endif %}
-
-    <p class="sld-dashboard__greeting">{{ 'Bienvenido, @name'|t({'@name': user_name}) }}</p>
+    <h1 class="sld-dashboard__greeting">{{ 'Bienvenido, @name'|t({'@name': user_name}) }}</h1>
 
     {# Texto plano: Twig lo escapa. No se admite marcado a propósito. #}
     {% if welcome_text %}

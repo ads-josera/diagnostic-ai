@@ -129,6 +129,30 @@
   stroke-linejoin: round;
 }
 
+/**
+ * Botón de cierre de sesión, en la barra del panel del alumno.
+ *
+ * A diferencia de `.sld-home__enter` lleva texto y no icono: es una acción
+ * que cambia el estado de la sesión, y un botón sin etiqueta visible invita
+ * a pulsarlo por curiosidad.
+ */
+.sld-home__logout {
+  display: inline-block;
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  color: #16181c;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+
+.sld-home__logout:hover {
+  transform: translateY(-1px);
+  color: #16181c;
+  text-decoration: none;
+}
+
 /* Tarjeta central ------------------------------------------------------ */
 
 .sld-home__main {
@@ -345,6 +369,112 @@
 .sld-login input[type="submit"]:hover,
 .sld-login button[type="submit"]:hover {
   background: var(--sld-color-primary-hover);
+}
+
+/* Páginas internas del alumno: panel y resultado ---------------------- */
+/*
+ * Las dos comparten marco y tarjeta —misma plantilla de página,
+ * `page--sld-inner.html.twig`— y por eso comparten estas reglas. Lo propio de
+ * cada una sigue en `sld-dashboard.css` y `sld-result.css`.
+ */
+
+/**
+ * Fondo liso, sin fotografía.
+ *
+ * La portada y el inicio de sesión son escaparate y llevan la imagen; el
+ * panel es la zona privada y el diseño del cliente lo quiere sobre un azul
+ * marino plano. Medido en la maqueta: #222254 uniforme en todo el fondo.
+ *
+ * El color va aquí y no en configuración porque es maquetación, no contenido
+ * —el mismo criterio que deja la disposición en la plantilla—. Si el cliente
+ * quiere poder cambiarlo, el sitio natural es la pestaña «Portada», junto a
+ * `accent_color` y `band_color`.
+ */
+.sld-home__frame--liso {
+  background-color: #222254;
+  background-image: none;
+}
+
+/**
+ * Variante ancha de la tarjeta: la del inicio de sesión pensaba en un
+ * formulario de dos campos, y el historial del panel necesita más aire.
+ * 66rem = 1056 px, que es lo que mide la tarjeta en la maqueta a 1366 px.
+ */
+.sld-home__card--wide {
+  max-width: 66rem;
+}
+
+/**
+ * La tarjeta de las páginas internas es BLANCA, no gris.
+ *
+ * `.sld-home__card` usa #f4f5f9 porque en la portada y el login la tarjeta se
+ * recorta contra una fotografía y el gris la asienta. Sobre el azul liso el
+ * diseño pide blanco puro, medido en las dos maquetas.
+ */
+.sld-inner-frame.sld-home__card {
+  background: #ffffff;
+}
+
+/**
+ * El contenido se alinea a la izquierda: son textos largos y tablas, no el
+ * mensaje centrado de la portada o el inicio de sesión.
+ *
+ * Deshace también, igual que `.sld-login`, el `display: contents` que
+ * `.sld-home` aplica a los envoltorios del tema (§ trampa ya documentada:
+ * ver `.sld-login` más abajo). Aquí importa todavía más: el panel lleva un
+ * formulario real —«Continuar mi diagnóstico»— y sin este bloque caería en
+ * la misma rejilla de doce columnas que rompió el inicio de sesión.
+ */
+.sld-inner-frame {
+  text-align: start;
+}
+
+.sld-inner-frame .region,
+.sld-inner-frame .block,
+.sld-inner-frame .block__content {
+  display: block;
+  width: 100%;
+}
+
+/* El contenido ya vive dentro del acolchado de la tarjeta: el que trae
+   `.sld` por defecto (pensado para ir suelto en la página de un tema)
+   solo duplicaría el espaciado. */
+.sld-inner-frame .sld {
+  max-width: none;
+  padding: 0;
+  margin-inline: 0;
+}
+
+/**
+ * Los avisos se elevan con una sombra, y solo eso.
+ *
+ * Su relleno (`--sld-color-surface`, #f6f7f9) está pensado para destacar sobre
+ * blanco, que es justo lo que la tarjeta vuelve a ser. Aun así la diferencia
+ * es de solo 1,07:1 —medido—: dos superficies que se distinguen únicamente
+ * por luminancia y apenas. La sombra las separa de verdad, y la franja ámbar
+ * de la izquierda (5,09:1) es la que da el significado.
+ *
+ * Importa porque los dos avisos que aparecen aquí son los que el alumno menos
+ * puede permitirse no ver: que su acceso caduca, y que el diagnóstico no está
+ * disponible.
+ */
+.sld-inner-frame .sld__notice {
+  box-shadow: var(--sld-shadow);
+}
+
+/**
+ * El encabezado de cada página interna usa el gris de la maqueta (#404040
+ * medido en las dos), no el negro del módulo. Es el mismo tono con el que la
+ * portada pinta sus titulares (`.sld-home__title`, #414141): un negro pleno
+ * sobre blanco resulta duro y el diseño del cliente lo evita en todas.
+ *
+ * Solo afecta al encabezado de la página. Los títulos de sección de dentro
+ * del informe siguen en el negro del módulo, que es lo que pide la maqueta
+ * del resultado (medido: casi negro).
+ */
+.sld-inner-frame .sld-dashboard__greeting,
+.sld-inner-frame .sld-result__title {
+  color: #404040;
 }
 
 /* Enlace de recuperación de contraseña, bajo el botón. */

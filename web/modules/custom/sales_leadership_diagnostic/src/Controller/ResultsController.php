@@ -80,6 +80,10 @@ final class ResultsController extends ControllerBase {
 
     return [
       '#theme' => 'sld_result',
+      // Se pasa el mismo título que devuelve el callback de la ruta. La página
+      // usa el marco interno del módulo, que no pinta la región donde el tema
+      // coloca su bloque de título, así que lo imprime la plantilla.
+      '#title' => $this->title($result),
       '#summary' => Markup::create($this->markdown->render($result->getSummary())),
       '#score' => $result->getScore(),
       '#sections' => $this->buildSections($payload),
