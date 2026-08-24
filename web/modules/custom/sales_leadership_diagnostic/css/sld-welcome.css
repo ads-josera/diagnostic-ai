@@ -51,15 +51,28 @@
 
 /**
  * Barra flotante: separada de los bordes y con esquinas redondeadas, en lugar
- * de pegada al borde superior. Deja ver la imagen alrededor, que es lo que
+ * de pegada al borde superior. Deja ver el fondo alrededor, que es lo que
  * hace que la página parezca una portada y no la cabecera de un panel.
+ *
+ * La altura se fija con `min-height` y no dejando que la decida el contenido.
+ * Ese era el motivo de que midiera 74 px donde las cuatro maquetas piden ~92:
+ * la barra valía lo que midiese lo más alto que llevara dentro, y eso cambia
+ * de página en página —el logotipo solo en el login, el botón de acceso en la
+ * portada, el de cerrar sesión en las internas—. Con una altura mínima las
+ * cuatro salen iguales y coinciden con el diseño.
+ *
+ * `box-sizing` se declara aquí explícitamente porque el módulo solo lo hereda
+ * dentro de `.sld`, y esta barra vive fuera: sin esta línea la altura mínima
+ * se sumaría al acolchado en lugar de incluirlo.
  */
 .sld-home__bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin: 1.5rem;
+  box-sizing: border-box;
+  min-height: 92px;
+  margin: 1.125rem;
   padding: 0.875rem 1.5rem;
   border-radius: 14px;
   background: var(--sld-color-primary);
@@ -242,7 +255,11 @@
 /* Pantallas estrechas -------------------------------------------------- */
 
 @media (max-width: 640px) {
+  /* Los 92 px del diseño son para una pantalla ancha. En un móvil esa barra se
+     come una franja notable de la primera pantalla sin nada que la llene, así
+     que se rebaja: el diseño del cliente no cubre este tamaño. */
   .sld-home__bar {
+    min-height: 72px;
     margin: 0.75rem;
     padding: 0.75rem 1rem;
   }
