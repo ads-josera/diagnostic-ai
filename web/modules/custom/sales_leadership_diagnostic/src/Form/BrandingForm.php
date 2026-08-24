@@ -4,17 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Form;
 
-use Drupal\Component\Utility\Bytes;
-use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Config\TypedConfigManagerInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
-use Drupal\Core\Form\ConfigTarget;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\file\FileInterface;
-use Drupal\file\FileUsage\FileUsageInterface;
 use Drupal\sales_leadership_diagnostic\Service\Branding\Branding;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Personalización visual del diagnóstico.
@@ -22,30 +14,23 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Expone deliberadamente pocos ajustes. Un panel de personalización completo
  * —cada color, cada espaciado, cada tipografía— parece más generoso, pero
  * produce combinaciones ilegibles y traslada al cliente un trabajo de diseño
- * que no ha pedido. Aquí solo se abre lo que identifica a una marca: el
- * logotipo, el color principal y el mensaje de bienvenida.
+ * que no ha pedido. Aquí solo se abre lo que identifica a una marca: los
+ * colores y el mensaje de bienvenida.
+ *
+ * NO hay logotipo. Lo hubo, y se retiró el 23-08-2026 a petición del usuario:
+ * desde que las páginas del alumno llevan el marco del diseño del cliente, el
+ * logotipo lo pone la barra superior, que se administra en la pestaña
+ * «Portada». El de aquí se pintaba además dentro de la tarjeta, duplicando la
+ * marca en la misma pantalla, y al quitarlo de la plantilla se quedó sin
+ * ningún sitio donde mostrarse. Un ajuste que no se ve en ninguna parte es
+ * peor que no tenerlo: invita a subir un archivo y a preguntarse por qué no
+ * pasa nada.
  *
  * Nótese que no hay ajuste de tipografía. La variable existe en el CSS y hereda
  * la del tema del sitio a propósito: así el diagnóstico se lee igual que el
  * resto de las páginas sin cargar una fuente más.
  */
 final class BrandingForm extends ConfigFormBase {
-
-  /**
-   * Extensiones admitidas para el logotipo.
-   *
-   * SVG entra, pero no sin más: cada archivo pasa por SldSafeSvg, que rechaza
-   * el que contenga scripts, manejadores de evento o referencias externas. Un
-   * SVG es un documento XML y es el único formato de imagen capaz de ejecutar
-   * código; el propio Drupal usa SVG para el logotipo de Olivero, de modo que
-   * excluirlo por completo habría sido más estricto que core sin buen motivo.
-   */
-  private const LOGO_EXTENSIONS = 'png jpg jpeg webp svg';
-
-  /**
-   * Tamaño máximo del logotipo.
-   */
-  private const LOGO_MAX_SIZE = '2 MB';
 
   /**
    * Paleta por defecto, la misma que declara sld-base.css.
@@ -69,27 +54,6 @@ final class BrandingForm extends ConfigFormBase {
     'color_accent' => '#1a7f4b',
   ];
 
-  public function __construct(
-    ConfigFactoryInterface $config_factory,
-    TypedConfigManagerInterface $typedConfigManager,
-    private readonly EntityTypeManagerInterface $entityTypes,
-    private readonly FileUsageInterface $fileUsage,
-  ) {
-    parent::__construct($config_factory, $typedConfigManager);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container): static {
-    return new static(
-      $container->get('config.factory'),
-      $container->get('config.typed'),
-      $container->get('entity_type.manager'),
-      $container->get('file.usage'),
-    );
-  }
-
   /**
    * {@inheritdoc}
    */
@@ -111,50 +75,6 @@ final class BrandingForm extends ConfigFormBase {
     $form['ayuda'] = [
       '#type' => 'item',
       '#markup' => $this->t('Estos ajustes afectan a las páginas del diagnóstico: el panel del alumno, la conversación y el resultado. La cabecera, el pie y los menús los sigue pintando el tema del sitio, que se configura en Apariencia.'),
-    ];
-
-    $form['logotipo'] = [
-      '#type' => 'details',
-      '#title' => $this->t('Logotipo'),
-      '#open' => TRUE,
-    ];
-
-    $form['logotipo']['logo_fid'] = [
-      '#type' => 'managed_file',
-      '#title' => $this->t('Archivo'),
-      '#upload_location' => 'public://sales-diagnostic/',
-      '#upload_validators' => [
-        'FileExtension' => ['extensions' => self::LOGO_EXTENSIONS],
-        // El límite viaja en BYTES: la restricción de core lo declara
-        // como ?int y lanza un TypeError con una cadena como «2 MB»,
-        // que aborta la subida entera antes de comprobar nada.
-        'FileSizeLimit' => ['fileLimit' => (int) Bytes::toNumber(self::LOGO_MAX_SIZE)],
-        // Se aplica a todos los archivos y solo actúa sobre los SVG. Rechaza
-        // el archivo entero en lugar de limpiarlo: alterar en silencio el
-        // logotipo del cliente sería devolverle algo que no subió.
-        'SldSafeSvg' => [],
-      ],
-      '#description' => $this->t('Formatos admitidos: @formatos. Máximo @tamano. Los SVG se revisan y se rechazan si contienen scripts o enlaces externos.', [
-        '@formatos' => str_replace(' ', ', ', self::LOGO_EXTENSIONS),
-        '@tamano' => self::LOGO_MAX_SIZE,
-      ]),
-      '#config_target' => new ConfigTarget(
-        Branding::CONFIG_NAME,
-        'logo_fid',
-        // managed_file trabaja con un array de identificadores y la
-        // configuración guarda uno solo. Las dos funciones hacen esa
-        // traducción en cada sentido.
-        fromConfig: static fn ($value): array => $value > 0 ? [(int) $value] : [],
-        toConfig: static fn ($value): int => is_array($value) && $value !== [] ? (int) reset($value) : 0,
-      ),
-    ];
-
-    $form['logotipo']['logo_alt'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Texto alternativo'),
-      '#description' => $this->t('Lo que se lee en voz alta a quien usa un lector de pantalla, y lo que se muestra si la imagen no carga.'),
-      '#maxlength' => 128,
-      '#config_target' => Branding::CONFIG_NAME . ':logo_alt',
     ];
 
     $form['colores'] = [
@@ -247,38 +167,6 @@ final class BrandingForm extends ConfigFormBase {
     }
 
     return self::DEFAULT_PALETTE[$key];
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * Un archivo subido por managed_file nace temporal y lo borra la limpieza
-   * automática de Drupal a las seis horas. Marcarlo permanente y registrar el
-   * uso evita que el logotipo desaparezca solo unas horas después de ponerlo.
-   */
-  public function submitForm(array &$form, FormStateInterface $form_state): void {
-    parent::submitForm($form, $form_state);
-
-    $fids = $form_state->getValue('logo_fid');
-
-    if (!is_array($fids) || $fids === []) {
-      return;
-    }
-
-    $file = $this->entityTypes->getStorage('file')->load((int) reset($fids));
-
-    if (!$file instanceof FileInterface) {
-      return;
-    }
-
-    if ($file->isPermanent()) {
-      return;
-    }
-
-    $file->setPermanent();
-    $file->save();
-
-    $this->fileUsage->add($file, 'sales_leadership_diagnostic', 'config', (string) $file->id());
   }
 
 }

@@ -13,8 +13,8 @@ dependencies:
   # instalarse. Lo detectaron los tests de Kernel, que arrancan solo con lo
   # declarado aquí.
   - drupal:options
-  # Necesario para subir el logotipo de marca. Se declara aunque el perfil
-  # standard lo active: una instalación mínima no lo trae, y sin él el
-  # formulario de marca fallaría al construirse.
+  # Necesario para subir las imágenes de la portada y el icono del chat. Se
+  # declara aunque el perfil standard lo active: una instalación mínima no lo
+  # trae, y sin él esos formularios fallarían al construirse.
   - drupal:file
   - externalauth:externalauth

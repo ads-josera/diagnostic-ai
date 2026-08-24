@@ -203,8 +203,6 @@ services:
   Drupal\sales_leadership_diagnostic\Service\Branding\Branding:
     arguments:
       - '@config.factory'
-      - '@entity_type.manager'
-      - '@file_url_generator'
 
   # --- Inicio del diagnóstico ----------------------------------------------
 

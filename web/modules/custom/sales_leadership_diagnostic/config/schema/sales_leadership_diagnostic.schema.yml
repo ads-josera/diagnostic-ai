@@ -134,13 +134,6 @@ sales_leadership_diagnostic.branding:
   type: config_object
   label: 'Marca del diagnóstico'
   mapping:
-    logo_fid:
-      type: integer
-      label: 'Identificador del archivo del logotipo'
-    logo_alt:
-      # Traducible: es texto que lee una persona.
-      type: label
-      label: 'Texto alternativo del logotipo'
     color_primary:
       type: string
       label: 'Color principal'

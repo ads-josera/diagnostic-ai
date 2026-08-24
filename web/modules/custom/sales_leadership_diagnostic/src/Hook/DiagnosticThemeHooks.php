@@ -73,8 +73,6 @@ final class DiagnosticThemeHooks {
       'sld_dashboard' => [
         'variables' => [
           'user_name' => '',
-          'logo_url' => NULL,
-          'logo_alt' => '',
           'welcome_text' => NULL,
           'can_start' => FALSE,
           'start_url' => '',

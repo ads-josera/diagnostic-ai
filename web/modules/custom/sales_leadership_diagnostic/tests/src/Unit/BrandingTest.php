@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\sales_leadership_diagnostic\Unit;
 
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\sales_leadership_diagnostic\Service\Branding\Branding;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -122,8 +120,6 @@ final class BrandingTest extends UnitTestCase {
           'color_accent' => '',
         ],
       ]),
-      $this->createMock(EntityTypeManagerInterface::class),
-      $this->createMock(FileUrlGeneratorInterface::class),
     );
 
     return $branding->buildCss();

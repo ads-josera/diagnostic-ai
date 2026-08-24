@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace Drupal\sales_leadership_diagnostic\Service\Branding;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\File\FileUrlGeneratorInterface;
-use Drupal\file\FileInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
 
 /**
  * Personalización visual del diagnóstico.
@@ -60,8 +57,6 @@ final class Branding {
 
   public function __construct(
     private readonly ConfigFactoryInterface $configFactory,
-    private readonly EntityTypeManagerInterface $entityTypeManager,
-    private readonly FileUrlGeneratorInterface $fileUrlGenerator,
   ) {}
 
   /**
@@ -117,40 +112,6 @@ final class Branding {
   }
 
   /**
-   * URL del logotipo, o NULL si no hay ninguno configurado.
-   */
-  public function getLogoUrl(): ?string {
-    $fid = $this->configFactory->get(self::CONFIG_NAME)->get('logo_fid');
-
-    if (!is_numeric($fid) || (int) $fid <= 0) {
-      return NULL;
-    }
-
-    $file = $this->entityTypeManager->getStorage('file')->load((int) $fid);
-
-    // El fichero pudo borrarse desde la administración de archivos sin pasar
-    // por este formulario. Un logotipo que ya no existe no debe dejar una
-    // imagen rota en la página del alumno.
-    if (!$file instanceof FileInterface) {
-      return NULL;
-    }
-
-    return $this->fileUrlGenerator->generateString($file->getFileUri());
-  }
-
-  /**
-   * Texto alternativo del logotipo.
-   *
-   * Nunca vacío: un logotipo sin alternativa textual deja sin información a
-   * quien use un lector de pantalla.
-   */
-  public function getLogoAlt(): string {
-    $value = trim((string) $this->configFactory->get(self::CONFIG_NAME)->get('logo_alt'));
-
-    return $value === '' ? 'Salesbumm' : $value;
-  }
-
-  /**
    * Texto de bienvenida del panel, o NULL si no se ha personalizado.
    */
   public function getWelcomeText(): ?string {
@@ -162,8 +123,8 @@ final class Branding {
   /**
    * Etiquetas de cache del objeto de configuración.
    *
-   * Quien pinte la marca debe declararlas, o un cambio de logotipo no se vería
-   * hasta que caducara la página por otro motivo.
+   * Quien pinte la marca debe declararlas, o un cambio de color o del texto de
+   * bienvenida no se vería hasta que caducara la página por otro motivo.
    *
    * @return string[]
    *   Etiquetas de cache.

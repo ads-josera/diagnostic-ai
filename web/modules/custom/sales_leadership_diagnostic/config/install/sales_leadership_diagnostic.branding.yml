@@ -6,8 +6,6 @@
 langcode: es
 # Sin personalizar de fábrica: los colores vacíos dejan la paleta por defecto
 # del módulo, que ya está pensada para leerse bien en claro y en oscuro.
-logo_fid: 0
-logo_alt: ''
 color_primary: ''
 color_primary_hover: ''
 color_accent: ''

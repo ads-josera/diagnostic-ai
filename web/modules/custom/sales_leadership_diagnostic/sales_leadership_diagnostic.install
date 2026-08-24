@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\file\FileInterface;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\user\Entity\Role;
 
@@ -382,4 +383,51 @@ function sales_leadership_diagnostic_update_10006(): string {
   }
 
   return sprintf('Añadida la marca de conversación de prueba a: %s.', implode(', ', $creados));
+}
+
+/**
+ * Retira el logotipo de la pestaña «Marca».
+ *
+ * Desde que las páginas del alumno llevan el marco del diseño del cliente, el
+ * logotipo lo pinta la barra superior, que se administra en «Portada». El de
+ * «Marca» se dibujaba además dentro de la tarjeta, duplicando la marca en la
+ * misma pantalla, y al retirarlo de la plantilla se quedó sin ningún sitio
+ * donde mostrarse. Un ajuste que no se ve en ninguna parte invita a subir un
+ * archivo y a preguntarse por qué no pasa nada.
+ *
+ * El archivo NO se borra. Solo se suelta el registro de uso que este módulo
+ * había anotado sobre él: quien decida si un archivo sobra es el administrador
+ * desde la gestión de archivos, no una actualización. Borrarlo aquí destruiría
+ * algo que quizá se esté usando en otro sitio, y eso no se puede deshacer.
+ */
+function sales_leadership_diagnostic_update_10007(): string {
+  $config = \Drupal::configFactory()->getEditable('sales_leadership_diagnostic.branding');
+  $fid = (int) $config->get('logo_fid');
+
+  if ($config->get('logo_fid') === NULL && $config->get('logo_alt') === NULL) {
+    return 'El logotipo de Marca ya se había retirado; no se ha modificado nada.';
+  }
+
+  $config->clear('logo_fid')->clear('logo_alt')->save();
+
+  if ($fid <= 0) {
+    return 'Retirado el logotipo de la pestaña «Marca». No había ningún archivo configurado.';
+  }
+
+  $file = \Drupal::entityTypeManager()->getStorage('file')->load($fid);
+
+  if (!$file instanceof FileInterface) {
+    return sprintf(
+      'Retirado el logotipo de la pestaña «Marca». El archivo %d ya no existía.',
+      $fid,
+    );
+  }
+
+  \Drupal::service('file.usage')->delete($file, 'sales_leadership_diagnostic', 'config', (string) $fid);
+
+  return sprintf(
+    'Retirado el logotipo de la pestaña «Marca». El archivo %d («%s») se conserva y queda sin uso registrado: bórralo desde la gestión de archivos si ya no hace falta.',
+    $fid,
+    $file->getFilename(),
+  );
 }

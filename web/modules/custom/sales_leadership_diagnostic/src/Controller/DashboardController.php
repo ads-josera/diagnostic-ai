@@ -83,8 +83,6 @@ final class DashboardController extends ControllerBase {
       // nombre real permitiría suplantaciones. Para saludar se usa el nombre
       // que envió WordPress, guardado junto a la correspondencia.
       '#user_name' => $this->provisioner->getDisplayName($account),
-      '#logo_url' => $this->branding->getLogoUrl(),
-      '#logo_alt' => $this->branding->getLogoAlt(),
       // Texto plano: lo escapa Twig. No se admite marcado ni Markdown, para no
       // abrir otra vía de HTML arbitrario en la página del alumno.
       '#welcome_text' => $this->branding->getWelcomeText(),
@@ -105,8 +103,8 @@ final class DashboardController extends ControllerBase {
         'tags' => array_merge(
           ['sld_diagnostic_session_list', 'sld_diagnostic_result_list'],
           $this->readiness->getCacheTags(),
-          // Sin esto, cambiar el logotipo no se vería hasta que el panel
-          // caducase por otro motivo.
+          // Sin esto, cambiar los colores o el texto de bienvenida no se
+          // vería hasta que el panel caducase por otro motivo.
           $this->branding->getCacheTags(),
           // Igual con la política de repetición: cambiarla debe reflejarse en
           // el aviso que lee el alumno.
