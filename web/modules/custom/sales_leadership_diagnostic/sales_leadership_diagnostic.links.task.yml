@@ -70,3 +70,11 @@ sales_leadership_diagnostic.results_knowledge_tab:
   route_name: sales_leadership_diagnostic.knowledge
   base_route: sales_leadership_diagnostic.admin_results
   weight: 15
+
+# Los agentes los administra el gestor, con el mismo permiso que el prompt: un
+# agente ES metodologia. Cuelga de su listado de resultados como las demas.
+sales_leadership_diagnostic.results_agents_tab:
+  title: 'Agentes'
+  route_name: entity.sld_agent.collection
+  base_route: sales_leadership_diagnostic.admin_results
+  weight: 5

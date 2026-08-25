@@ -9,6 +9,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
 use Drupal\Core\StringTranslation\ByteSizeMarkup;
 use Drupal\file\FileInterface;
 use Drupal\file\FileUsage\FileUsageInterface;
@@ -166,16 +167,35 @@ final class KnowledgeDocumentsForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state, ?DiagnosticAgentInterface $sld_agent = NULL): array {
-    // La ruta puede traer el agente o no. Sin él se toma el primero
-    // utilizable, que es lo correcto mientras solo haya uno; el selector para
-    // elegir entre varios llega con la pantalla de administración por agente.
-    $this->agente = $sld_agent ?? $this->agents->getFirstUsable();
+    $disponibles = $this->agents->getUsable();
+
+    // Con la ruta sin agente hay que decidir cuál se edita. Con uno solo es
+    // obvio; con varios NO se elige por él: hacerlo silenciosamente llevaba a
+    // editar la biblioteca de un agente creyendo estar en la de otro, porque
+    // el orden lo decidía el peso y el nombre. Se le pide que elija.
+    $this->agente = $sld_agent ?? (count($disponibles) === 1 ? reset($disponibles) : NULL);
 
     if ($this->agente === NULL) {
-      $form['sin_agente'] = [
-        '#type' => 'item',
-        '#markup' => $this->t('No hay ningún agente configurado todavía. Crea uno antes de cargarle documentos.'),
-      ];
+      $form['elegir'] = $disponibles === []
+        ? [
+          '#type' => 'item',
+          '#markup' => $this->t('No hay ningún agente configurado todavía. Crea uno antes de cargarle documentos.'),
+        ]
+        : [
+          '#theme' => 'item_list',
+          '#title' => $this->t('¿A qué agente quieres cargarle documentos?'),
+          '#items' => array_map(
+            fn ($agent) => [
+              '#type' => 'link',
+              '#title' => $agent->label(),
+              '#url' => Url::fromRoute(
+                'sales_leadership_diagnostic.knowledge_agent',
+                ['sld_agent' => $agent->id()],
+              ),
+            ],
+            array_values($disponibles),
+          ),
+        ];
 
       return $form;
     }

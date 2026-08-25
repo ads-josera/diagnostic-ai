@@ -6,7 +6,11 @@ namespace Drupal\sales_leadership_diagnostic\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityBase;
 use Drupal\Core\Entity\Attribute\ConfigEntityType;
+use Drupal\Core\Entity\EntityDeleteForm;
+use Drupal\Core\Entity\Routing\AdminHtmlRouteProvider;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\sales_leadership_diagnostic\Entity\Handler\DiagnosticAgentListBuilder;
+use Drupal\sales_leadership_diagnostic\Form\DiagnosticAgentForm;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 
 /**
@@ -49,6 +53,26 @@ use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
     'label' => 'label',
     'status' => 'status',
     'uuid' => 'uuid',
+  ],
+  handlers: [
+    'list_builder' => DiagnosticAgentListBuilder::class,
+    // Sin proveedor de rutas, Drupal NO genera las de listar, añadir, editar
+    // ni borrar: los enlaces declarados abajo se quedan apuntando a rutas que
+    // no existen y la pestaña del gestor da un error de ruta desconocida.
+    'route_provider' => [
+      'html' => AdminHtmlRouteProvider::class,
+    ],
+    'form' => [
+      'add' => DiagnosticAgentForm::class,
+      'edit' => DiagnosticAgentForm::class,
+      'delete' => EntityDeleteForm::class,
+    ],
+  ],
+  links: [
+    'collection' => '/admin/config/salesbumm/diagnostic/agentes',
+    'add-form' => '/admin/config/salesbumm/diagnostic/agentes/anadir',
+    'edit-form' => '/admin/config/salesbumm/diagnostic/agentes/{sld_agent}',
+    'delete-form' => '/admin/config/salesbumm/diagnostic/agentes/{sld_agent}/borrar',
   ],
   config_export: [
     'id',

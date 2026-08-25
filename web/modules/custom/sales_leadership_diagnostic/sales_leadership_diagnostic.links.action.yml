@@ -1,0 +1,6 @@
+# Boton «Anadir agente» sobre el listado.
+sales_leadership_diagnostic.agent_add:
+  route_name: entity.sld_agent.add_form
+  title: 'Añadir agente'
+  appears_on:
+    - entity.sld_agent.collection
