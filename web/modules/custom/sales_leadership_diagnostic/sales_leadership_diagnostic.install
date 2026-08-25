@@ -505,3 +505,60 @@ function sales_leadership_diagnostic_update_10009(): string {
     count($agente->getKnowledgeFids()),
   );
 }
+
+/**
+ * Anota en cada sesión y resultado con qué agente se hicieron.
+ *
+ * Hasta ahora solo había un agente y la pregunta no tenía sentido. Con varios,
+ * un historial que no dice cuál se usó es ambiguo: dos diagnósticos de la
+ * misma fecha pueden ser de metodologías distintas.
+ *
+ * No se deduce del curso a posteriori. El curso que concede un agente puede
+ * cambiar, y entonces el historial empezaría a mentir sobre conversaciones ya
+ * cerradas. Se anota una vez y se queda.
+ *
+ * Lo anterior a este cambio se atribuye al primer agente, que es lo cierto:
+ * era el único que existía.
+ */
+function sales_leadership_diagnostic_update_10010(): string {
+  $definicion = BaseFieldDefinition::create('string')
+    ->setLabel(new TranslatableMarkup('Agente'))
+    ->setSetting('max_length', 64);
+
+  $manager = \Drupal::entityDefinitionUpdateManager();
+  $creados = [];
+
+  foreach (['sld_diagnostic_session', 'sld_diagnostic_result'] as $tipo) {
+    if ($manager->getFieldStorageDefinition('agent', $tipo) !== NULL) {
+      continue;
+    }
+
+    $manager->installFieldStorageDefinition('agent', $tipo, 'sales_leadership_diagnostic', $definicion);
+    $creados[] = $tipo;
+  }
+
+  if ($creados === []) {
+    return 'El campo del agente ya existía; no se ha modificado nada.';
+  }
+
+  // Se rellena lo existente con el primer agente. Se hace por consulta directa
+  // y no cargando entidades: son datos de historial, no hay lógica que
+  // ejecutar, y cargar miles de entidades para escribir un literal sería
+  // gastar memoria sin ganar nada.
+  $conexion = \Drupal::database();
+  $tocadas = 0;
+
+  foreach ($creados as $tipo) {
+    $tocadas += $conexion->update($tipo)
+      ->fields(['agent' => SalesLeadershipDiagnostic::FIRST_AGENT_ID])
+      ->isNull('agent')
+      ->execute();
+  }
+
+  return sprintf(
+    'Añadido el campo del agente a: %s. Se han atribuido %d fila(s) al agente "%s", que era el único que existía.',
+    implode(', ', $creados),
+    $tocadas,
+    SalesLeadershipDiagnostic::FIRST_AGENT_ID,
+  );
+}

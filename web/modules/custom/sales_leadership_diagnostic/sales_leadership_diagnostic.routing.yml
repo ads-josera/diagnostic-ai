@@ -54,7 +54,10 @@ sales_leadership_diagnostic.dashboard:
 # antivirus que inspecciona el correo, un rastreador—. El token impide además
 # que otro sitio la dispare desde el navegador del alumno.
 sales_leadership_diagnostic.start:
-  path: '/sales-diagnostic/start'
+  # El agente viaja en la ruta. Que este en la URL no lo autoriza: quien
+  # comprueba que el alumno tiene derecho a ESE agente es DiagnosticStarter,
+  # que vuelve a preguntarselo a WordPress antes de crear nada.
+  path: '/sales-diagnostic/start/{sld_agent}'
   methods: [POST]
   defaults:
     _controller: 'Drupal\sales_leadership_diagnostic\Controller\StartController::start'
@@ -257,6 +260,17 @@ sales_leadership_diagnostic.home_settings:
 # persona. Separarlos habria obligado a dar dos permisos para una sola tarea.
 sales_leadership_diagnostic.knowledge:
   path: '/admin/config/salesbumm/diagnostic/documentos'
+  defaults:
+    _form: 'Drupal\sales_leadership_diagnostic\Form\KnowledgeDocumentsForm'
+    _title: 'Documentos de conocimiento'
+  requirements:
+    _permission: 'edit diagnostic prompt+administer sales leadership diagnostic'
+
+# Misma pantalla de documentos, para un agente concreto. La pestana apunta a
+# la ruta sin parametro, que resuelve el primer agente; esta existe para poder
+# enlazar a cada uno cuando haya varios.
+sales_leadership_diagnostic.knowledge_agent:
+  path: '/admin/config/salesbumm/diagnostic/documentos/{sld_agent}'
   defaults:
     _form: 'Drupal\sales_leadership_diagnostic\Form\KnowledgeDocumentsForm'
     _title: 'Documentos de conocimiento'

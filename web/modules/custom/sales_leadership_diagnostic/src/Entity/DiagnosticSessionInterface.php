@@ -39,6 +39,14 @@ interface DiagnosticSessionInterface extends ContentEntityInterface, EntityOwner
   public function getCourseId(): string;
 
   /**
+   * Agente con el que se hizo.
+   *
+   * Cadena vacía en lo anterior a que hubiera varios agentes: entonces la
+   * pregunta no tenía sentido porque solo había uno.
+   */
+  public function getAgentId(): string;
+
+  /**
    * Versión del diagnóstico con la que se ejecutó esta sesión.
    */
   public function getDiagnosticVersion(): string;

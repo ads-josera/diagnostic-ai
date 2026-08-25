@@ -1,7 +1,12 @@
-_core:
-  default_config_hash: Ch1lcvb16bxS-CZpkM4n5NGWOw6WU4aB_fjCpUbTrlM
+uuid: e278377d-b880-4cd1-8eda-67eeff1375e0
 langcode: es
+status: true
+dependencies: {  }
+id: sales_leadership_diagnostic
+label: 'Sales Leadership Diagnostic AI'
 version: 0.0-PRUEBAS
+course_id: '35884'
+description: 'Diagnóstico de madurez comercial B2B. Primer agente del producto.'
 system_prompt: |-
   Eres un asesor senior especializado en diagnóstico de liderazgo comercial.
   Conduces una conversación estructurada con un directivo para evaluar la
@@ -54,6 +59,9 @@ output_contract: |-
 
   El campo "message" es lo único que el directivo lee en la conversación.
   Escríbelo en su idioma, con el tono de un asesor, no como un informe.
+knowledge_fids:
+  - 29
+  - 30
 welcome_icon_fid: 10
 welcome_intro: 'Diagnostica la madurez de tu organización comercial B2B utilizando evidencia, métricas y criterio ejecutivo. Identifica fortalezas, fugas, riesgos y las tres prioridades que más pueden mejorar tu sistema comercial.'
 welcome_suggestions:
@@ -61,6 +69,4 @@ welcome_suggestions:
   - 'Quiero volver a evaluar mi organización y comparar mi avance.'
   - 'Quiero evaluar sólo Forecast, Pipeline y Excelencia Operativa.'
   - 'Tengo información de mi CRM o Excel y quiero utilizarla en el diagnóstico.'
-knowledge_fids:
-  - 29
-  - 30
+weight: 0

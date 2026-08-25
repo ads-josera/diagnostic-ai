@@ -124,7 +124,7 @@ final class DiagnosticStarterTest extends KernelTestBase {
   public function testCreaLaSesionCuandoTodoEstaEnOrden(): void {
     $this->concederAcceso();
 
-    $session = $this->starter()->start($this->alumno);
+    $session = $this->starter()->start($this->alumno, $this->agente());
 
     $this->assertSame('4821', $session->getWordPressUserId());
     $this->assertSame(DiagnosticStatus::Draft, $session->getStatus());
@@ -146,7 +146,7 @@ final class DiagnosticStarterTest extends KernelTestBase {
     $local->save();
 
     $this->expectException(CannotStartDiagnosticException::class);
-    $this->starter()->start($local);
+    $this->starter()->start($local, $this->agente());
   }
 
   /**
@@ -160,7 +160,7 @@ final class DiagnosticStarterTest extends KernelTestBase {
     );
 
     try {
-      $this->starter()->start($this->alumno);
+      $this->starter()->start($this->alumno, $this->agente());
       $this->fail('Debería haberse rechazado por falta de autorización.');
     }
     catch (CannotStartDiagnosticException $e) {
@@ -179,8 +179,8 @@ final class DiagnosticStarterTest extends KernelTestBase {
   public function testNoDuplicaUnaSesionEnCurso(): void {
     $this->concederAcceso();
 
-    $primera = $this->starter()->start($this->alumno);
-    $segunda = $this->starter()->start($this->alumno);
+    $primera = $this->starter()->start($this->alumno, $this->agente());
+    $segunda = $this->starter()->start($this->alumno, $this->agente());
 
     $this->assertSame($primera->id(), $segunda->id());
     $this->assertSame(1, $this->contarSesiones());
@@ -193,7 +193,7 @@ final class DiagnosticStarterTest extends KernelTestBase {
     $this->concederAcceso(periodStart: 1_000_000);
     $this->crearSesionCompletada(1_500_000);
 
-    $this->starter()->start($this->alumno);
+    $this->starter()->start($this->alumno, $this->agente());
 
     $this->assertSame(2, $this->contarSesiones());
   }
@@ -207,7 +207,7 @@ final class DiagnosticStarterTest extends KernelTestBase {
     $this->crearSesionCompletada(1_500_000);
 
     try {
-      $this->starter()->start($this->alumno);
+      $this->starter()->start($this->alumno, $this->agente());
       $this->fail('Debería haberse rechazado por haber agotado el diagnóstico del periodo.');
     }
     catch (CannotStartDiagnosticException $e) {
@@ -232,7 +232,7 @@ final class DiagnosticStarterTest extends KernelTestBase {
     // empieza después de aquel diagnóstico, que ya pertenece al pasado.
     $this->concederAcceso(periodStart: 2_000_000);
 
-    $this->starter()->start($this->alumno);
+    $this->starter()->start($this->alumno, $this->agente());
 
     $this->assertSame(2, $this->contarSesiones());
   }
@@ -249,7 +249,7 @@ final class DiagnosticStarterTest extends KernelTestBase {
     $this->crearSesionCompletada(1_500_000, DiagnosticStatus::Failed);
 
     $this->expectException(CannotStartDiagnosticException::class);
-    $this->starter()->start($this->alumno);
+    $this->starter()->start($this->alumno, $this->agente());
   }
 
   /**
@@ -264,7 +264,7 @@ final class DiagnosticStarterTest extends KernelTestBase {
     $this->concederAcceso(periodStart: NULL);
     $this->crearSesionCompletada(1_500_000);
 
-    $this->starter()->start($this->alumno);
+    $this->starter()->start($this->alumno, $this->agente());
 
     $this->assertSame(2, $this->contarSesiones());
   }
@@ -272,6 +272,34 @@ final class DiagnosticStarterTest extends KernelTestBase {
   /**
    * El servicio bajo prueba.
    */
+  /**
+   * Agente de la prueba, creado al vuelo la primera vez que se pide.
+   *
+   * Su curso coincide con el que la prueba configura en WordPress, que es lo
+   * que le da derecho al alumno. Sin esa coincidencia el starter rechazaría
+   * cada intento por falta de derecho al agente, y los tests fallarían por un
+   * motivo distinto del que quieren comprobar.
+   */
+  private function agente(): \Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface {
+    $almacen = $this->container->get('entity_type.manager')->getStorage('sld_agent');
+    $agente = $almacen->load('agente_prueba');
+
+    if ($agente === NULL) {
+      $agente = $almacen->create([
+        'id' => 'agente_prueba',
+        'label' => 'Agente de prueba',
+        'status' => TRUE,
+        'version' => '1.0-TEST',
+        'course_id' => '35884',
+        'system_prompt' => 'Prompt de prueba.',
+        'output_contract' => 'Contrato.',
+      ]);
+      $agente->save();
+    }
+
+    return $agente;
+  }
+
   private function starter(): DiagnosticStarter {
     return $this->container->get(DiagnosticStarter::class);
   }

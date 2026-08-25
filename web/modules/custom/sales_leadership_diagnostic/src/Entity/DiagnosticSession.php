@@ -81,6 +81,11 @@ class DiagnosticSession extends ContentEntityBase implements DiagnosticSessionIn
       ->setSetting('allowed_values', DiagnosticStatus::allowedValues())
       ->setDefaultValue(DiagnosticStatus::Draft->value);
 
+    $fields['agent'] = BaseFieldDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Agente'))
+      ->setDescription(new TranslatableMarkup('Agente con el que se hizo. Se guarda por sesión y no se deduce del curso: el curso que concede un agente puede cambiar, y el historial debe seguir diciendo con cuál se conversó de verdad.'))
+      ->setSetting('max_length', 64);
+
     $fields['diagnostic_version'] = BaseFieldDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Versión del diagnóstico'))
       ->setRequired(TRUE)
@@ -168,6 +173,13 @@ class DiagnosticSession extends ContentEntityBase implements DiagnosticSessionIn
    */
   public function getCourseId(): string {
     return (string) $this->get('course_id')->value;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getAgentId(): string {
+    return (string) $this->get('agent')->value;
   }
 
   /**

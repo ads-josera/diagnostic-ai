@@ -16,9 +16,9 @@
  * Variables disponibles:
  * - user_name: nombre para el saludo.
  * - welcome_text: mensaje de bienvenida personalizado, o nulo.
- * - can_start: si puede iniciarse un diagnóstico ahora mismo.
- * - start_url: destino del formulario de inicio, con su token CSRF.
- * - resume_session_id: identificador de la sesión a medias, o nulo.
+ * - can_start: si el sistema está listo para iniciar diagnósticos.
+ * - agents: agentes a los que el alumno tiene derecho. Cada uno con id,
+ *   label, description, start_url y resume_session_id.
  * - repeat_notice: aviso sobre la política de repetición, o nulo.
  * - unavailable_notice: motivo, si no puede. Un alumno recibe un mensaje
  *   neutro; un administrador, el detalle técnico.
@@ -60,24 +60,53 @@
   {% endif %}
 
   <div class="sld-dashboard__start">
-    {% if can_start %}
+    {% if can_start and agents is not empty %}
       {#
-        Un formulario y no un enlace: iniciar un diagnóstico crea una sesión, y
+        Un formulario por agente, y no un enlace: iniciar crea una sesión, y
         con GET la crearía cualquier cosa que precargue enlaces. El token CSRF
         impide además que otro sitio lo dispare desde el navegador del alumno.
 
-        Toda la política se aplica en el servidor, en DiagnosticStarter. Este
-        botón solo evita ofrecer algo que se va a rechazar; no es la defensa.
+        Toda la política se aplica en el servidor, en DiagnosticStarter, que
+        vuelve a comprobar que el alumno tiene derecho a ESE agente. Estos
+        botones solo evitan ofrecer algo que se va a rechazar; no son la
+        defensa.
+
+        Con un solo agente no hay encabezado ni nombre: el alumno ve su botón
+        y entra, igual que antes de que hubiera varios.
       #}
-      <form action="{{ start_url }}" method="post">
-        <button type="submit" class="sld__button">
-          {{ resume_session_id ? 'Continuar mi diagnóstico'|t : 'Iniciar diagnóstico'|t }}
-        </button>
-      </form>
+      {% if agents|length > 1 %}
+        <h2 class="sld-dashboard__section-title">{{ 'Tus diagnósticos disponibles'|t }}</h2>
+      {% endif %}
+
+      <ul class="sld-dashboard__agents">
+        {% for agent in agents %}
+          <li class="sld-dashboard__agent">
+            {% if agents|length > 1 %}
+              <p class="sld-dashboard__agent-name">{{ agent.label }}</p>
+              {% if agent.description %}
+                <p class="sld__muted">{{ agent.description }}</p>
+              {% endif %}
+            {% endif %}
+
+            <form action="{{ agent.start_url }}" method="post">
+              <button type="submit" class="sld__button">
+                {{ agent.resume_session_id
+                  ? 'Continuar mi diagnóstico'|t
+                  : 'Iniciar diagnóstico'|t }}
+              </button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
 
       {% if repeat_notice %}
         <p class="sld__muted">{{ repeat_notice }}</p>
       {% endif %}
+    {% elseif can_start %}
+      {# Listo, pero sin derecho a ningún agente: no es un fallo del sistema. #}
+      <p class="sld__muted">
+        {{ 'Tu cuenta todavía no tiene ningún diagnóstico asignado.'|t }}
+      </p>
     {% else %}
       <button type="button" class="sld__button" aria-disabled="true" disabled>
         {{ 'Iniciar diagnóstico'|t }}

@@ -12,6 +12,8 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\ByteSizeMarkup;
 use Drupal\file\FileInterface;
 use Drupal\file\FileUsage\FileUsageInterface;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Knowledge\DocumentTextExtractor;
 use Drupal\sales_leadership_diagnostic\Service\Knowledge\KnowledgeLibrary;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -62,6 +64,16 @@ final class KnowledgeDocumentsForm extends FormBase {
   private FileUsageInterface $fileUsage;
 
   /**
+   * Registro de agentes.
+   */
+  private AgentRegistry $agents;
+
+  /**
+   * Agente cuya biblioteca se está editando.
+   */
+  private ?DiagnosticAgentInterface $agente = NULL;
+
+  /**
    * Construye el formulario.
    *
    * Las propiedades NO son `readonly`, y no es un descuido.
@@ -77,6 +89,8 @@ final class KnowledgeDocumentsForm extends FormBase {
    *
    * @param \Drupal\sales_leadership_diagnostic\Service\Knowledge\KnowledgeLibrary $library
    *   Biblioteca de documentos.
+   * @param \Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry $agents
+   *   Registro de agentes.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configs
    *   Fábrica de configuración.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypes
@@ -86,11 +100,13 @@ final class KnowledgeDocumentsForm extends FormBase {
    */
   public function __construct(
     KnowledgeLibrary $library,
+    AgentRegistry $agents,
     ConfigFactoryInterface $configs,
     EntityTypeManagerInterface $entityTypes,
     FileUsageInterface $fileUsage,
   ) {
     $this->library = $library;
+    $this->agents = $agents;
     $this->configs = $configs;
     $this->entityTypes = $entityTypes;
     $this->fileUsage = $fileUsage;
@@ -102,6 +118,7 @@ final class KnowledgeDocumentsForm extends FormBase {
   public static function create(ContainerInterface $container): static {
     return new static(
       $container->get(KnowledgeLibrary::class),
+      $container->get(AgentRegistry::class),
       $container->get('config.factory'),
       $container->get('entity_type.manager'),
       $container->get('file.usage'),
@@ -132,6 +149,7 @@ final class KnowledgeDocumentsForm extends FormBase {
     $container = \Drupal::getContainer();
 
     $this->library = $container->get(KnowledgeLibrary::class);
+    $this->agents = $container->get(AgentRegistry::class);
     $this->configs = $container->get('config.factory');
     $this->entityTypes = $container->get('entity_type.manager');
     $this->fileUsage = $container->get('file.usage');
@@ -147,8 +165,27 @@ final class KnowledgeDocumentsForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state): array {
+  public function buildForm(array $form, FormStateInterface $form_state, ?DiagnosticAgentInterface $sld_agent = NULL): array {
+    // La ruta puede traer el agente o no. Sin él se toma el primero
+    // utilizable, que es lo correcto mientras solo haya uno; el selector para
+    // elegir entre varios llega con la pantalla de administración por agente.
+    $this->agente = $sld_agent ?? $this->agents->getFirstUsable();
+
+    if ($this->agente === NULL) {
+      $form['sin_agente'] = [
+        '#type' => 'item',
+        '#markup' => $this->t('No hay ningún agente configurado todavía. Crea uno antes de cargarle documentos.'),
+      ];
+
+      return $form;
+    }
+
     $form['#attached']['library'][] = 'sales_leadership_diagnostic/studio';
+
+    $form['agente'] = [
+      '#type' => 'item',
+      '#markup' => $this->t('Biblioteca de <strong>@agente</strong>.', ['@agente' => $this->agente->label()]),
+    ];
 
     $form['ayuda'] = [
       '#type' => 'item',
@@ -165,7 +202,7 @@ final class KnowledgeDocumentsForm extends FormBase {
    * Tabla de documentos activos, cada uno con su botón de quitar.
    */
   private function buildList(array &$form): void {
-    $documentos = $this->library->getDocuments();
+    $documentos = $this->library->getDocuments($this->agente);
 
     $form['lista'] = [
       '#type' => 'details',
@@ -226,7 +263,7 @@ final class KnowledgeDocumentsForm extends FormBase {
       ];
     }
 
-    $total = $this->library->getTotalTokens();
+    $total = $this->library->getTotalTokens($this->agente);
 
     $form['lista']['total'] = [
       '#type' => 'item',
@@ -289,7 +326,7 @@ final class KnowledgeDocumentsForm extends FormBase {
       return;
     }
 
-    $fids = $this->library->getFids();
+    $fids = $this->agente->getKnowledgeFids();
 
     foreach ($nuevos as $fid) {
       $file = $this->entityTypes->getStorage('file')->load((int) $fid);
@@ -345,7 +382,7 @@ final class KnowledgeDocumentsForm extends FormBase {
     }
 
     $this->guardarLista(array_filter(
-      $this->library->getFids(),
+      $this->agente->getKnowledgeFids(),
       static fn (int $activo): bool => $activo !== $fid,
     ));
 
@@ -372,9 +409,7 @@ final class KnowledgeDocumentsForm extends FormBase {
    *   Identificadores de archivo.
    */
   private function guardarLista(array $fids): void {
-    $this->configs->getEditable(KnowledgeLibrary::CONFIG_NAME)
-      ->set(KnowledgeLibrary::CONFIG_KEY, array_values(array_unique(array_map('intval', $fids))))
-      ->save();
+    $this->agente->setKnowledgeFids($fids)->save();
   }
 
 }

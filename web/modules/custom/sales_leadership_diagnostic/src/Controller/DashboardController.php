@@ -15,6 +15,7 @@ use Drupal\sales_leadership_diagnostic\ReadinessBlocker;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticResultRepository;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticSessionRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
 use Drupal\sales_leadership_diagnostic\Service\Branding\Branding;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
@@ -42,6 +43,7 @@ final class DashboardController extends ControllerBase {
     private readonly DiagnosticReadiness $readiness,
     private readonly UserProvisioner $provisioner,
     private readonly DiagnosticAccessChecker $accessChecker,
+    private readonly AgentRegistry $agents,
     private readonly DateFormatterInterface $dateFormatter,
     private readonly TimeInterface $time,
     private readonly Branding $branding,
@@ -59,6 +61,7 @@ final class DashboardController extends ControllerBase {
       $container->get(DiagnosticReadiness::class),
       $container->get(UserProvisioner::class),
       $container->get(DiagnosticAccessChecker::class),
+      $container->get(AgentRegistry::class),
       $container->get('date.formatter'),
       $container->get('datetime.time'),
       $container->get(Branding::class),
@@ -87,8 +90,7 @@ final class DashboardController extends ControllerBase {
       // abrir otra vía de HTML arbitrario en la página del alumno.
       '#welcome_text' => $this->branding->getWelcomeText(),
       '#can_start' => $this->readiness->isReady(),
-      '#start_url' => $this->buildStartUrl(),
-      '#resume_session_id' => $this->findResumableId($sessions),
+      '#agents' => $this->buildAgents($account, $sessions),
       '#repeat_notice' => $this->buildRepeatNotice(),
       '#unavailable_notice' => $this->buildUnavailableNotice(),
       '#expiry_notice' => $this->buildExpiryNotice($account),
@@ -109,25 +111,71 @@ final class DashboardController extends ControllerBase {
           // Igual con la política de repetición: cambiarla debe reflejarse en
           // el aviso que lee el alumno.
           $this->starter->getCacheTags(),
+          // Crear o modificar un agente debe verse en el panel.
+          $this->agents->getCacheTags(),
         ),
       ],
     ];
   }
 
   /**
-   * URL del formulario de inicio, con su token CSRF.
+   * Agentes que el alumno puede usar, cada uno con su botón.
+   *
+   * El alumno con UN agente no ve ningún selector: el panel le enseña su
+   * botón y entra directo. Decisión del usuario, 25-08-2026 — poner una
+   * pantalla para elegir entre una sola opción es empeorarla. La plantilla
+   * decide cómo mostrarlo según cuántos haya.
+   *
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   Alumno.
+   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[] $sessions
+   *   Sus sesiones, para saber cuáles tiene a medias.
+   *
+   * @return array<int, array<string, mixed>>
+   *   Una entrada por agente disponible.
+   */
+  private function buildAgents(AccountInterface $account, array $sessions): array {
+    $externalUserId = $this->provisioner->getExternalUserId($account);
+    $decision = $externalUserId === NULL
+      ? NULL
+      : $this->accessChecker->decide($externalUserId);
+
+    $filas = [];
+
+    foreach ($this->agents->forDecision($decision) as $agent) {
+      $enCurso = $this->findResumableId($sessions, (string) $agent->id());
+
+      $filas[] = [
+        'id' => $agent->id(),
+        'label' => $agent->label(),
+        'description' => $agent->getDescription(),
+        'resume_session_id' => $enCurso,
+        'start_url' => $this->buildStartUrl((string) $agent->id()),
+      ];
+    }
+
+    return $filas;
+  }
+
+  /**
+   * URL del formulario de inicio de un agente, con su token CSRF.
    *
    * El token viaja en la URL porque la ruta lo valida con `_csrf_token`, que
    * es el mecanismo de Drupal para rutas que no son formularios de la Form
    * API. El valor se calcula sobre la ruta interna, sin la barra inicial, que
-   * es lo que espera el validador.
+   * es lo que espera el validador — y como la ruta lleva ahora el agente, cada
+   * agente tiene su propio token.
+   *
+   * @param string $agentId
+   *   Identificador del agente que se va a iniciar.
    */
-  private function buildStartUrl(): string {
-    $internal = ltrim(Url::fromRoute('sales_leadership_diagnostic.start')->getInternalPath(), '/');
+  private function buildStartUrl(string $agentId): string {
+    $parametros = ['sld_agent' => $agentId];
+    $internal = ltrim(Url::fromRoute('sales_leadership_diagnostic.start', $parametros)->getInternalPath(), '/');
 
     return Url::fromRoute(
       'sales_leadership_diagnostic.start',
-      [],
+      $parametros,
       ['query' => ['token' => $this->csrfToken->get($internal)]],
     )->toString();
   }
@@ -141,10 +189,14 @@ final class DashboardController extends ControllerBase {
    *
    * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[] $sessions
    *   Sesiones del alumno.
+   * @param string $agentId
+   *   Agente del que se busca la conversación a medias.
    */
-  private function findResumableId(array $sessions): ?int {
+  private function findResumableId(array $sessions, string $agentId): ?int {
     foreach ($sessions as $session) {
-      if ($session->getStatus()->acceptsMessages()) {
+      // Se compara también el agente: una conversación a medias con uno no
+      // debe cambiar el texto del botón de otro.
+      if ($session->getStatus()->acceptsMessages() && $session->getAgentId() === $agentId) {
         return (int) $session->id();
       }
     }

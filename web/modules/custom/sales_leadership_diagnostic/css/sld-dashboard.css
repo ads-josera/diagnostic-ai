@@ -115,3 +115,27 @@
   margin: var(--sld-space-sm) 0 0;
   color: var(--sld-color-text-muted);
 }
+
+/**
+ * Agentes disponibles.
+ *
+ * Lista y no rejilla: con uno solo debe verse exactamente igual que el botón
+ * único de antes, y una rejilla de un elemento habría cambiado su posición sin
+ * motivo. Con varios, cada agente ocupa su fila con su nombre encima.
+ */
+.sld-dashboard__agents {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--sld-space-lg);
+}
+
+.sld-dashboard__agent-name {
+  margin: 0 0 var(--sld-space-xs);
+  font-weight: 600;
+}
+
+.sld-dashboard__agent form {
+  margin-top: var(--sld-space-sm);
+}

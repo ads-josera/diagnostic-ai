@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Service\Knowledge;
 
-use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\State\StateInterface;
 use Drupal\file\FileInterface;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 
 /**
  * Documentos de conocimiento que acompañan al prompt del agente.
@@ -19,8 +19,9 @@ use Drupal\file\FileInterface;
  *
  * QUÉ SE GUARDA DÓNDE, Y POR QUÉ
  *
- * La LISTA de documentos activos vive en configuración: es una decisión
- * estructural del sitio, se exporta y se despliega como cualquier otro ajuste.
+ * La LISTA de documentos activos vive EN EL AGENTE, que es una entidad de
+ * configuración: es una decisión estructural, se exporta y se despliega. Cada
+ * agente tiene su propia biblioteca, porque cada uno tiene su metodología.
  *
  * El TEXTO extraído vive en el estado, no en configuración. Son cientos de
  * miles de caracteres de material propietario del cliente: meterlo en
@@ -30,16 +31,6 @@ use Drupal\file\FileInterface;
  * es para decisiones, no para caché.
  */
 final class KnowledgeLibrary {
-
-  /**
-   * Objeto de configuración donde vive la lista de documentos.
-   */
-  public const CONFIG_NAME = 'sales_leadership_diagnostic.diagnostic';
-
-  /**
-   * Clave de configuración con los identificadores de archivo, en orden.
-   */
-  public const CONFIG_KEY = 'knowledge_fids';
 
   /**
    * Prefijo de las entradas de estado con el texto extraído.
@@ -56,27 +47,10 @@ final class KnowledgeLibrary {
   public const TOKENS_AVISO = 60000;
 
   public function __construct(
-    private readonly ConfigFactoryInterface $configFactory,
     private readonly StateInterface $state,
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly DocumentTextExtractor $extractor,
   ) {}
-
-  /**
-   * Identificadores de los documentos activos, en el orden configurado.
-   *
-   * @return int[]
-   *   Identificadores de archivo.
-   */
-  public function getFids(): array {
-    $fids = $this->configFactory->get(self::CONFIG_NAME)->get(self::CONFIG_KEY);
-
-    if (!is_array($fids)) {
-      return [];
-    }
-
-    return array_values(array_filter(array_map('intval', $fids)));
-  }
 
   /**
    * Texto de todos los documentos, listo para anteponerse al prompt.
@@ -88,10 +62,10 @@ final class KnowledgeLibrary {
    * Devuelve cadena vacía si no hay documentos legibles, para no anteponer un
    * encabezado que no encabeza nada.
    */
-  public function compose(): string {
+  public function compose(DiagnosticAgentInterface $agent): string {
     $bloques = [];
 
-    foreach ($this->getFids() as $fid) {
+    foreach ($agent->getKnowledgeFids() as $fid) {
       $guardado = $this->getStored($fid);
 
       if ($guardado === NULL || $guardado['texto'] === '') {
@@ -121,10 +95,10 @@ final class KnowledgeLibrary {
    * @return array<int, array<string, mixed>>
    *   Una entrada por documento, con fid, nombre, tamaño, tokens y estado.
    */
-  public function getDocuments(): array {
+  public function getDocuments(DiagnosticAgentInterface $agent): array {
     $fichas = [];
 
-    foreach ($this->getFids() as $fid) {
+    foreach ($agent->getKnowledgeFids() as $fid) {
       $guardado = $this->getStored($fid);
 
       if ($guardado === NULL) {
@@ -158,8 +132,8 @@ final class KnowledgeLibrary {
   /**
    * Suma de tokens estimados de la biblioteca completa.
    */
-  public function getTotalTokens(): int {
-    return array_sum(array_column($this->getDocuments(), 'tokens'));
+  public function getTotalTokens(DiagnosticAgentInterface $agent): int {
+    return array_sum(array_column($this->getDocuments($agent), 'tokens'));
   }
 
   /**
@@ -206,16 +180,6 @@ final class KnowledgeLibrary {
     }
 
     return (int) round(str_word_count($texto, 0) * 1.4);
-  }
-
-  /**
-   * Etiquetas de cache de la lista de documentos.
-   *
-   * @return string[]
-   *   Etiquetas de cache.
-   */
-  public function getCacheTags(): array {
-    return $this->configFactory->get(self::CONFIG_NAME)->getCacheTags();
   }
 
   /**

@@ -9,6 +9,8 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Lock\LockBackendInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 use Drupal\sales_leadership_diagnostic\Exception\CannotStartDiagnosticException;
@@ -56,6 +58,7 @@ final class DiagnosticStarter {
     private readonly DiagnosticReadiness $readiness,
     private readonly DiagnosticPromptManager $prompts,
     private readonly DiagnosticAccessChecker $accessChecker,
+    private readonly AgentRegistry $agents,
     private readonly UserProvisioner $provisioner,
     private readonly RateLimiter $rateLimiter,
     private readonly ConfigFactoryInterface $configFactory,
@@ -71,6 +74,9 @@ final class DiagnosticStarter {
    *
    * @param \Drupal\Core\Session\AccountInterface $account
    *   Alumno que quiere empezar.
+   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface $agent
+   *   Agente con el que quiere hacerlo. Que llegue hasta aquí no lo autoriza:
+   *   se comprueba contra los cursos que posee antes de crear nada.
    *
    * @return \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface
    *   La sesión recién creada, o la que ya estuviera en curso.
@@ -78,7 +84,7 @@ final class DiagnosticStarter {
    * @throws \Drupal\sales_leadership_diagnostic\Exception\CannotStartDiagnosticException
    *   Si no se cumple alguna de las condiciones para empezar.
    */
-  public function start(AccountInterface $account): DiagnosticSessionInterface {
+  public function start(AccountInterface $account, DiagnosticAgentInterface $agent): DiagnosticSessionInterface {
     $uid = (int) $account->id();
 
     if (!$this->readiness->isReady()) {
@@ -111,10 +117,21 @@ final class DiagnosticStarter {
       );
     }
 
-    // El cerrojo es por alumno, no global: dos alumnos distintos pueden
-    // empezar a la vez sin estorbarse. Evita que un doble clic —o dos
-    // pestañas— creen dos sesiones para la misma persona.
-    $lockId = 'sld_start_' . $uid;
+    // Tener acceso al diagnóstico no basta: hay que tener derecho a ESTE
+    // agente. Sin esta comprobación, quien compró un curso podría iniciar
+    // cualquier agente escribiendo su identificador en la URL.
+    if (!array_key_exists($agent->id(), $this->agents->forDecision($decision))) {
+      throw new CannotStartDiagnosticException(
+        'El alumno no tiene derecho a este agente.',
+        CannotStartDiagnosticException::REASON_NOT_AUTHORIZED,
+      );
+    }
+
+    // El cerrojo es por alumno Y AGENTE: dos alumnos distintos pueden empezar
+    // a la vez sin estorbarse, y un mismo alumno puede abrir dos agentes
+    // distintos. Evita que un doble clic —o dos pestañas— creen dos sesiones
+    // del mismo agente para la misma persona.
+    $lockId = 'sld_start_' . $uid . '_' . $agent->id();
 
     if (!$this->lock->acquire($lockId, self::LOCK_TIMEOUT)) {
       throw new CannotStartDiagnosticException(
@@ -127,7 +144,7 @@ final class DiagnosticStarter {
       // Dentro del cerrojo, porque la comprobación y la creación tienen que
       // ser indivisibles: comprobar fuera dejaría pasar dos peticiones
       // simultáneas que vieran ambas «no hay ninguna».
-      $existing = $this->findResumableSession($uid);
+      $existing = $this->findResumableSession($uid, (string) $agent->id());
 
       if ($existing !== NULL) {
         // No es un error: quien pulsa «empezar» teniendo una conversación a
@@ -143,7 +160,7 @@ final class DiagnosticStarter {
       // rechazar por otro motivo.
       $this->rateLimiter->assertCanStartDiagnostic($uid);
 
-      $session = $this->createSession($account, $externalUserId, $decision->courseId);
+      $session = $this->createSession($account, $agent, $externalUserId, $decision->courseId);
 
       $this->rateLimiter->registerDiagnostic($uid);
 
@@ -161,12 +178,16 @@ final class DiagnosticStarter {
    * «processing» está esperando respuesta del modelo, y una fallida o
    * completada ya no admite más turnos.
    */
-  private function findResumableSession(int $uid): ?DiagnosticSessionInterface {
+  private function findResumableSession(int $uid, string $agentId): ?DiagnosticSessionInterface {
     $storage = $this->entityTypeManager->getStorage('sld_diagnostic_session');
 
     $ids = $storage->getQuery()
       ->accessCheck(FALSE)
       ->condition('uid', $uid)
+      // Del MISMO agente. Sin esta condición, tener una conversación a medias
+      // con un agente impedía empezar con otro: el alumno pulsaba «empezar» en
+      // el segundo y aterrizaba en la conversación del primero.
+      ->condition('agent', $agentId)
       ->condition('status', [DiagnosticStatus::Draft->value, DiagnosticStatus::InProgress->value], 'IN')
       // Una prueba a medias no debe secuestrar el botón del alumno.
       ->condition('is_sandbox', FALSE)
@@ -250,8 +271,8 @@ final class DiagnosticStarter {
   /**
    * Crea y guarda la sesión.
    */
-  private function createSession(AccountInterface $account, string $externalUserId, string $courseId): DiagnosticSessionInterface {
-    $prompt = $this->prompts->compose();
+  private function createSession(AccountInterface $account, DiagnosticAgentInterface $agent, string $externalUserId, string $courseId): DiagnosticSessionInterface {
+    $prompt = $this->prompts->composeFor($agent);
 
     $session = $this->entityTypeManager
       ->getStorage('sld_diagnostic_session')
@@ -259,7 +280,8 @@ final class DiagnosticStarter {
         'uid' => $account->id(),
         'wp_user_id' => $externalUserId,
         'course_id' => $courseId,
-        'diagnostic_version' => $this->prompts->getCurrentVersion(),
+        'agent' => $agent->id(),
+        'diagnostic_version' => $agent->getVersion(),
         // Copia literal del prompt con el que se conduce ESTA conversación.
         // Sin ella, un cambio posterior del prompt haría imposible saber con
         // qué instrucciones se generó un diagnóstico antiguo (§57).

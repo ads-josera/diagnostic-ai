@@ -53,6 +53,19 @@ final class AgentRegistry {
   }
 
   /**
+   * El primer agente utilizable, o NULL si no hay ninguno.
+   *
+   * Sirve a las pantallas de administración que todavía no eligen agente:
+   * mientras solo haya uno, es el correcto. Cuando haya varios, cada pantalla
+   * deberá recibir el suyo por la ruta en lugar de llamar aquí.
+   */
+  public function getFirstUsable(): ?DiagnosticAgentInterface {
+    $agentes = $this->getUsable();
+
+    return $agentes === [] ? NULL : reset($agentes);
+  }
+
+  /**
    * Un agente por su identificador, o NULL si no existe o no es utilizable.
    */
   public function get(string $id): ?DiagnosticAgentInterface {

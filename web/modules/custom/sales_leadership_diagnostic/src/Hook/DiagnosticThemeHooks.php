@@ -75,8 +75,10 @@ final class DiagnosticThemeHooks {
           'user_name' => '',
           'welcome_text' => NULL,
           'can_start' => FALSE,
-          'start_url' => '',
-          'resume_session_id' => NULL,
+          // Una entrada por agente disponible. Vacío significa que el alumno
+          // no tiene derecho a ninguno, que es distinto de que el sistema no
+          // esté listo (`can_start`).
+          'agents' => [],
           'repeat_notice' => NULL,
           'unavailable_notice' => NULL,
           'expiry_notice' => NULL,

@@ -61,6 +61,11 @@ class DiagnosticResult extends ContentEntityBase implements DiagnosticResultInte
       ->setRequired(TRUE)
       ->setSetting('target_type', 'sld_diagnostic_session');
 
+    $fields['agent'] = BaseFieldDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Agente'))
+      ->setDescription(new TranslatableMarkup('Agente con el que se hizo. Se guarda por sesión y no se deduce del curso: el curso que concede un agente puede cambiar, y el historial debe seguir diciendo con cuál se conversó de verdad.'))
+      ->setSetting('max_length', 64);
+
     $fields['diagnostic_version'] = BaseFieldDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Versión del diagnóstico'))
       ->setDescription(new TranslatableMarkup('Se copia de la sesión para que el resultado siga siendo interpretable aunque la sesión se elimine.'))
@@ -112,6 +117,13 @@ class DiagnosticResult extends ContentEntityBase implements DiagnosticResultInte
   public function getSessionId(): ?int {
     $value = $this->get('session_id')->target_id;
     return $value === NULL ? NULL : (int) $value;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getAgentId(): string {
+    return (string) $this->get('agent')->value;
   }
 
   /**

@@ -6,6 +6,7 @@ namespace Drupal\sales_leadership_diagnostic\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Url;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Exception\CannotStartDiagnosticException;
 use Drupal\sales_leadership_diagnostic\Exception\RateLimitException;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticStarter;
@@ -43,9 +44,9 @@ final class StartController extends ControllerBase {
   /**
    * Crea la sesión y redirige a la conversación.
    */
-  public function start(): RedirectResponse {
+  public function start(DiagnosticAgentInterface $sld_agent): RedirectResponse {
     try {
-      $session = $this->starter->start($this->currentUser());
+      $session = $this->starter->start($this->currentUser(), $sld_agent);
     }
     catch (CannotStartDiagnosticException $e) {
       $this->messenger()->addWarning($this->explain($e->getReason()));

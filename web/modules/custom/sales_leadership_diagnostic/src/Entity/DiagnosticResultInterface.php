@@ -23,6 +23,14 @@ interface DiagnosticResultInterface extends ContentEntityInterface, EntityOwnerI
   public function getSessionId(): ?int;
 
   /**
+   * Agente con el que se hizo.
+   *
+   * Cadena vacía en lo anterior a que hubiera varios agentes: entonces la
+   * pregunta no tenía sentido porque solo había uno.
+   */
+  public function getAgentId(): string;
+
+  /**
    * Versión del diagnóstico con la que se generó.
    */
   public function getDiagnosticVersion(): string;
