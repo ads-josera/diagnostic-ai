@@ -137,4 +137,13 @@ final class SalesLeadershipDiagnostic {
    */
   public const LOGGER_CHANNEL = 'sales_leadership_diagnostic';
 
+  /**
+   * Identificador del primer agente, el que existía antes de haber varios.
+   *
+   * Vive como constante porque lo usan la migración y el código que necesita
+   * un valor por defecto para las sesiones anteriores a los agentes. Nada más
+   * debería depender de él: a partir de aquí los agentes son datos, no código.
+   */
+  public const FIRST_AGENT_ID = 'sales_leadership_diagnostic';
+
 }

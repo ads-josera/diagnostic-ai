@@ -451,3 +451,57 @@ function sales_leadership_diagnostic_update_10008(): string {
 
   return 'Creada la biblioteca de documentos de conocimiento, vacía. Se cargan desde Contenido → Resultados → Documentos.';
 }
+
+/**
+ * Convierte el agente único en el primer agente administrable.
+ *
+ * Hasta ahora el módulo tenía UN agente, definido en el objeto de
+ * configuración `sales_leadership_diagnostic.diagnostic`. El cliente pidió
+ * poder tener varios —un curso, un agente— así que el agente pasa a ser una
+ * entidad de configuración de la que puede haber tantas como haga falta.
+ *
+ * Esta actualización NO borra la configuración antigua. Se copia, y el objeto
+ * original se conserva: si algo saliera mal, la metodología del cliente sigue
+ * donde estaba. Retirarlo es una limpieza posterior y deliberada, no un efecto
+ * secundario de migrar.
+ *
+ * El curso lo hereda de `wordpress.course_id`, que era el único que había.
+ */
+function sales_leadership_diagnostic_update_10009(): string {
+  $almacen = \Drupal::entityTypeManager()->getStorage('sld_agent');
+
+  if ($almacen->load(SalesLeadershipDiagnostic::FIRST_AGENT_ID) !== NULL) {
+    return 'El agente ya estaba migrado; no se ha modificado nada.';
+  }
+
+  $viejo = \Drupal::config('sales_leadership_diagnostic.diagnostic');
+  $ajustes = \Drupal::config('sales_leadership_diagnostic.settings');
+
+  $agente = $almacen->create([
+    'id' => SalesLeadershipDiagnostic::FIRST_AGENT_ID,
+    'label' => 'Sales Leadership Diagnostic AI',
+    'status' => TRUE,
+    'weight' => 0,
+    'version' => (string) $viejo->get('version'),
+    'course_id' => (string) $ajustes->get('wordpress.course_id'),
+    'description' => 'Diagnóstico de madurez comercial B2B. Primer agente del producto.',
+    'system_prompt' => (string) $viejo->get('system_prompt'),
+    'instructions' => (string) $viejo->get('instructions'),
+    'output_contract' => (string) $viejo->get('output_contract'),
+    'knowledge_fids' => $viejo->get('knowledge_fids') ?? [],
+    'welcome_icon_fid' => (int) $viejo->get('welcome_icon_fid'),
+    'welcome_intro' => (string) $viejo->get('welcome_intro'),
+    'welcome_suggestions' => $viejo->get('welcome_suggestions') ?? [],
+  ]);
+
+  $agente->save();
+
+  return sprintf(
+    'Creado el agente "%s" (%s) a partir de la configuración existente: versión %s, curso %s, %d documento(s) de conocimiento. La configuración antigua se conserva intacta.',
+    $agente->label(),
+    $agente->id(),
+    $agente->getVersion() !== '' ? $agente->getVersion() : '(sin versión)',
+    $agente->getCourseId() !== '' ? $agente->getCourseId() : '(sin curso)',
+    count($agente->getKnowledgeFids()),
+  );
+}

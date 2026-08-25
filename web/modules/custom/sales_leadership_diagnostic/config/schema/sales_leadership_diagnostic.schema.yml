@@ -191,3 +191,60 @@ sales_leadership_diagnostic.home:
     band_color:
       type: string
       label: 'Color de la banda del pie'
+
+# Un agente de diagnóstico. Entidad de configuración: se exporta, se despliega
+# y se versiona como cualquier otra definición del producto.
+#
+# El prompt, las instrucciones y el contrato se declaran `string` y NO `text`,
+# por el mismo motivo que en el objeto de configuración anterior: `text` los
+# marcaría como traducibles, y dos traducciones de una misma versión
+# producirían diagnósticos distintos imposibles de reproducir (§57). Un agente
+# en otro idioma es otro agente, no una traducción de este.
+sales_leadership_diagnostic.agent.*:
+  type: config_entity
+  label: 'Agente de diagnóstico'
+  mapping:
+    id:
+      type: machine_name
+      label: 'Identificador'
+    label:
+      type: label
+      label: 'Nombre'
+    version:
+      type: string
+      label: 'Versión de la metodología'
+    course_id:
+      type: string
+      label: 'Curso de WordPress que lo concede'
+    description:
+      type: text
+      label: 'Descripción interna'
+    system_prompt:
+      type: string
+      label: 'Prompt principal (propiedad del cliente)'
+    instructions:
+      type: string
+      label: 'Instrucciones de conducción (propiedad del cliente)'
+    output_contract:
+      type: string
+      label: 'Contrato de salida (añadido técnico)'
+    knowledge_fids:
+      type: sequence
+      label: 'Documentos de conocimiento'
+      sequence:
+        type: integer
+        label: 'Identificador del archivo'
+    welcome_icon_fid:
+      type: integer
+      label: 'Icono de la pantalla de bienvenida'
+    welcome_intro:
+      type: text
+      label: 'Texto introductorio del chat'
+    welcome_suggestions:
+      type: sequence
+      label: 'Sugerencias para empezar'
+      sequence:
+        type: label
+    weight:
+      type: integer
+      label: 'Orden'
