@@ -202,10 +202,46 @@ final class KnowledgeDocumentsForm extends FormBase {
 
     $form['#attached']['library'][] = 'sales_leadership_diagnostic/studio';
 
+    // Se dice de QUIEN es la biblioteca de forma destacada y con enlace para
+    // cambiar. Antes iba en una línea de texto corriente sobre el párrafo de
+    // ayuda, y se leía como descripción y no como «estás editando este
+    // agente»: el usuario preguntó cómo se asignaban los documentos a un
+    // agente teniendo delante la pantalla que ya lo hacía.
+    $otros = array_filter(
+      $disponibles,
+      fn ($a): bool => $a->id() !== $this->agente->id(),
+    );
+
     $form['agente'] = [
       '#type' => 'item',
-      '#markup' => $this->t('Biblioteca de <strong>@agente</strong>.', ['@agente' => $this->agente->label()]),
+      '#wrapper_attributes' => ['class' => ['sld-knowledge__agent']],
+      '#markup' => $this->t('Documentos de <strong>@agente</strong>', [
+        '@agente' => $this->agente->label(),
+      ]),
     ];
+
+    if ($otros !== []) {
+      $form['agente']['#description'] = $this->t('Cada agente tiene su propia biblioteca.');
+      $form['cambiar'] = [
+        '#theme' => 'item_list',
+        '#title' => $this->t('Ver la de otro agente'),
+        // Es navegación secundaria, no una sección del formulario: sin acotar
+        // su tamaño se pintaba como un encabezado mayor que «Documentos
+        // activos» y competía con lo que de verdad se viene a hacer aquí.
+        '#attributes' => ['class' => ['sld-knowledge__switch']],
+        '#items' => array_map(
+          fn ($a) => [
+            '#type' => 'link',
+            '#title' => $a->label(),
+            '#url' => Url::fromRoute(
+              'sales_leadership_diagnostic.knowledge_agent',
+              ['sld_agent' => $a->id()],
+            ),
+          ],
+          array_values($otros),
+        ),
+      ];
+    }
 
     $form['ayuda'] = [
       '#type' => 'item',
@@ -214,6 +250,7 @@ final class KnowledgeDocumentsForm extends FormBase {
 
     $this->buildList($form);
     $this->buildUpload($form);
+    $this->buildReuse($form);
 
     return $form;
   }
@@ -330,6 +367,87 @@ final class KnowledgeDocumentsForm extends FormBase {
         '#value' => $this->t('Añadir a la biblioteca'),
       ],
     ];
+  }
+
+  /**
+   * Documentos que ya están en otro agente y pueden reutilizarse aquí.
+   *
+   * Sin esto, dar el mismo documento a dos agentes obligaba a subirlo dos
+   * veces. Además de ocupar el doble, dejaba que una copia se actualizara y la
+   * otra no, y a partir de ahí los dos agentes dirían cosas distintas sin que
+   * nadie lo notara.
+   */
+  private function buildReuse(array &$form): void {
+    $reutilizables = $this->library->getReusable($this->agente);
+
+    if ($reutilizables === []) {
+      return;
+    }
+
+    $opciones = [];
+
+    foreach ($reutilizables as $doc) {
+      $opciones[$doc['fid']] = $this->t('@nombre — @tokens tokens (en @agentes)', [
+        '@nombre' => $doc['nombre'],
+        '@tokens' => number_format($doc['tokens']),
+        '@agentes' => implode(', ', $doc['agentes']),
+      ]);
+    }
+
+    $form['reutilizar'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Reutilizar documentos de otro agente'),
+      // Abierta: esta sección solo se pinta cuando hay algo que reutilizar,
+      // así que cuando aparece es relevante. Cerrada, la opción existía y no
+      // la encontraba nadie, que es como si no estuviera.
+      '#open' => TRUE,
+      '#description' => $this->t('Es el mismo archivo, no una copia: si lo actualizas, se actualiza para todos los agentes que lo usen.'),
+    ];
+
+    $form['reutilizar']['existentes'] = [
+      '#type' => 'checkboxes',
+      '#title' => $this->t('Documentos disponibles'),
+      '#options' => $opciones,
+    ];
+
+    $form['reutilizar']['acciones'] = [
+      '#type' => 'actions',
+      'submit' => [
+        '#type' => 'submit',
+        '#value' => $this->t('Añadir los seleccionados'),
+        '#submit' => ['::reutilizarDocumentos'],
+        '#limit_validation_errors' => [['existentes']],
+      ],
+    ];
+  }
+
+  /**
+   * Añade a este agente documentos que ya están en otro.
+   *
+   * No se toca el archivo ni su texto: solo se suma su identificador a la
+   * lista de este agente. El registro de uso tampoco cambia, porque el módulo
+   * ya lo tenía anotado cuando se subió.
+   */
+  public function reutilizarDocumentos(array &$form, FormStateInterface $form_state): void {
+    $elegidos = array_filter((array) $form_state->getValue('existentes'));
+
+    if ($elegidos === []) {
+      $this->messenger()->addWarning($this->t('No has seleccionado ningún documento.'));
+
+      return;
+    }
+
+    $this->guardarLista(array_merge(
+      $this->agente->getKnowledgeFids(),
+      array_map('intval', array_keys($elegidos)),
+    ));
+
+    $this->messenger()->addStatus($this->formatPlural(
+      count($elegidos),
+      'Se ha añadido 1 documento a @agente.',
+      'Se han añadido @count documentos a @agente.',
+      ['@agente' => $this->agente->label()],
+    ));
   }
 
   /**

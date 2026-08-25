@@ -278,6 +278,7 @@ services:
       - '@state'
       - '@entity_type.manager'
       - '@Drupal\sales_leadership_diagnostic\Service\Knowledge\DocumentTextExtractor'
+      - '@Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry'
 
   # --- Agentes ---------------------------------------------------------------
 

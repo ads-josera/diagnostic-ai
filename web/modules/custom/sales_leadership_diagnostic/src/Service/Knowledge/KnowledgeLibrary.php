@@ -8,6 +8,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\State\StateInterface;
 use Drupal\file\FileInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 
 /**
  * Documentos de conocimiento que acompañan al prompt del agente.
@@ -50,6 +51,7 @@ final class KnowledgeLibrary {
     private readonly StateInterface $state,
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly DocumentTextExtractor $extractor,
+    private readonly AgentRegistry $agents,
   ) {}
 
   /**
@@ -127,6 +129,56 @@ final class KnowledgeLibrary {
     }
 
     return $fichas;
+  }
+
+  /**
+   * Documentos que ya están en OTROS agentes y este todavía no tiene.
+   *
+   * Existe para no volver a subir el mismo archivo por cada agente que lo
+   * necesite. Dos metodologías pueden compartir documentos, y duplicarlos
+   * ocuparía el doble y, peor, dejaría que uno se actualice y el otro no: a
+   * partir de ahí los dos agentes dirían cosas distintas sin que nadie lo
+   * note.
+   *
+   * El texto extraído se guarda por ARCHIVO y no por agente, así que
+   * reutilizar uno no cuesta nada: es la misma entrada de estado.
+   *
+   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface $agent
+   *   Agente cuya biblioteca se está ampliando.
+   *
+   * @return array<int, array<string, mixed>>
+   *   Fichas de documento, con fid, nombre, tokens y de qué agentes vienen.
+   */
+  public function getReusable(DiagnosticAgentInterface $agent): array {
+    $propios = $agent->getKnowledgeFids();
+    $ajenos = [];
+
+    foreach ($this->agents->getUsable() as $otro) {
+      if ($otro->id() === $agent->id()) {
+        continue;
+      }
+
+      foreach ($otro->getKnowledgeFids() as $fid) {
+        if (in_array($fid, $propios, TRUE)) {
+          continue;
+        }
+
+        $guardado = $this->getStored($fid);
+
+        if ($guardado === NULL) {
+          continue;
+        }
+
+        // Un mismo documento puede estar en varios agentes: se acumulan sus
+        // nombres para que quien elige sepa de dónde sale.
+        $ajenos[$fid]['fid'] = $fid;
+        $ajenos[$fid]['nombre'] = $guardado['nombre'];
+        $ajenos[$fid]['tokens'] = $this->estimateTokens($guardado['texto']);
+        $ajenos[$fid]['agentes'][] = (string) $otro->label();
+      }
+    }
+
+    return array_values($ajenos);
   }
 
   /**
