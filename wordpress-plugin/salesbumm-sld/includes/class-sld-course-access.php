@@ -61,7 +61,7 @@ class CourseAccess {
 	 *
 	 * @param int $user_id Identificador del usuario en WordPress.
 	 *
-	 * @return array{has_access: bool, started_at: ?int, expires_at: ?int, course_id: ?int, reason: string}|null
+	 * @return array{has_access: bool, started_at: ?int, expires_at: ?int, course_id: ?int, owned_courses: int[], reason: string}|null
 	 *   La decisión, o NULL si no se ha podido determinar (por ejemplo, si
 	 *   LearnDash no está disponible). NULL y "sin acceso" son cosas distintas
 	 *   y Drupal las trata de forma distinta.
@@ -83,11 +83,15 @@ class CourseAccess {
 			return null;
 		}
 
-		$owned = $this->find_owned_course( $user_id, $courses );
+		$owned_courses = $this->find_owned_courses( $user_id, $courses );
 
-		if ( null === $owned ) {
+		if ( array() === $owned_courses ) {
 			return $this->deny( 'no posee ningún curso autorizador' );
 		}
+
+		// `course_id` conserva el PRIMERO por compatibilidad: un Drupal que no
+		// conozca todavía `owned_courses` sigue funcionando exactamente igual.
+		$owned = $owned_courses[0];
 
 		// El alumno tiene el curso: si nunca se le inició el reloj, se inicia
 		// ahora. El origen de esa fecha es una decisión de negocio y por eso
@@ -96,24 +100,29 @@ class CourseAccess {
 
 		if ( ! $this->clock->is_active( $user_id ) ) {
 			return array(
-				'has_access' => false,
-				'started_at' => $this->clock->get_started_at( $user_id ),
-				'expires_at' => $this->clock->get_expires_at( $user_id ),
-				'course_id'  => $owned,
-				'reason'     => 'periodo de acceso caducado',
+				'has_access'    => false,
+				'started_at'    => $this->clock->get_started_at( $user_id ),
+				'expires_at'    => $this->clock->get_expires_at( $user_id ),
+				'course_id'     => $owned,
+				'owned_courses' => $owned_courses,
+				'reason'        => 'periodo de acceso caducado',
 			);
 		}
 
 		return array(
-			'has_access' => true,
+			'has_access'    => true,
 			// Cuando EMPEZO el periodo, no solo cuando acaba. Drupal lo
 			// necesita para poder limitar el diagnostico a uno por periodo:
 			// sin este dato no hay forma de saber que sesiones pertenecen al
 			// periodo vigente y cuales son de una compra anterior.
-			'started_at' => $this->clock->get_started_at( $user_id ),
-			'expires_at' => $this->clock->get_expires_at( $user_id ),
-			'course_id'  => $owned,
-			'reason'     => 'acceso vigente',
+			'started_at'    => $this->clock->get_started_at( $user_id ),
+			'expires_at'    => $this->clock->get_expires_at( $user_id ),
+			'course_id'     => $owned,
+			// TODOS los cursos que posee, no solo el primero. Es lo que
+			// permite a Drupal saber a que agentes tiene derecho el alumno:
+			// alli cada agente declara el curso que lo concede.
+			'owned_courses' => $owned_courses,
+			'reason'        => 'acceso vigente',
 		);
 	}
 
@@ -131,12 +140,24 @@ class CourseAccess {
 	}
 
 	/**
-	 * Devuelve el primer curso autorizador que posea el alumno.
+	 * Devuelve TODOS los cursos autorizadores que posea el alumno.
+	 *
+	 * Antes devolvía solo el primero y cortaba el bucle. Dejó de valer cuando
+	 * el producto pasó a tener varios agentes: en Drupal cada agente declara
+	 * qué curso lo concede, así que saber solo uno de los cursos del alumno
+	 * equivalía a ocultarle los demás agentes que ha comprado.
+	 *
+	 * Se conserva el orden en que están configurados: Drupal usa el primero
+	 * como `course_id` para no romper el contrato anterior.
 	 *
 	 * @param int   $user_id Usuario.
 	 * @param int[] $courses Cursos configurados.
+	 *
+	 * @return int[] Cursos que posee, en el orden configurado.
 	 */
-	private function find_owned_course( int $user_id, array $courses ): ?int {
+	private function find_owned_courses( int $user_id, array $courses ): array {
+		$owned = array();
+
 		foreach ( $courses as $course_id ) {
 			if ( ! $this->course_exists( $course_id ) ) {
 				continue;
@@ -145,11 +166,11 @@ class CourseAccess {
 			// sfwd_lms_has_access() es la vía canónica de LearnDash y ya
 			// contempla inscripción directa, compra, grupo y acceso abierto.
 			if ( sfwd_lms_has_access( $course_id, $user_id ) ) {
-				return $course_id;
+				$owned[] = (int) $course_id;
 			}
 		}
 
-		return null;
+		return $owned;
 	}
 
 	/**
@@ -217,11 +238,12 @@ class CourseAccess {
 	 */
 	private function deny( string $reason ): array {
 		return array(
-			'has_access' => false,
-			'started_at' => null,
-			'expires_at' => null,
-			'course_id'  => null,
-			'reason'     => $reason,
+			'has_access'    => false,
+			'started_at'    => null,
+			'expires_at'    => null,
+			'course_id'     => null,
+			'owned_courses' => array(),
+			'reason'        => $reason,
 		);
 	}
 }

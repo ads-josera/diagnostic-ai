@@ -48,6 +48,14 @@ final readonly class AccessDecision {
    *   empezó. Identifica el periodo: una compra nueva reinicia el reloj en
    *   WordPress y con ello cambia este valor, que es lo que permite saber si
    *   un diagnóstico anterior pertenece al periodo actual o a uno pasado.
+   * @param string[] $ownedCourses
+   *   Lista completa de cursos autorizadores del alumno, no solo el que
+   *   concedió el acceso. Es lo que permite saber a qué agentes tiene
+   *   derecho: en Drupal cada agente declara el curso que lo concede.
+   *
+   *   Llega vacío desde un plugin anterior a la 1.2.0, que solo enviaba
+   *   `course_id`. En ese caso quien lo consume debe caer en el curso único,
+   *   y así un sitio sin actualizar sigue funcionando con un solo agente.
    */
   public function __construct(
     public bool $granted,
@@ -56,7 +64,32 @@ final readonly class AccessDecision {
     public string $source = self::SOURCE_LIVE,
     public ?int $expiresAt = NULL,
     public ?int $startedAt = NULL,
+    public array $ownedCourses = [],
   ) {}
+
+  /**
+   * Cursos del alumno, con respaldo para plugins antiguos.
+   *
+   * Nunca devuelve una lista vacía cuando hay acceso concedido: si el plugin
+   * no envió la lista, el curso que concedió el acceso ES la lista. Sin este
+   * respaldo, actualizar Drupal antes que WordPress dejaría a los alumnos sin
+   * ningún agente visible.
+   *
+   * @return string[]
+   *   Identificadores de curso, sin vacíos ni repetidos.
+   */
+  public function getOwnedCourses(): array {
+    $cursos = array_values(array_unique(array_filter(array_map(
+      static fn ($c): string => trim((string) $c),
+      $this->ownedCourses,
+    ))));
+
+    if ($cursos !== []) {
+      return $cursos;
+    }
+
+    return trim($this->courseId) !== '' ? [trim($this->courseId)] : [];
+  }
 
   /**
    * Devuelve una copia marcada como procedente de cache.
@@ -99,6 +132,10 @@ final readonly class AccessDecision {
       'checkedAt' => $this->checkedAt,
       'expiresAt' => $this->expiresAt,
       'startedAt' => $this->startedAt,
+      // Sin esta línea la lista se perdía al cachear, y el alumno veía todos
+      // sus agentes en la primera consulta y uno solo en las siguientes. Un
+      // fallo intermitente y dificilísimo de reproducir.
+      'ownedCourses' => $this->ownedCourses,
     ];
   }
 
@@ -122,6 +159,11 @@ final readonly class AccessDecision {
       source: self::SOURCE_CACHE,
       expiresAt: is_numeric($expiresAt) ? (int) $expiresAt : NULL,
       startedAt: is_numeric($startedAt) ? (int) $startedAt : NULL,
+      // Ausente en entradas guardadas antes de existir este dato, igual que
+      // startedAt. getOwnedCourses() cae entonces en el curso único.
+      ownedCourses: is_array($data['ownedCourses'] ?? NULL)
+        ? array_map('strval', $data['ownedCourses'])
+        : [],
     );
   }
 

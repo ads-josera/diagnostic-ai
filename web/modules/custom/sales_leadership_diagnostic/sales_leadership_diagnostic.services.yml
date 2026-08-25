@@ -278,3 +278,11 @@ services:
       - '@state'
       - '@entity_type.manager'
       - '@Drupal\sales_leadership_diagnostic\Service\Knowledge\DocumentTextExtractor'
+
+  # --- Agentes ---------------------------------------------------------------
+
+  # Traduce los cursos que posee el alumno a los agentes que puede usar. La
+  # correspondencia vive aqui y no en WordPress a proposito.
+  Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry:
+    arguments:
+      - '@entity_type.manager'

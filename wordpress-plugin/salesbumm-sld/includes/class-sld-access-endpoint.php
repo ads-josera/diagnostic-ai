@@ -119,7 +119,16 @@ class AccessEndpoint {
 				'has_access'     => $decision['has_access'],
 				'wp_user_id'     => $user_id,
 				// Curso que concedió el acceso, o null si ninguno lo hizo.
+				// Se conserva por compatibilidad: es el PRIMERO de los que
+				// posee, y era el único dato que existía antes de que el
+				// producto tuviera varios agentes.
 				'course_id'      => null === $decision['course_id'] ? null : (string) $decision['course_id'],
+				// TODOS los cursos autorizadores que posee el alumno. En
+				// Drupal cada agente declara qué curso lo concede, así que
+				// esta lista es la que decide a qué agentes tiene derecho.
+				// Cadenas y no enteros, igual que `course_id`, para que los
+				// dos campos se comparen sin conversiones por el camino.
+				'owned_courses'  => array_map( 'strval', $decision['owned_courses'] ),
 				// Momento en que EMPEZÓ el periodo de acceso, en ISO 8601.
 				// Drupal lo usa para saber qué diagnósticos pertenecen al
 				// periodo vigente cuando se limita a uno por compra.

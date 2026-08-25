@@ -60,6 +60,13 @@ final class LearnDashAccessProvider implements CourseAccessProviderInterface {
       checkedAt: $this->time->getRequestTime(),
       expiresAt: $this->parseTimestamp($response['expires_at'] ?? NULL),
       startedAt: $this->parseTimestamp($response['started_at'] ?? NULL),
+      // Llega desde la 1.2.0 del plugin. Un plugin anterior no lo envía y la
+      // lista queda vacía: AccessDecision::getOwnedCourses() cae entonces en
+      // el curso único, de modo que actualizar Drupal antes que WordPress no
+      // deja a nadie sin agentes.
+      ownedCourses: is_array($response['owned_courses'] ?? NULL)
+        ? array_map('strval', $response['owned_courses'])
+        : [],
     );
   }
 
