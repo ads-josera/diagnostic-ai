@@ -431,3 +431,23 @@ function sales_leadership_diagnostic_update_10007(): string {
     $file->getFilename(),
   );
 }
+
+/**
+ * Prepara la biblioteca de documentos de conocimiento del agente.
+ *
+ * El prompt del cliente declara que la metodología autorizada vive en esos
+ * archivos, de modo que sin ellos el agente invoca un método que no puede
+ * leer. La clave se crea vacía: los documentos los aporta el cliente desde
+ * Contenido → Resultados → Documentos.
+ */
+function sales_leadership_diagnostic_update_10008(): string {
+  $config = \Drupal::configFactory()->getEditable('sales_leadership_diagnostic.diagnostic');
+
+  if ($config->get('knowledge_fids') !== NULL) {
+    return 'La biblioteca de documentos ya existía; no se ha modificado.';
+  }
+
+  $config->set('knowledge_fids', [])->save();
+
+  return 'Creada la biblioteca de documentos de conocimiento, vacía. Se cargan desde Contenido → Resultados → Documentos.';
+}

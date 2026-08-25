@@ -22,7 +22,8 @@
         "drupal/core-recommended": "^11.4",
         "drupal/externalauth": "^2.0",
         "firebase/php-jwt": "^7.1",
-        "league/commonmark": "^2.5"
+        "league/commonmark": "^2.5",
+        "smalot/pdfparser": "^2.12"
     },
     "conflict": {
         "drupal/drupal": "*"

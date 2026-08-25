@@ -110,6 +110,7 @@ services:
   Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManager:
     arguments:
       - '@config.factory'
+      - '@Drupal\sales_leadership_diagnostic\Service\Knowledge\KnowledgeLibrary'
 
   # Decide qué se envía al motor, y sobre todo qué no (§31).
   Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticContextBuilder:
@@ -263,3 +264,17 @@ services:
       - '@config.factory'
       - '@entity_type.manager'
       - '@file_url_generator'
+
+  # --- Documentos de conocimiento -------------------------------------------
+
+  Drupal\sales_leadership_diagnostic\Service\Knowledge\DocumentTextExtractor:
+    arguments:
+      - '@file_system'
+      - '@logger.factory'
+
+  Drupal\sales_leadership_diagnostic\Service\Knowledge\KnowledgeLibrary:
+    arguments:
+      - '@config.factory'
+      - '@state'
+      - '@entity_type.manager'
+      - '@Drupal\sales_leadership_diagnostic\Service\Knowledge\DocumentTextExtractor'

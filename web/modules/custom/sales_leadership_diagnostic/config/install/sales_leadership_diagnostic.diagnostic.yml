@@ -28,3 +28,5 @@ welcome_suggestions:
   - 'Quiero volver a evaluar mi organización y comparar mi avance.'
   - 'Quiero evaluar sólo Forecast, Pipeline y Excelencia Operativa.'
   - 'Tengo información de mi CRM o Excel y quiero utilizarla en el diagnóstico.'
+# Sin documentos de fábrica: la metodología la aporta el cliente.
+knowledge_fids: {  }

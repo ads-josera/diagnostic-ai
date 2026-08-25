@@ -62,3 +62,11 @@ sales_leadership_diagnostic.home_tab:
   route_name: sales_leadership_diagnostic.home_settings
   base_route: sales_leadership_diagnostic.settings
   weight: 30
+
+# Cuelga del listado de resultados, con las demas del gestor: desde la pagina
+# de ajustes no se le pintaria nunca, porque esa pagina es de administrador.
+sales_leadership_diagnostic.results_knowledge_tab:
+  title: 'Documentos'
+  route_name: sales_leadership_diagnostic.knowledge
+  base_route: sales_leadership_diagnostic.admin_results
+  weight: 15

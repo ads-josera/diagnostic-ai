@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\sales_leadership_diagnostic\Service\Diagnostic;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\sales_leadership_diagnostic\Service\Knowledge\KnowledgeLibrary;
 
 /**
  * Compone el prompt del agente a partir de la configuración (§18).
@@ -25,6 +26,7 @@ final class DiagnosticPromptManager {
 
   public function __construct(
     private readonly ConfigFactoryInterface $configFactory,
+    private readonly KnowledgeLibrary $knowledge,
   ) {}
 
   /**
@@ -43,8 +45,25 @@ final class DiagnosticPromptManager {
   public function compose(): string {
     $config = $this->config();
 
+    // Los documentos de conocimiento van DENTRO del prompt compuesto, y no
+    // aparte, por una razón que no es de comodidad: §57 congela el prompt en
+    // la sesión para que un diagnóstico antiguo siga siendo reproducible. Si
+    // la metodología autorizada viajara por fuera, cambiar un documento
+    // alteraría en silencio el resultado de conversaciones ya cerradas y esa
+    // garantía dejaría de valer.
+    //
+    // Tiene un coste que conviene conocer: cada sesión guarda su copia, y con
+    // nueve documentos son unos 165 KB por sesión. A la escala de este
+    // producto es irrelevante para la base de datos; lo que sí pesa es que el
+    // prompt viaja al proveedor en CADA turno, así que la biblioteca debe
+    // mantenerse en lo necesario.
+    //
+    // El orden es deliberado: primero el rol, después la metodología que ese
+    // rol dice seguir, después cómo conducir y por último el contrato de
+    // salida, que queda lo más cerca posible de la respuesta.
     $parts = array_filter([
       trim((string) $config->get('system_prompt')),
+      $this->knowledge->compose(),
       trim((string) $config->get('instructions')),
       trim((string) $config->get('output_contract')),
     ], static fn (string $part): bool => $part !== '');

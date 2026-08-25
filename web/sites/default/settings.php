@@ -615,6 +615,20 @@ $settings['update_free_access'] = FALSE;
 # $settings['file_private_path'] = '';
 
 /**
+ * Archivos privados.
+ *
+ * Activado para los documentos de conocimiento del agente: contienen la
+ * metodologia propietaria de Salesbumm y en `public://` quedarian descargables
+ * por cualquiera que acertara la URL, sin pasar por ningun control de acceso.
+ * En `private://` cada descarga la autoriza Drupal.
+ *
+ * El directorio esta fuera del docroot y ya lo excluye .gitignore. Al desplegar
+ * hay que crearlo en el servidor y darle permisos de escritura al usuario del
+ * servidor web; si falta, las subidas fallan con un error poco explicito.
+ */
+$settings['file_private_path'] = 'sites/default/files-private';
+
+/**
  * Temporary file path:
  *
  * A local file system path where temporary files will be stored. This directory

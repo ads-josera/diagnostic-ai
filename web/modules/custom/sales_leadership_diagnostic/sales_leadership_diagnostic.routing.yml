@@ -249,3 +249,16 @@ sales_leadership_diagnostic.home_settings:
     _title: 'Portada'
   requirements:
     _permission: 'administer sales leadership diagnostic'
+
+# Documentos de conocimiento del agente.
+#
+# Mismo permiso que el estudio del prompt: los documentos son metodologia
+# igual que el prompt, y quien define como diagnostica el agente es la misma
+# persona. Separarlos habria obligado a dar dos permisos para una sola tarea.
+sales_leadership_diagnostic.knowledge:
+  path: '/admin/config/salesbumm/diagnostic/documentos'
+  defaults:
+    _form: 'Drupal\sales_leadership_diagnostic\Form\KnowledgeDocumentsForm'
+    _title: 'Documentos de conocimiento'
+  requirements:
+    _permission: 'edit diagnostic prompt+administer sales leadership diagnostic'

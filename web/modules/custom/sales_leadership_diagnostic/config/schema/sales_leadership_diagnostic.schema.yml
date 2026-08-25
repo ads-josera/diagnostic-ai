@@ -126,6 +126,16 @@ sales_leadership_diagnostic.diagnostic:
       label: 'Sugerencias para empezar'
       sequence:
         type: label
+    # Documentos que el agente lee como metodología autorizada. Aquí viaja
+    # solo la LISTA: el texto extraído vive en el estado, porque son cientos
+    # de miles de caracteres de material propietario que no deben acabar en
+    # Git en cada exportación de configuración.
+    knowledge_fids:
+      type: sequence
+      label: 'Documentos de conocimiento'
+      sequence:
+        type: integer
+        label: 'Identificador del archivo'
 
 # Personalización visual (§4). Vive en su propio objeto de configuración y no
 # junto a los ajustes de integración: son cosas que cambian por motivos
