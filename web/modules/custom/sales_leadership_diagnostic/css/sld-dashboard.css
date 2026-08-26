@@ -139,3 +139,105 @@
 .sld-dashboard__agent form {
   margin-top: var(--sld-space-sm);
 }
+
+/**
+ * Lo que el sistema recuerda del alumno.
+ *
+ * Se presenta como una lista de fichas y no como una tabla: no son datos
+ * tabulares, cada entrada es un párrafo con su acción al lado, y una tabla
+ * habría obligado a inventar columnas que no significan nada.
+ */
+.sld-memory {
+  margin-top: var(--sld-space-xl);
+}
+
+.sld-memory__intro {
+  max-width: 60ch;
+  margin: 0 0 var(--sld-space-md);
+}
+
+.sld-memory__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--sld-space-sm);
+}
+
+.sld-memory__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sld-space-md);
+  padding: var(--sld-space-md);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+}
+
+.sld-memory__body {
+  min-width: 0;
+}
+
+.sld-memory__topic {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+}
+
+.sld-memory__content {
+  margin: 0;
+  /* El texto lo escribió un modelo y puede ser largo; que fluya sin empujar
+     el botón fuera de la ficha. */
+  overflow-wrap: anywhere;
+}
+
+.sld-memory__updated {
+  margin: 0.35rem 0 0;
+  color: var(--sld-color-text-muted);
+  font-size: 0.85rem;
+}
+
+.sld-memory__forget {
+  /* Más pequeño que el botón principal: olvidar es una acción de mantenimiento
+     y no debe competir con «iniciar diagnóstico». */
+  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.sld-memory__all {
+  margin-top: var(--sld-space-md);
+}
+
+/**
+ * «Olvidarlo todo» va como botón y no como enlace porque borra datos y
+ * necesita ir por POST con su token. Se le quita la apariencia de botón para
+ * que no compita con los de cada ficha, pero conserva el foco visible: es el
+ * único indicador de posición para quien navega con teclado.
+ */
+.sld-memory__forget-all {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sld-color-text-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.sld-memory__forget-all:hover,
+.sld-memory__forget-all:focus {
+  color: var(--sld-color-text);
+}
+
+.sld-memory__forget-all:focus-visible {
+  outline: 2px solid var(--sld-color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 34rem) {
+  .sld-memory__item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

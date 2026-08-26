@@ -24,6 +24,9 @@
  *   neutro; un administrador, el detalle técnico.
  * - history: filas del historial, cada una con id, date, status,
  *   status_machine, version, result_id e is_resumable.
+ * - memory: lo que el sistema recuerda del alumno. Cada entrada con topic,
+ *   content, updated y forget_url. Vacío mientras no termine un diagnóstico.
+ * - memory_forget_all_url: destino del botón de olvidarlo todo.
  *
  * Twig autoescapa todas las variables, de modo que ningún dato de usuario
  * puede inyectar marcado.
@@ -166,5 +169,55 @@
       </div>
     {% endif %}
   </section>
+
+  {#
+    Lo que el sistema recuerda del alumno.
+
+    Se le enseña porque condiciona sus conversaciones futuras y lo escribió un
+    modelo que puede equivocarse: sin verlo no tendría forma de saber que el
+    agente arranca dando por sabido algo falso. La sección solo aparece cuando
+    hay algo que enseñar, para que quien todavía no ha hecho ningún
+    diagnóstico no vea un apartado vacío que no entiende.
+
+    Cada hecho es un formulario con su propio token, no un enlace: olvidar
+    borra datos, y con GET lo dispararía cualquier cosa que precargue enlaces.
+  #}
+  {% if memory is not empty %}
+    <section class="sld-memory" aria-labelledby="sld-memory-title">
+      <h2 class="sld-dashboard__section-title" id="sld-memory-title">
+        {{ 'Lo que recordamos de ti'|t }}
+      </h2>
+
+      <p class="sld__muted sld-memory__intro">
+        {{ 'Esto lo hemos ido recogiendo de tus conversaciones para no hacerte repetirlo. Si algo no es correcto, puedes olvidarlo.'|t }}
+      </p>
+
+      <ul class="sld-memory__list">
+        {% for item in memory %}
+          <li class="sld-memory__item">
+            <div class="sld-memory__body">
+              <p class="sld-memory__topic">{{ item.topic }}</p>
+              <p class="sld-memory__content">{{ item.content }}</p>
+              <p class="sld-memory__updated">
+                {{ 'Actualizado el @date'|t({'@date': item.updated}) }}
+              </p>
+            </div>
+
+            <form action="{{ item.forget_url }}" method="post">
+              <button type="submit" class="sld__button sld__button--secondary sld-memory__forget">
+                {{ 'Olvidar'|t }}
+              </button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+
+      <form action="{{ memory_forget_all_url }}" method="post" class="sld-memory__all">
+        <button type="submit" class="sld-memory__forget-all">
+          {{ 'Olvidarlo todo'|t }}
+        </button>
+      </form>
+    </section>
+  {% endif %}
 
 </div>

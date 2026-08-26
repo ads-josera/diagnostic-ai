@@ -20,6 +20,7 @@ use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChe
 use Drupal\sales_leadership_diagnostic\Service\Branding\Branding;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticStarter;
+use Drupal\sales_leadership_diagnostic\Service\Memory\StudentMemoryStore;
 use Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -48,6 +49,7 @@ final class DashboardController extends ControllerBase {
     private readonly TimeInterface $time,
     private readonly Branding $branding,
     private readonly DiagnosticStarter $starter,
+    private readonly StudentMemoryStore $memory,
     private readonly CsrfTokenGenerator $csrfToken,
   ) {}
 
@@ -66,6 +68,7 @@ final class DashboardController extends ControllerBase {
       $container->get('datetime.time'),
       $container->get(Branding::class),
       $container->get(DiagnosticStarter::class),
+      $container->get(StudentMemoryStore::class),
       $container->get('csrf_token'),
     );
   }
@@ -95,6 +98,8 @@ final class DashboardController extends ControllerBase {
       '#unavailable_notice' => $this->buildUnavailableNotice(),
       '#expiry_notice' => $this->buildExpiryNotice($account),
       '#history' => $this->buildHistory($sessions, $results),
+      '#memory' => $this->buildMemory($uid),
+      '#memory_forget_all_url' => $this->buildForgetAllUrl(),
       '#attached' => [
         'library' => ['sales_leadership_diagnostic/dashboard'],
       ],
@@ -103,7 +108,12 @@ final class DashboardController extends ControllerBase {
         // sesiones o la configuración de la que depende la disponibilidad.
         'contexts' => ['user'],
         'tags' => array_merge(
-          ['sld_diagnostic_session_list', 'sld_diagnostic_result_list'],
+          [
+            'sld_diagnostic_session_list',
+            'sld_diagnostic_result_list',
+            // Olvidar un dato tiene que verse al volver al panel.
+            'sld_student_memory_list',
+          ],
           $this->readiness->getCacheTags(),
           // Sin esto, cambiar los colores o el texto de bienvenida no se
           // vería hasta que el panel caducase por otro motivo.
@@ -116,6 +126,60 @@ final class DashboardController extends ControllerBase {
         ),
       ],
     ];
+  }
+
+  /**
+   * Lo que el sistema recuerda del alumno, listo para pintar.
+   *
+   * Se le enseña porque la memoria condiciona sus conversaciones futuras y la
+   * escribió un modelo que puede equivocarse: sin verla no tendría forma de
+   * saber que el agente arranca dando por sabido algo falso. Cada hecho lleva
+   * su propio botón de olvido, que es el único control que se le da; editarla
+   * no, porque entonces dejaría de saberse qué salió de la conversación y qué
+   * escribió él.
+   *
+   * @param int $uid
+   *   Alumno.
+   *
+   * @return array<int, array<string, mixed>>
+   *   Una entrada por hecho recordado.
+   */
+  private function buildMemory(int $uid): array {
+    $filas = [];
+
+    foreach ($this->memory->forUser($uid) as $hecho) {
+      $tema = $hecho->getTopic();
+
+      if ($tema === NULL) {
+        continue;
+      }
+
+      $filas[] = [
+        'topic' => $tema->label(),
+        'content' => $hecho->getContent(),
+        'updated' => $this->dateFormatter->format($hecho->getChangedTime(), 'custom', 'd/m/Y'),
+        'forget_url' => $this->buildForgetUrl((int) $hecho->id()),
+      ];
+    }
+
+    return $filas;
+  }
+
+  /**
+   * URL para olvidar un hecho, con su token CSRF.
+   */
+  private function buildForgetUrl(int $memoryId): string {
+    return $this->buildTokenizedUrl(
+      'sales_leadership_diagnostic.memory_forget',
+      ['sld_student_memory' => $memoryId],
+    );
+  }
+
+  /**
+   * URL para olvidarlo todo, con su token CSRF.
+   */
+  private function buildForgetAllUrl(): string {
+    return $this->buildTokenizedUrl('sales_leadership_diagnostic.memory_forget_all', []);
   }
 
   /**
@@ -160,21 +224,35 @@ final class DashboardController extends ControllerBase {
   /**
    * URL del formulario de inicio de un agente, con su token CSRF.
    *
-   * El token viaja en la URL porque la ruta lo valida con `_csrf_token`, que
-   * es el mecanismo de Drupal para rutas que no son formularios de la Form
-   * API. El valor se calcula sobre la ruta interna, sin la barra inicial, que
-   * es lo que espera el validador — y como la ruta lleva ahora el agente, cada
-   * agente tiene su propio token.
-   *
    * @param string $agentId
    *   Identificador del agente que se va a iniciar.
    */
   private function buildStartUrl(string $agentId): string {
-    $parametros = ['sld_agent' => $agentId];
-    $internal = ltrim(Url::fromRoute('sales_leadership_diagnostic.start', $parametros)->getInternalPath(), '/');
+    return $this->buildTokenizedUrl(
+      'sales_leadership_diagnostic.start',
+      ['sld_agent' => $agentId],
+    );
+  }
+
+  /**
+   * URL de una ruta que exige token CSRF, con el token ya puesto.
+   *
+   * El token viaja en la URL porque estas rutas lo validan con `_csrf_token`,
+   * que es el mecanismo de Drupal para las que no son formularios de la Form
+   * API. El valor se calcula sobre la ruta interna, sin la barra inicial, que
+   * es lo que espera el validador — y como la ruta lleva sus parametros, cada
+   * destino tiene su propio token.
+   *
+   * @param string $ruta
+   *   Nombre de la ruta.
+   * @param array<string, mixed> $parametros
+   *   Parametros de la ruta.
+   */
+  private function buildTokenizedUrl(string $ruta, array $parametros): string {
+    $internal = ltrim(Url::fromRoute($ruta, $parametros)->getInternalPath(), '/');
 
     return Url::fromRoute(
-      'sales_leadership_diagnostic.start',
+      $ruta,
       $parametros,
       ['query' => ['token' => $this->csrfToken->get($internal)]],
     )->toString();

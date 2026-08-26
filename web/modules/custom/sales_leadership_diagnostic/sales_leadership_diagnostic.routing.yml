@@ -66,6 +66,30 @@ sales_leadership_diagnostic.start:
     _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::access'
     _csrf_token: 'TRUE'
 
+# El alumno olvida un hecho concreto de su memoria.
+#
+# POST y con token, como el inicio: borra datos, y con GET lo dispararia
+# cualquier cosa que precargue enlaces. Quien puede borrar lo decide el
+# control de acceso de la entidad, que solo se lo permite a su dueño.
+sales_leadership_diagnostic.memory_forget:
+  path: '/sales-diagnostic/memoria/{sld_student_memory}/olvidar'
+  methods: [POST]
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\StudentMemoryController::forget'
+  requirements:
+    _entity_access: 'sld_student_memory.delete'
+    _csrf_token: 'TRUE'
+
+# El alumno olvida toda su memoria de una vez.
+sales_leadership_diagnostic.memory_forget_all:
+  path: '/sales-diagnostic/memoria/olvidar-todo'
+  methods: [POST]
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\StudentMemoryController::forgetAll'
+  requirements:
+    _permission: 'access sales leadership diagnostic'
+    _csrf_token: 'TRUE'
+
 # Vista de conversación.
 #
 # El nombre del parámetro coincide con el ID del tipo de entidad, así que

@@ -83,6 +83,10 @@ final class DiagnosticThemeHooks {
           'unavailable_notice' => NULL,
           'expiry_notice' => NULL,
           'history' => [],
+          // Lo que el sistema recuerda del alumno. Vacio en su primera visita
+          // y mientras no termine ningun diagnostico.
+          'memory' => [],
+          'memory_forget_all_url' => '',
         ],
       ],
       'sld_chat' => [
