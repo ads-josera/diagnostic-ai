@@ -174,6 +174,11 @@ final class ConversationService {
       // de acceso pueda atribuir un resultado a quien no le corresponde.
       'uid' => $session->getOwnerId(),
       'session_id' => $session->id(),
+      // Se copia de la sesión, igual que la versión: la sesión puede
+      // eliminarse y el historial tiene que seguir diciendo con qué agente se
+      // conversó. Deducirlo del curso no serviría, porque el curso que
+      // concede un agente puede cambiar después.
+      'agent' => $session->getAgentId(),
       'diagnostic_version' => $session->getDiagnosticVersion(),
       'summary' => (string) ($payload['summary'] ?? ''),
       'score' => isset($payload['score']) && is_numeric($payload['score'])

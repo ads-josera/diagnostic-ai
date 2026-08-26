@@ -7,6 +7,7 @@ namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\DTO\AccessDecision;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSession;
 use Drupal\sales_leadership_diagnostic\Exception\CannotStartDiagnosticException;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
@@ -270,9 +271,6 @@ final class DiagnosticStarterTest extends KernelTestBase {
   }
 
   /**
-   * El servicio bajo prueba.
-   */
-  /**
    * Agente de la prueba, creado al vuelo la primera vez que se pide.
    *
    * Su curso coincide con el que la prueba configura en WordPress, que es lo
@@ -280,7 +278,7 @@ final class DiagnosticStarterTest extends KernelTestBase {
    * cada intento por falta de derecho al agente, y los tests fallarían por un
    * motivo distinto del que quieren comprobar.
    */
-  private function agente(): \Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface {
+  private function agente(): DiagnosticAgentInterface {
     $almacen = $this->container->get('entity_type.manager')->getStorage('sld_agent');
     $agente = $almacen->load('agente_prueba');
 
@@ -300,6 +298,9 @@ final class DiagnosticStarterTest extends KernelTestBase {
     return $agente;
   }
 
+  /**
+   * El servicio bajo prueba.
+   */
   private function starter(): DiagnosticStarter {
     return $this->container->get(DiagnosticStarter::class);
   }
