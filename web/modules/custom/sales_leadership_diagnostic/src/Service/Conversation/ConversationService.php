@@ -9,6 +9,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Lock\LockBackendInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
+use Drupal\Core\Queue\QueueFactory;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
@@ -66,6 +67,7 @@ final class ConversationService {
     private readonly RateLimiter $rateLimiter,
     private readonly LockBackendInterface $lock,
     private readonly EntityTypeManagerInterface $entityTypeManager,
+    private readonly QueueFactory $queueFactory,
     private readonly TimeInterface $time,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
@@ -159,7 +161,31 @@ final class ConversationService {
       '@version' => $session->getDiagnosticVersion(),
     ]);
 
+    $this->encolarExtraccionDeMemoria($session);
+
     return $resultId;
+  }
+
+  /**
+   * Deja encargada la extracción de la memoria del alumno.
+   *
+   * Solo se encola: extraer aquí mismo añadiría al alumno una segunda espera
+   * ante el modelo, justo cuando acaba de esperar su informe, por algo que no
+   * va a ver. Y un fallo del proveedor en ese momento se le presentaría como
+   * si su diagnóstico hubiera fallado.
+   *
+   * No se encolan los ensayos del gestor. El extractor vuelve a comprobarlo
+   * por su cuenta —es él quien no debe escribir memoria de una simulación—,
+   * pero encolar algo que se va a descartar sería gastar un cron para nada.
+   */
+  private function encolarExtraccionDeMemoria(DiagnosticSessionInterface $session): void {
+    if ((bool) $session->get('is_sandbox')->value) {
+      return;
+    }
+
+    $this->queueFactory
+      ->get('sld_memory_extraction')
+      ->createItem(['session_id' => (int) $session->id()]);
   }
 
   /**

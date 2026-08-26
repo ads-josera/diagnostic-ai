@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
+use Drupal\Core\Queue\QueueInterface;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
@@ -103,6 +104,49 @@ final class ConversationServiceTest extends KernelTestBase {
   }
 
   /**
+   * Terminar deja encargada la extracción de la memoria.
+   *
+   * Se comprueba que se ENCOLA y no que se extraiga: extraer en el mismo turno
+   * añadiría al alumno una segunda espera ante el modelo justo cuando acaba de
+   * esperar su informe, y un fallo del proveedor en ese momento se le
+   * presentaría como si su diagnóstico hubiera fallado.
+   */
+  public function testAlTerminarSeEncolaLaExtraccionDeLaMemoria(): void {
+    $session = $this->crearSesion('agente_gap');
+
+    $this->assertSame(0, $this->cola()->numberOfItems(), 'La cola debe empezar vacía.');
+
+    $this->conversarHastaElFinal($session);
+
+    $this->assertSame(1, $this->cola()->numberOfItems());
+    $this->assertSame(
+      ['session_id' => (int) $session->id()],
+      $this->cola()->claimItem()->data,
+    );
+  }
+
+  /**
+   * Un ensayo del gestor no encola nada.
+   *
+   * Su contenido es una simulación, y escribirlo en la memoria de la cuenta
+   * que ensaya mezclaría el negocio inventado con el de esa persona.
+   */
+  public function testUnEnsayoNoEncolaExtraccion(): void {
+    $session = $this->crearSesion('agente_gap', ensayo: TRUE);
+
+    $this->conversarHastaElFinal($session);
+
+    $this->assertSame(0, $this->cola()->numberOfItems());
+  }
+
+  /**
+   * La cola de extracción.
+   */
+  private function cola(): QueueInterface {
+    return $this->container->get('queue')->get('sld_memory_extraction');
+  }
+
+  /**
    * Conversa hasta que el agente da el diagnóstico por terminado.
    *
    * El guion del motor simulado se agota tras unos turnos; se acota el bucle
@@ -131,7 +175,7 @@ final class ConversationServiceTest extends KernelTestBase {
   /**
    * Crea una sesión en curso del agente indicado.
    */
-  private function crearSesion(string $agentId): DiagnosticSessionInterface {
+  private function crearSesion(string $agentId, bool $ensayo = FALSE): DiagnosticSessionInterface {
     $session = DiagnosticSession::create([
       'uid' => $this->alumno->id(),
       'wp_user_id' => '4821',
@@ -140,6 +184,7 @@ final class ConversationServiceTest extends KernelTestBase {
       'diagnostic_version' => '1.0-TEST',
       'prompt_snapshot' => 'PROMPT',
       'prompt_hash' => hash('sha256', 'PROMPT'),
+      'is_sandbox' => $ensayo,
     ]);
     $session->setStatus(DiagnosticStatus::InProgress);
     $session->save();

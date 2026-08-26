@@ -132,13 +132,20 @@ services:
     class: Drupal\sales_leadership_diagnostic\Service\Engine\UnavailableDiagnosticEngine
 
   # Unica clase que sabe que el proveedor es OpenAI (§28).
-  Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIDiagnosticProvider:
+  # Toda la fontaneria de hablar con OpenAI: endpoint, credenciales,
+  # reintentos, errores y registro de consumo. No sabe para que se le
+  # pregunta, y por eso lo comparten el diagnostico y la memoria.
+  Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIClient:
     arguments:
       - '@http_client'
       - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
-      - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator'
       - '@config.factory'
       - '@logger.factory'
+
+  Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIDiagnosticProvider:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIClient'
+      - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator'
 
   Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory:
     arguments:
@@ -174,6 +181,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter'
       - '@lock'
       - '@entity_type.manager'
+      - '@queue'
       - '@datetime.time'
       - '@logger.factory'
 
@@ -295,3 +303,14 @@ services:
   Drupal\sales_leadership_diagnostic\Service\Memory\StudentMemoryStore:
     arguments:
       - '@entity_type.manager'
+
+  # Relee una conversacion terminada y actualiza la memoria del alumno. Es una
+  # llamada al modelo APARTE de la del diagnostico, con prompt propio: la
+  # metodologia del agente es del cliente y no se amplia (§15).
+  Drupal\sales_leadership_diagnostic\Service\Memory\MemoryExtractor:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIClient'
+      - '@Drupal\sales_leadership_diagnostic\Service\Memory\StudentMemoryStore'
+      - '@Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository'
+      - '@entity_type.manager'
+      - '@logger.factory'
