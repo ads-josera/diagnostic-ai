@@ -7,6 +7,10 @@ namespace Drupal\sales_leadership_diagnostic\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
+use Drupal\sales_leadership_diagnostic\Controller\AdminResultsController;
+use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Filtros del listado de administración de resultados.
@@ -21,6 +25,17 @@ use Drupal\Core\Url;
  * petición. No hay nada que procesar.
  */
 final class ResultsFilterForm extends FormBase {
+
+  public function __construct(
+    private readonly AgentRegistry $agents,
+  ) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container): static {
+    return new static($container->get(AgentRegistry::class));
+  }
 
   /**
    * {@inheritdoc}
@@ -55,6 +70,35 @@ final class ResultsFilterForm extends FormBase {
       '#description' => $this->t('Parte del nombre de usuario o del correo.'),
       '#default_value' => (string) $query->get('alumno', ''),
       '#size' => 30,
+    ];
+
+    // Con un solo agente el desplegable sobra: no hay nada que elegir.
+    $agentes = $this->agents->getUsable();
+
+    if (count($agentes) > 1) {
+      $opciones = ['' => $this->t('- Cualquiera -')];
+
+      foreach ($agentes as $agente) {
+        $opciones[(string) $agente->id()] = $agente->label();
+      }
+
+      $form['filtros']['agente'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Agente'),
+        '#options' => $opciones,
+        '#default_value' => (string) $query->get('agente', ''),
+      ];
+    }
+
+    $form['filtros']['estado'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Estado'),
+      '#options' => [
+        '' => $this->t('- Cualquiera -'),
+        AdminResultsController::ESTADO_SIN_TERMINAR => $this->t('Sin terminar'),
+      ] + DiagnosticStatus::allowedValues(),
+      '#description' => $this->t('«Sin terminar» reúne los que empezaron y no llegaron a resultado.'),
+      '#default_value' => (string) $query->get('estado', ''),
     ];
 
     $form['filtros']['desde'] = [
@@ -94,7 +138,7 @@ final class ResultsFilterForm extends FormBase {
   private function hasActiveFilters(): bool {
     $query = $this->getRequest()->query;
 
-    foreach (['alumno', 'desde', 'hasta'] as $key) {
+    foreach (['alumno', 'desde', 'hasta', 'agente', 'estado'] as $key) {
       if (trim((string) $query->get($key, '')) !== '') {
         return TRUE;
       }
