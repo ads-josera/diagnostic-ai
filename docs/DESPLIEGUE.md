@@ -31,6 +31,30 @@ que importa esté versionado.
 | Base de datos | MariaDB 10.6+ / MySQL 8.0+ / PostgreSQL 12+ |
 | Composer | 2.x |
 | HTTPS | **Obligatorio.** El token de acceso viaja en la URL |
+| Cron | **Debe ejecutarse.** Ver más abajo |
+
+### El cron no es opcional
+
+La memoria del alumno —lo que el sistema recuerda de su negocio para no
+hacérselo repetir— se extrae **en cola**, no en el mismo turno en que termina
+el diagnóstico. Esa decisión es a propósito: encadenarle al alumno una segunda
+llamada al modelo antes de enseñarle su informe le añadiría una espera por algo
+que no va a ver, y un fallo del proveedor en ese momento se le presentaría como
+si su diagnóstico hubiera fallado.
+
+El precio es que **sin cron la memoria no se escribe nunca**. Nada falla de
+forma visible: los diagnósticos siguen saliendo, los resultados se guardan, y
+el alumno simplemente vuelve a contarlo todo cada vez, sin que nadie sepa por
+qué. Si el cron de Drupal no está programado en el servidor, prográmelo.
+
+    */15 * * * * cd /ruta/al/sitio && vendor/bin/drush cron
+
+También hay directorio privado que crear, para los documentos de conocimiento:
+
+    mkdir -p web/sites/default/files-private
+    chmod 775 web/sites/default/files-private
+
+Si falta, subir un documento falla con un error poco explícito.
 
 ## 2. Código y dependencias
 
@@ -292,5 +316,7 @@ proveedor de IA, así que no cuesta llamadas.
 - [ ] Prueba de humo superada con un alumno real
 - [ ] Copia de la base de datos guardada
 - [ ] `bin/humo.mjs` en verde
+- [ ] Cron programado y ejecutándose (sin él, la memoria del alumno no se escribe)
+- [ ] Directorio `sites/default/files-private` creado y con permisos de escritura
 - [ ] Versión del plugin subida y anotada en su CHANGELOG
 - [ ] El informe de estado muestra la versión correcta del plugin
