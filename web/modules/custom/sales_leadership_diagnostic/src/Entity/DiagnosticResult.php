@@ -175,4 +175,61 @@ class DiagnosticResult extends ContentEntityBase implements DiagnosticResultInte
     return $this;
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function getMaturity(): string {
+    return trim((string) ($this->getPayload()['maturity'] ?? ''));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getConfidence(): string {
+    return trim((string) ($this->getPayload()['confidence'] ?? ''));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getDimensions(): array {
+    $crudas = $this->getPayload()['dimensions'] ?? [];
+
+    if (!is_array($crudas)) {
+      return [];
+    }
+
+    $dimensiones = [];
+
+    foreach ($crudas as $cruda) {
+      if (!is_array($cruda)) {
+        continue;
+      }
+
+      $nombre = trim((string) ($cruda['name'] ?? ''));
+
+      // Una dimensión sin nombre no se puede mostrar ni comparar con nada.
+      // Se descarta esa y se siguen leyendo las demás: perder la tabla entera
+      // porque una entrada viniera mal sería peor.
+      if ($nombre === '') {
+        continue;
+      }
+
+      // El máximo cae a 10 si no viene o no tiene sentido: es el de la
+      // metodología del cliente, y un cero haría estallar cualquier división
+      // al pintar la barra.
+      $maximo = (float) ($cruda['max'] ?? 0);
+
+      $dimensiones[] = [
+        'name' => $nombre,
+        'score' => (float) ($cruda['score'] ?? 0),
+        'max' => $maximo > 0 ? $maximo : 10.0,
+        'level' => trim((string) ($cruda['level'] ?? '')),
+        'confidence' => trim((string) ($cruda['confidence'] ?? '')),
+      ];
+    }
+
+    return $dimensiones;
+  }
+
 }

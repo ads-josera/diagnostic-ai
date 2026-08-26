@@ -183,3 +183,120 @@
     background: none;
   }
 }
+
+/**
+ * Madurez por dimensión.
+ *
+ * Tabla real y no una rejilla de divs: son datos tabulares y un lector de
+ * pantalla tiene que poder recorrerlos por filas y columnas. En móvil se
+ * reorganiza en tarjetas conservando la semántica, igual que el historial.
+ */
+.sld-result__table-wrapper {
+  overflow-x: auto;
+}
+
+.sld-dimensions {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.sld-dimensions th,
+.sld-dimensions td {
+  padding: 0.6rem var(--sld-space-sm);
+  border-bottom: 1px solid var(--sld-color-border);
+  text-align: start;
+  vertical-align: middle;
+}
+
+.sld-dimensions thead th {
+  color: var(--sld-color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.sld-dimensions__name {
+  font-weight: 600;
+}
+
+.sld-dimensions__score {
+  display: inline-block;
+  min-width: 3.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sld-dimensions__max {
+  color: var(--sld-color-text-muted);
+  font-size: 0.85em;
+}
+
+/* La barra acompaña a la cifra; nunca la sustituye. */
+.sld-dimensions__bar {
+  display: inline-block;
+  width: 6rem;
+  height: 0.5rem;
+  margin-inline-start: var(--sld-space-sm);
+  border-radius: 999px;
+  background: var(--sld-color-border);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.sld-dimensions__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--sld-color-primary);
+}
+
+.sld-score__band {
+  margin: var(--sld-space-xs) 0 0;
+}
+
+.sld-score__confidence {
+  margin-inline-start: var(--sld-space-sm);
+  color: var(--sld-color-text-muted);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 34rem) {
+  .sld-dimensions thead {
+    /* Se oculta visualmente, no del árbol de accesibilidad. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .sld-dimensions tr {
+    display: block;
+    margin-bottom: var(--sld-space-md);
+    padding: var(--sld-space-md);
+    border: 1px solid var(--sld-color-border);
+    border-radius: var(--sld-radius);
+  }
+
+  .sld-dimensions td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sld-space-md);
+    padding: 0.35rem 0;
+    border-bottom: 0;
+  }
+
+  .sld-dimensions td::before {
+    content: attr(data-label);
+    color: var(--sld-color-text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .sld-dimensions__name {
+    display: block;
+    padding: 0 0 var(--sld-space-xs);
+    border-bottom: 0;
+  }
+}

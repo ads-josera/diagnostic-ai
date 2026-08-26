@@ -9,6 +9,11 @@
  *   él la página se quedaba sin `<h1>`.
  * - summary: resumen ya saneado. Es Markup, así que Twig no vuelve a escaparlo.
  * - score: puntuación, o null si la metodología no contempla ninguna.
+ * - maturity: banda de madurez global, o cadena vacía.
+ * - confidence: confianza global, o cadena vacía.
+ * - dimensions: puntuación por dimensión, cada una con name, score, max,
+ *   level y confidence. Vacía en los diagnósticos anteriores al 26-08-2026,
+ *   que no la guardaban.
  * - sections: lista de secciones con label e items.
  * - version: versión del diagnóstico con la que se generó.
  * - created: fecha de generación.
@@ -35,6 +40,14 @@
       </h2>
       <div class="sld-score">
         <div class="sld-score__value">{{ score }}<span class="sld-score__max">/100</span></div>
+        {% if maturity or confidence %}
+          <p class="sld-score__band">
+            {% if maturity %}<strong>{{ maturity }}</strong>{% endif %}
+            {% if confidence %}
+              <span class="sld-score__confidence">{{ 'Confianza: @c'|t({'@c': confidence}) }}</span>
+            {% endif %}
+          </p>
+        {% endif %}
         {#
           El indicador es decorativo: el valor ya está escrito arriba en texto,
           de modo que quien no vea la barra no pierde información.
@@ -42,6 +55,53 @@
         <div class="sld-score__bar" aria-hidden="true">
           <div class="sld-score__fill" style="width: {{ score }}%"></div>
         </div>
+      </div>
+    </section>
+  {% endif %}
+
+  {#
+    Madurez por dimensión.
+
+    Es el corazón de la metodología del cliente y hasta el 26-08-2026 solo
+    existía dentro de la conversación, en prosa. Se pinta como tabla porque son
+    datos tabulares: un lector de pantalla la recorre por filas y columnas.
+
+    Los diagnósticos anteriores no la traen y la sección simplemente no
+    aparece, igual que antes.
+  #}
+  {% if dimensions is not empty %}
+    <section class="sld-result__section" aria-labelledby="sld-dimensiones">
+      <h2 class="sld-result__section-title" id="sld-dimensiones">
+        {{ 'Madurez por dimensión'|t }}
+      </h2>
+
+      <div class="sld-result__table-wrapper">
+        <table class="sld-dimensions">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'Dimensión'|t }}</th>
+              <th scope="col">{{ 'Puntuación'|t }}</th>
+              <th scope="col">{{ 'Nivel'|t }}</th>
+              <th scope="col">{{ 'Confianza'|t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in dimensions %}
+              <tr>
+                <th scope="row" class="sld-dimensions__name">{{ d.name }}</th>
+                <td data-label="{{ 'Puntuación'|t }}">
+                  <span class="sld-dimensions__score">{{ d.score }}<span class="sld-dimensions__max">/{{ d.max }}</span></span>
+                  {# La barra es decorativa: la cifra ya está al lado. #}
+                  <span class="sld-dimensions__bar" aria-hidden="true">
+                    <span class="sld-dimensions__fill" style="width: {{ (d.score / d.max * 100)|round }}%"></span>
+                  </span>
+                </td>
+                <td data-label="{{ 'Nivel'|t }}">{{ d.level }}</td>
+                <td data-label="{{ 'Confianza'|t }}">{{ d.confidence }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </section>
   {% endif %}

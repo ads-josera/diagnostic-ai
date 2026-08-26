@@ -4,7 +4,7 @@ status: true
 dependencies: {  }
 id: sales_leadership_diagnostic
 label: 'Sales Leadership Diagnostic AI'
-version: '1.0'
+version: '1.1'
 course_id: '35884'
 description: 'Diagnóstico de madurez comercial B2B. Primer agente del producto.'
 system_prompt: |-
@@ -290,22 +290,34 @@ output_contract: |-
     Markdown. This is what the participant reads on screen, so it must be
     complete and self-contained.
   - result: the same report broken into the fields below, so the platform can
-    store it.
+    store it. The fields must agree with "message"; never compute anything twice.
 
   Fields of "result":
-  - summary: EXECUTIVE SNAPSHOT and EXECUTIVE READING condensed into one
-    paragraph. Open it with the Maturity Level and the Confidence, since there
-    is no separate field for either.
+  - summary: EXECUTIVE READING, as one paragraph.
   - score: the Complete Diagnostic Global Score, 0-100, as an integer. Send null
     for a Partial Diagnostic, which must not produce a Global Score.
+  - maturity: the maturity band of that Score, exactly as your methodology names
+    it (CRITICAL, DEVELOPING, MANAGED, PREDICTIVE or SALES EXCELLENCE).
+  - confidence: the global Confidence (HIGH, MEDIUM or LOW).
+  - dimensions: MATURITY BY DIMENSION, one entry per dimension you evaluated,
+    in the order of your methodology. Each entry carries:
+      - name: the dimension's name.
+      - score: its score, as a number. Half points are allowed.
+      - max: the maximum for that dimension, normally 10.
+      - level: its maturity level.
+      - confidence: HIGH, MEDIUM or LOW for that dimension.
+    Send an empty list only for a Partial Diagnostic that scored nothing.
   - strengths: STRENGTHS TO PRESERVE, one entry each.
   - opportunities: TOP 3 SALES LEAKS, one entry each, keeping the evidence and
     the impact.
+  - risks: the risks from RISKS & MISSING EVIDENCE, one entry each.
+  - missing_evidence: the critical missing evidence items, one entry each.
   - recommendations: TOP 3 PRIORITIES, one entry each.
   - priority_actions: FIRST 30 DAYS, one entry each, with owner, horizon and KPI.
 
-  Two sections of the report have no field of their own: MATURITY BY DIMENSION
-  and RISKS & MISSING EVIDENCE. They must still appear in full in "message".
+  Every field is required by the schema. Send an empty string or an empty list
+  for anything that does not apply; never omit a field and never invent content
+  to fill one.
 
   "message" is the only thing the participant reads. Write it in their language,
   as the report of an advisor.

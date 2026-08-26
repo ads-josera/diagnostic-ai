@@ -43,6 +43,8 @@ final class ResultsController extends ControllerBase {
   private const SECTION_KEYS = [
     'strengths',
     'opportunities',
+    'risks',
+    'missing_evidence',
     'recommendations',
     'priority_actions',
   ];
@@ -86,6 +88,11 @@ final class ResultsController extends ControllerBase {
       '#title' => $this->title($result),
       '#summary' => Markup::create($this->markdown->render($result->getSummary())),
       '#score' => $result->getScore(),
+      // Banda de madurez y confianza global. Hasta el 26-08-2026 no tenían
+      // sitio y se colaban dentro del resumen en prosa.
+      '#maturity' => $result->getMaturity(),
+      '#confidence' => $result->getConfidence(),
+      '#dimensions' => $result->getDimensions(),
       '#sections' => $this->buildSections($payload),
       '#version' => $result->getDiagnosticVersion(),
       '#created' => $this->dateFormatter->format((int) $result->get('created')->value, 'long'),
@@ -176,6 +183,8 @@ final class ResultsController extends ControllerBase {
     return match ($key) {
       'strengths' => $this->t('Fortalezas'),
       'opportunities' => $this->t('Oportunidades de mejora'),
+      'risks' => $this->t('Riesgos'),
+      'missing_evidence' => $this->t('Evidencia que falta'),
       'recommendations' => $this->t('Recomendaciones'),
       'priority_actions' => $this->t('Acciones prioritarias'),
       default => $this->t('Otros hallazgos'),

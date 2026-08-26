@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Service\Diagnostic;
 
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn;
 use Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException;
+use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 
 /**
  * Valida y normaliza la respuesta estructurada del motor (§32).
@@ -31,6 +34,27 @@ final class DiagnosticResponseValidator {
    */
   private const TYPE_RESPONSE = 'diagnostic_response';
   private const TYPE_RESULT = 'diagnostic_result';
+
+  /**
+   * Descuadre admitido entre el global y la suma de dimensiones.
+   *
+   * Medio punto: la rúbrica del cliente usa medios puntos por dimensión, y
+   * nuestro campo de puntuación es entero, así que un global de 20,5 se guarda
+   * como 21 sin que nadie se haya equivocado. Por encima de eso ya no es
+   * redondeo.
+   */
+  private const TOLERANCIA_ARITMETICA = 0.5;
+
+  /**
+   * Canal de log del módulo.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
+   */
+  private LoggerChannelInterface $logger;
+
+  public function __construct(LoggerChannelFactoryInterface $loggerFactory) {
+    $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
+  }
 
   /**
    * Valida la respuesta cruda y la convierte en un turno.
@@ -72,6 +96,7 @@ final class DiagnosticResponseValidator {
 
     if ($completed) {
       $result = $this->extractResult($raw);
+      $this->comprobarAritmetica($result);
     }
 
     return new DiagnosticTurn(
@@ -79,6 +104,56 @@ final class DiagnosticResponseValidator {
       completed: $completed,
       result: $result,
       raw: $raw,
+    );
+  }
+
+  /**
+   * Comprueba que el global cuadre con la suma de las dimensiones.
+   *
+   * Lo pide la propia metodología del cliente, que en su control de calidad
+   * exige verificar que «la aritmética del Score Global es correcta». Es
+   * exactamente el tipo de error que un modelo comete sin avisar y que nadie
+   * detecta leyendo el informe, porque las dos cifras están en secciones
+   * distintas.
+   *
+   * NO se rechaza el resultado: un descuadre de un punto no invalida veinte
+   * minutos de conversación, y perder el diagnóstico entero sería peor que
+   * guardarlo con una nota. Queda en el registro para que se pueda revisar.
+   *
+   * @param array<string, mixed> $result
+   *   Resultado ya extraído.
+   */
+  private function comprobarAritmetica(array $result): void {
+    $global = $result['score'] ?? NULL;
+    $dimensiones = $result['dimensions'] ?? NULL;
+
+    // Sin puntuación global o sin dimensiones no hay nada que cuadrar: es el
+    // caso de un diagnóstico parcial, que su metodología prohíbe puntuar.
+    if (!is_numeric($global) || !is_array($dimensiones) || $dimensiones === []) {
+      return;
+    }
+
+    $suma = 0.0;
+
+    foreach ($dimensiones as $dimension) {
+      if (is_array($dimension) && is_numeric($dimension['score'] ?? NULL)) {
+        $suma += (float) $dimension['score'];
+      }
+    }
+
+    $desvio = abs((float) $global - $suma);
+
+    if ($desvio <= self::TOLERANCIA_ARITMETICA) {
+      return;
+    }
+
+    $this->logger->warning(
+      'El diagnóstico declaró una puntuación global de @global pero sus @n dimensiones suman @suma. Conviene revisarlo: la metodología exige que el global sea la suma.',
+      [
+        '@global' => $global,
+        '@n' => count($dimensiones),
+        '@suma' => $suma,
+      ],
     );
   }
 

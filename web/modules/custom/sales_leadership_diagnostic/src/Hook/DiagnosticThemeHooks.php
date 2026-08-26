@@ -117,6 +117,12 @@ final class DiagnosticThemeHooks {
           'title' => '',
           'summary' => NULL,
           'score' => NULL,
+          // Banda de madurez, confianza global y tabla por dimensión. Vacías
+          // en los diagnósticos anteriores al 26-08-2026, que no las
+          // guardaban: su tabla quedó solo en la conversación.
+          'maturity' => '',
+          'confidence' => '',
+          'dimensions' => [],
           'sections' => [],
           'version' => '',
           'created' => '',

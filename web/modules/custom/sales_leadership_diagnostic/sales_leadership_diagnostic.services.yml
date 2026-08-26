@@ -120,7 +120,8 @@ services:
 
   # Valida la respuesta del motor antes de almacenarla (§32).
   Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator:
-    class: Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator
+    arguments:
+      - '@logger.factory'
 
   # --- Motor de IA ---------------------------------------------------------
 

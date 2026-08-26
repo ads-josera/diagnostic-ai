@@ -61,4 +61,27 @@ interface DiagnosticResultInterface extends ContentEntityInterface, EntityOwnerI
    */
   public function setPayload(array $payload): static;
 
+  /**
+   * Banda de madurez global, o cadena vacía si el diagnóstico no la dio.
+   */
+  public function getMaturity(): string;
+
+  /**
+   * Confianza global del diagnóstico, o cadena vacía.
+   */
+  public function getConfidence(): string;
+
+  /**
+   * Puntuación dimensión a dimensión.
+   *
+   * Se lee del payload y se normaliza aquí para que ningún consumidor tenga
+   * que conocer la forma cruda. Los diagnósticos anteriores al 26-08-2026 no
+   * la traen y devuelven una lista vacía: su tabla quedó solo en la
+   * conversación.
+   *
+   * @return array<int, array{name: string, score: float, max: float, level: string, confidence: string}>
+   *   Una entrada por dimensión, en el orden en que las dio el agente.
+   */
+  public function getDimensions(): array;
+
 }

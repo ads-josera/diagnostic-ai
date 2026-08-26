@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\sales_leadership_diagnostic\Unit;
 
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator;
 use Drupal\Tests\UnitTestCase;
@@ -27,11 +29,23 @@ final class DiagnosticResponseValidatorTest extends UnitTestCase {
   private DiagnosticResponseValidator $validator;
 
   /**
+   * Doble del registro, para comprobar los avisos de aritmética.
+   *
+   * @var \Drupal\Core\Logger\LoggerChannelInterface&\PHPUnit\Framework\MockObject\MockObject
+   */
+  private LoggerChannelInterface $logger;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->validator = new DiagnosticResponseValidator();
+
+    $this->logger = $this->createMock(LoggerChannelInterface::class);
+    $loggerFactory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $loggerFactory->method('get')->willReturn($this->logger);
+
+    $this->validator = new DiagnosticResponseValidator($loggerFactory);
   }
 
   /**
@@ -185,6 +199,77 @@ final class DiagnosticResponseValidatorTest extends UnitTestCase {
 
     $this->assertSame($crudo, $turno->raw);
     $this->assertSame('dimension_2', $turno->raw['next_step']);
+  }
+
+  /**
+   * Un global que no cuadra con la suma de dimensiones deja aviso.
+   *
+   * Lo pide la metodología del cliente en su control de calidad. Es el tipo de
+   * error que un modelo comete sin avisar y que nadie ve leyendo el informe,
+   * porque las dos cifras están en secciones distintas.
+   */
+  public function testAvisaSiElGlobalNoCuadraConLasDimensiones(): void {
+    $this->logger->expects($this->once())->method('warning');
+
+    $this->validator->validate($this->resultadoCon(90, [30, 20, 10]));
+  }
+
+  /**
+   * Un descuadre de medio punto NO avisa.
+   *
+   * La rúbrica del cliente usa medios puntos por dimensión y nuestro campo de
+   * puntuación es entero: un global de 20,5 se guarda como 21 sin que nadie se
+   * haya equivocado. Avisar de eso sería ruido en cada diagnóstico.
+   */
+  public function testElRedondeoDeMedioPuntoNoAvisa(): void {
+    $this->logger->expects($this->never())->method('warning');
+
+    $this->validator->validate($this->resultadoCon(21, [1.5, 9, 10]));
+  }
+
+  /**
+   * Sin dimensiones no hay nada que cuadrar.
+   *
+   * Es el caso de los diagnósticos anteriores al 26-08-2026 y el de un
+   * diagnóstico parcial, que la metodología prohíbe puntuar.
+   */
+  public function testSinDimensionesNoSeComprueba(): void {
+    $this->logger->expects($this->never())->method('warning');
+
+    $this->validator->validate($this->resultadoCon(50, []));
+  }
+
+  /**
+   * Turno final con la puntuación y las dimensiones indicadas.
+   *
+   * @param int $global
+   *   Puntuación global declarada.
+   * @param float[] $dimensiones
+   *   Puntuación de cada dimensión.
+   *
+   * @return array<string, mixed>
+   *   Respuesta cruda del motor.
+   */
+  private function resultadoCon(int $global, array $dimensiones): array {
+    return [
+      'type' => 'diagnostic_result',
+      'status' => 'completed',
+      'message' => 'Informe final.',
+      'result' => [
+        'summary' => 'Resumen.',
+        'score' => $global,
+        'dimensions' => array_map(
+          static fn (float|int $puntos): array => [
+            'name' => 'Dimensión',
+            'score' => $puntos,
+            'max' => 10,
+            'level' => 'CRITICAL',
+            'confidence' => 'MEDIUM',
+          ],
+          $dimensiones,
+        ),
+      ],
+    ];
   }
 
 }

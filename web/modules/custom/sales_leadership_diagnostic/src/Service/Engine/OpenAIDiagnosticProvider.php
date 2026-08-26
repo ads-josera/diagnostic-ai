@@ -52,16 +52,51 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
         'properties' => [
           'summary' => ['type' => 'string'],
           'score' => ['type' => ['integer', 'null']],
+          // Banda de madurez y confianza globales. Son parte del informe del
+          // cliente y hasta el 26-08-2026 no tenían campo: se colaban dentro
+          // del resumen en prosa, donde no se pueden consultar ni comparar.
+          'maturity' => ['type' => 'string'],
+          'confidence' => ['type' => 'string'],
+          // Puntuación dimensión a dimensión. Es el corazón de la metodología
+          // del cliente —diez dimensiones con su nivel y su confianza— y era
+          // lo único de su informe que se perdía por completo: quedaba en la
+          // conversación como prosa y en ningún sitio consultable.
+          'dimensions' => [
+            'type' => 'array',
+            'items' => [
+              'type' => 'object',
+              'properties' => [
+                'name' => ['type' => 'string'],
+                // Decimal a propósito: la metodología del cliente usa medios
+                // puntos (un 7.5 aparece en sus propios ejemplos).
+                'score' => ['type' => 'number'],
+                'max' => ['type' => 'number'],
+                'level' => ['type' => 'string'],
+                'confidence' => ['type' => 'string'],
+              ],
+              'required' => ['name', 'score', 'max', 'level', 'confidence'],
+              'additionalProperties' => FALSE,
+            ],
+          ],
           'strengths' => ['type' => 'array', 'items' => ['type' => 'string']],
           'opportunities' => ['type' => 'array', 'items' => ['type' => 'string']],
+          'risks' => ['type' => 'array', 'items' => ['type' => 'string']],
+          'missing_evidence' => ['type' => 'array', 'items' => ['type' => 'string']],
           'recommendations' => ['type' => 'array', 'items' => ['type' => 'string']],
           'priority_actions' => ['type' => 'array', 'items' => ['type' => 'string']],
         ],
+        // El modo estricto exige declarar TODAS las propiedades como
+        // requeridas. Las que no apliquen se devuelven vacías.
         'required' => [
           'summary',
           'score',
+          'maturity',
+          'confidence',
+          'dimensions',
           'strengths',
           'opportunities',
+          'risks',
+          'missing_evidence',
           'recommendations',
           'priority_actions',
         ],
