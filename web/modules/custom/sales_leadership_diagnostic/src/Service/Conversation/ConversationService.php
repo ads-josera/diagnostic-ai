@@ -205,6 +205,13 @@ final class ConversationService {
       // conversó. Deducirlo del curso no serviría, porque el curso que
       // concede un agente puede cambiar después.
       'agent' => $session->getAgentId(),
+      // La marca de ensayo se hereda de la sesión. Sin esto, el resultado de
+      // una prueba del gestor nace marcado como real y aparece en el listado
+      // que el cliente usa para dar soporte, mezclado con los diagnósticos de
+      // alumnos de verdad — que es justamente lo que la separación existe para
+      // impedir. El listado filtra por este campo, así que dejarlo vacío no
+      // fallaba de forma visible.
+      'is_sandbox' => (bool) $session->get('is_sandbox')->value,
       'diagnostic_version' => $session->getDiagnosticVersion(),
       'summary' => (string) ($payload['summary'] ?? ''),
       'score' => isset($payload['score']) && is_numeric($payload['score'])

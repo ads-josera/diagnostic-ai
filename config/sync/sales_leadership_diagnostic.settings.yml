@@ -15,7 +15,7 @@ openai:
     - gpt-5.6-luna
   timeout: 60
   max_retries: 2
-  max_completion_tokens: 2000
+  max_completion_tokens: 8000
 diagnostic:
   repeat_policy: unlimited
 security:

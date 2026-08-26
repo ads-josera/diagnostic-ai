@@ -104,6 +104,23 @@ final class ConversationServiceTest extends KernelTestBase {
   }
 
   /**
+   * El resultado de un ensayo nace marcado como ensayo.
+   *
+   * El listado que el gestor usa para dar soporte filtra por esta marca. Sin
+   * heredarla de la sesión, los ensayos aparecen ahí mezclados con los
+   * diagnósticos de alumnos reales, que es justamente lo que la separación
+   * existe para impedir. Y no falla de forma visible: solo aparecen filas de
+   * más que parecen legítimas.
+   */
+  public function testElResultadoDeUnEnsayoQuedaMarcadoComoEnsayo(): void {
+    $ensayo = $this->conversarHastaElFinal($this->crearSesion('agente_gap', ensayo: TRUE));
+    $real = $this->conversarHastaElFinal($this->crearSesion('agente_gap'));
+
+    $this->assertTrue((bool) $ensayo->get('is_sandbox')->value);
+    $this->assertFalse((bool) $real->get('is_sandbox')->value);
+  }
+
+  /**
    * Terminar deja encargada la extracción de la memoria.
    *
    * Se comprueba que se ENCOLA y no que se extraiga: extraer en el mismo turno
