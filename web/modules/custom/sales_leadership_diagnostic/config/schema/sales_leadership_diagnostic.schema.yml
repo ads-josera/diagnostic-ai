@@ -82,64 +82,6 @@ sales_leadership_diagnostic.settings:
           type: integer
           label: 'Tolerancia de desfase de reloj al validar el token SSO (segundos)'
 
-sales_leadership_diagnostic.diagnostic:
-  type: config_object
-  label: 'Definición del agente de diagnóstico'
-  # El prompt, las instrucciones y el contrato de salida se declaran como
-  # `string` y no como `text` de forma deliberada.
-  #
-  # En el esquema de configuración de Drupal, `text` marca un valor como
-  # traducible y lo expone al sistema de traducción de configuración. Eso sería
-  # incorrecto aquí: dos traducciones del mismo prompt bajo una misma versión
-  # producirían diagnósticos distintos imposibles de reproducir, rompiendo la
-  # trazabilidad que exige §57.
-  #
-  # Un diagnóstico en otro idioma debe modelarse como una definición y una
-  # versión propias —la evolución hacia N diagnósticos que contempla §56—, no
-  # como una traducción de esta.
-  mapping:
-    version:
-      type: string
-      label: 'Versión del diagnóstico'
-    system_prompt:
-      type: string
-      label: 'Prompt principal (propiedad del cliente)'
-    instructions:
-      type: string
-      label: 'Instrucciones del agente (propiedad del cliente)'
-    output_contract:
-      type: string
-      label: 'Contrato de salida (añadido técnico)'
-
-    # --- Pantalla de bienvenida del chat -----------------------------------
-    # Lo que ve el alumno antes de escribir nada. A diferencia del prompt, que
-    # es una instrucción para el modelo, esto es texto que lee una persona: por
-    # eso aquí sí es correcto declararlo traducible.
-    welcome_icon_fid:
-      type: integer
-      label: 'Icono de la pantalla de bienvenida'
-    welcome_intro:
-      type: text
-      label: 'Texto introductorio del chat'
-    welcome_suggestions:
-      type: sequence
-      label: 'Sugerencias para empezar'
-      sequence:
-        type: label
-    # Documentos que el agente lee como metodología autorizada. Aquí viaja
-    # solo la LISTA: el texto extraído vive en el estado, porque son cientos
-    # de miles de caracteres de material propietario que no deben acabar en
-    # Git en cada exportación de configuración.
-    knowledge_fids:
-      type: sequence
-      label: 'Documentos de conocimiento'
-      sequence:
-        type: integer
-        label: 'Identificador del archivo'
-
-# Personalización visual (§4). Vive en su propio objeto de configuración y no
-# junto a los ajustes de integración: son cosas que cambian por motivos
-# distintos y que suele tocar gente distinta.
 sales_leadership_diagnostic.branding:
   type: config_object
   label: 'Marca del diagnóstico'

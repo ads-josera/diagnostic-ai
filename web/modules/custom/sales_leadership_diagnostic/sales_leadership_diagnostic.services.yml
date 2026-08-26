@@ -110,7 +110,6 @@ services:
   # Composición y versionado del prompt del cliente (§18, §57).
   Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManager:
     arguments:
-      - '@config.factory'
       - '@Drupal\sales_leadership_diagnostic\Service\Knowledge\KnowledgeLibrary'
 
   # Decide qué se envía al motor, y sobre todo qué no (§31).

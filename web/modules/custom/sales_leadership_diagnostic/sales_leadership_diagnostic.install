@@ -584,3 +584,51 @@ function sales_leadership_diagnostic_update_10011(): string {
 
   return 'Creado el almacén de la memoria del alumno, vacío. Se irá llenando a medida que se terminen diagnósticos.';
 }
+
+/**
+ * Retira la configuración del agente único, que ya no gobierna nada.
+ *
+ * `sales_leadership_diagnostic.diagnostic` fue la definición del agente cuando
+ * solo había uno. Al pasar a varios, `update_10009` copió su contenido a la
+ * primera entidad de agente y desde entonces el diagnóstico se conduce con
+ * ellas, pero el objeto se quedó ahí, y tres pantallas de administración
+ * seguían escribiendo en él. Eso lo convirtió en una trampa: quien editaba el
+ * prompt allí lo guardaba sin que pasara nada.
+ *
+ * Las tres pantallas se migraron el 26-08-2026. Esto retira lo que sostenían.
+ *
+ * El icono de la bienvenida necesita cuidado aparte: es un archivo real, y su
+ * uso quedó registrado a nombre de la configuración. Se libera aquí para que
+ * el recuento no apunte a algo que ya no existe. El archivo NO se borra: lo
+ * usa ahora el agente, que registra su propio uso al guardarse.
+ */
+function sales_leadership_diagnostic_update_10012(): string {
+  $config = \Drupal::configFactory()->getEditable('sales_leadership_diagnostic.diagnostic');
+
+  if ($config->isNew()) {
+    return 'La configuración del agente único ya no existía; no se ha modificado nada.';
+  }
+
+  $liberados = 0;
+  $fid = (int) $config->get('welcome_icon_fid');
+
+  if ($fid > 0) {
+    $archivo = \Drupal::entityTypeManager()->getStorage('file')->load($fid);
+
+    if ($archivo !== NULL) {
+      // El tipo 'config' es el que usaba el formulario retirado.
+      \Drupal::service('file.usage')->delete($archivo, 'sales_leadership_diagnostic', 'config', (string) $fid);
+      $liberados = 1;
+    }
+  }
+
+  $config->delete();
+
+  // El borrador del estudio también era único y pasó a ser por agente.
+  \Drupal::state()->delete('sales_leadership_diagnostic.prompt_draft');
+
+  return sprintf(
+    'Retirada la configuración del agente único. Archivos liberados: %d. El contenido vive en las entidades de agente desde update_10009.',
+    $liberados,
+  );
+}

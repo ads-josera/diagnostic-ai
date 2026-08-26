@@ -311,13 +311,12 @@ final class DiagnosticAgentForm extends EntityForm {
     assert($agente instanceof DiagnosticAgentInterface);
 
     $actual = $agente->getWelcomeIconFid();
-
-    if ($actual === $anterior) {
-      return;
-    }
-
     $almacen = $this->entityTypes->getStorage('file');
 
+    // Se comprueba SIEMPRE, aunque el icono no haya cambiado. Un agente que
+    // llegó con su icono puesto por una migración no pasó nunca por este
+    // formulario, así que no tiene uso registrado: quedaría borrable desde la
+    // administración de archivos y la bienvenida se rompería sin aviso.
     if ($actual > 0) {
       $nuevo = $almacen->load($actual);
 
@@ -327,16 +326,32 @@ final class DiagnosticAgentForm extends EntityForm {
           $nuevo->save();
         }
 
-        $this->fileUsage->add($nuevo, 'sales_leadership_diagnostic', 'sld_agent', (string) $agente->id());
+        $this->asegurarUso($nuevo, (string) $agente->id());
       }
     }
 
-    if ($anterior > 0) {
+    if ($anterior > 0 && $anterior !== $actual) {
       $viejo = $almacen->load($anterior);
 
       if ($viejo instanceof FileInterface) {
         $this->fileUsage->delete($viejo, 'sales_leadership_diagnostic', 'sld_agent', (string) $agente->id());
       }
+    }
+  }
+
+  /**
+   * Registra el uso del archivo si no lo estaba ya.
+   *
+   * `add()` incrementa un contador cada vez que se le llama, así que llamarlo
+   * en cada guardado dejaría un recuento inflado que después impediría liberar
+   * el archivo. Se comprueba antes.
+   */
+  private function asegurarUso(FileInterface $archivo, string $agentId): void {
+    $usos = $this->fileUsage->listUsage($archivo);
+    $registrado = (int) ($usos['sales_leadership_diagnostic']['sld_agent'][$agentId] ?? 0);
+
+    if ($registrado === 0) {
+      $this->fileUsage->add($archivo, 'sales_leadership_diagnostic', 'sld_agent', $agentId);
     }
   }
 

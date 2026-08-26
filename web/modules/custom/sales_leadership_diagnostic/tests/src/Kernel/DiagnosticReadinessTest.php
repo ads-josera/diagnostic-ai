@@ -99,20 +99,18 @@ final class DiagnosticReadinessTest extends KernelTestBase {
   }
 
   /**
-   * El prompt de la configuración antigua ya NO da por listo al módulo.
+   * La configuración del agente único ya no existe.
    *
-   * Es la prueba que fija la corrección: por muy lleno que esté ese objeto de
-   * configuración, sin agentes no hay nada que ofrecer.
+   * Fue la definición del agente cuando solo había uno, y se retiró el
+   * 26-08-2026 con update_10012. Se comprueba aquí porque su presencia era lo
+   * que hacía que el módulo se diera por listo sin tener ningún agente.
    */
-  public function testLaConfiguracionAntiguaYaNoDaPorListoAlModulo(): void {
-    $this->config('sales_leadership_diagnostic.diagnostic')
-      ->set('system_prompt', 'Un prompt que quedó de cuando había un solo agente.')
-      ->save();
-
-    $this->assertFalse(
-      $this->readiness()->isReady(),
-      'La configuración antigua no debe bastar: el diagnóstico lo conducen los agentes.',
+  public function testLaConfiguracionDelAgenteUnicoYaNoExiste(): void {
+    $this->assertTrue(
+      $this->config('sales_leadership_diagnostic.diagnostic')->isNew(),
+      'No debe reaparecer al instalar el módulo.',
     );
+    $this->assertFalse($this->readiness()->isReady());
   }
 
   /**

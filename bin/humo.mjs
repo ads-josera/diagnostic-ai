@@ -149,8 +149,13 @@ export default async function run(page) {
       '/admin/content/sales-diagnostic',
       '/admin/config/salesbumm/diagnostic',
       '/admin/config/salesbumm/diagnostic/estudio',
-      '/admin/config/salesbumm/diagnostic/bienvenida',
-      '/admin/config/salesbumm/diagnostic/agent',
+      // Las pestañas «Agente» y «Bienvenida» se retiraron el 26-08-2026: la
+      // primera editaba un prompt que ya no usaba nadie y la segunda una
+      // bienvenida que debía ser de cada agente. Su contenido vive ahora en la
+      // ficha del agente, que es la que se comprueba.
+      '/admin/config/salesbumm/diagnostic/agentes',
+      '/admin/config/salesbumm/diagnostic/agentes/sales_leadership_diagnostic',
+      '/admin/config/salesbumm/diagnostic/documentos',
       '/admin/config/salesbumm/diagnostic/marca',
       '/admin/reports/status',
     ]) {
@@ -160,7 +165,13 @@ export default async function run(page) {
     // Los formularios se ENVÍAN. Que su página cargue no dice nada: los tres
     // fallos de configuración de este proyecto solo aparecían al guardar.
     await guarda('/admin/config/salesbumm/diagnostic/marca', 'Marca');
-    await guarda('/admin/config/salesbumm/diagnostic/bienvenida', 'Bienvenida del chat');
+    // La ficha del agente reúne prompt y bienvenida. Guardarla SIN tocar nada
+    // tiene que dejarla idéntica: los navegadores envían saltos CRLF y hubo un
+    // momento en que cada guardado engordaba el prompt y cambiaba su huella.
+    await guarda(
+      '/admin/config/salesbumm/diagnostic/agentes/sales_leadership_diagnostic',
+      'Ficha del agente',
+    );
 
     await legibleEnAmbosModos(
       '/admin/config/salesbumm/diagnostic/estudio',

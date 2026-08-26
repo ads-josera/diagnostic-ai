@@ -416,6 +416,9 @@ final class DiagnosticStarterTest extends KernelTestBase {
    *
    * Los secretos van por Settings y no por configuración, que es justamente lo
    * que exige §29 para que no acaben en un archivo exportable.
+   *
+   * El prompt ya no se fija aquí: desde el 26-08-2026 lo aporta el agente, que
+   * crea agente() al vuelo.
    */
   private function configurarModulo(): void {
     $this->setSetting(SecretsProvider::JWT_SHARED_SECRET, str_repeat('a', 32));
@@ -425,11 +428,6 @@ final class DiagnosticStarterTest extends KernelTestBase {
     $this->config('sales_leadership_diagnostic.settings')
       ->set('wordpress.api_base_url', 'https://ejemplo.test')
       ->set('wordpress.course_id', '35884')
-      ->save();
-
-    $this->config('sales_leadership_diagnostic.diagnostic')
-      ->set('version', '1.0-TEST')
-      ->set('system_prompt', 'Eres un consultor de liderazgo comercial.')
       ->save();
   }
 
