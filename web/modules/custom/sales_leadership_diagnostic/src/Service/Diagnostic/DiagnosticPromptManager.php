@@ -57,6 +57,31 @@ final class DiagnosticPromptManager {
   }
 
   /**
+   * Compone el prompt de un BORRADOR que se está ensayando.
+   *
+   * Toma la metodología del borrador y los documentos del agente, en el mismo
+   * orden que composeFor(). Que incluya los documentos no es un detalle: el
+   * ensayo tiene que probar lo que de verdad va a vivir el alumno, y hasta el
+   * 26-08-2026 el estudio componía sin ellos —y encima desde la configuración
+   * antigua—, así que ensayaba algo que no existía en ninguna parte.
+   *
+   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface $agent
+   *   Agente al que pertenece el borrador. Aporta sus documentos.
+   * @param array<string, string> $values
+   *   Campos del borrador.
+   */
+  public function composeDraft(DiagnosticAgentInterface $agent, array $values): string {
+    $parts = array_filter([
+      trim((string) ($values['system_prompt'] ?? '')),
+      $this->knowledge->compose($agent),
+      trim((string) ($values['instructions'] ?? '')),
+      trim((string) ($values['output_contract'] ?? '')),
+    ], static fn (string $part): bool => $part !== '');
+
+    return implode("\n\n", $parts);
+  }
+
+  /**
    * Compone el prompt completo con la configuración vigente.
    *
    * Se usa al CREAR una sesión, para congelarlo. Una sesión ya iniciada nunca

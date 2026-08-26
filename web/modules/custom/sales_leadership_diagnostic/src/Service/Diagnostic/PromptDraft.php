@@ -25,13 +25,18 @@ use Drupal\Core\State\StateInterface;
  *    borrador de alguien a medio escribir no es algo que deba viajar.
  *  - Nadie debería poder publicar un prompt sin querer al importar
  *    configuración desde otro sitio.
+ *
+ * Hay un borrador POR AGENTE, desde el 26-08-2026. Con uno solo daba igual;
+ * con varios, un borrador compartido significaba que ensayar un cambio en el
+ * agente de prospección pisara el borrador a medias del de liderazgo, y que
+ * publicar escribiera en el agente equivocado.
  */
 final class PromptDraft {
 
   /**
-   * Clave del estado donde vive el borrador.
+   * Prefijo de la clave del estado. Se completa con el agente.
    */
-  private const STATE_KEY = 'sales_leadership_diagnostic.prompt_draft';
+  private const STATE_PREFIX = 'sales_leadership_diagnostic.prompt_draft.';
 
   /**
    * Campos que componen el prompt.
@@ -51,20 +56,23 @@ final class PromptDraft {
   ) {}
 
   /**
-   * Indica si hay un borrador sin publicar.
+   * Indica si hay un borrador sin publicar para el agente.
    */
-  public function exists(): bool {
-    return is_array($this->state->get(self::STATE_KEY));
+  public function exists(string $agentId): bool {
+    return is_array($this->state->get($this->key($agentId)));
   }
 
   /**
    * Devuelve el borrador guardado, o un array vacío si no hay ninguno.
    *
+   * @param string $agentId
+   *   Agente cuyo borrador se pide.
+   *
    * @return array<string, string>
    *   Los campos del borrador.
    */
-  public function get(): array {
-    $stored = $this->state->get(self::STATE_KEY);
+  public function get(string $agentId): array {
+    $stored = $this->state->get($this->key($agentId));
 
     if (!is_array($stored)) {
       return [];
@@ -82,8 +90,8 @@ final class PromptDraft {
   /**
    * Momento del último guardado, o NULL si no hay borrador.
    */
-  public function getSavedAt(): ?int {
-    $stored = $this->state->get(self::STATE_KEY);
+  public function getSavedAt(string $agentId): ?int {
+    $stored = $this->state->get($this->key($agentId));
 
     return is_array($stored) && is_numeric($stored['saved_at'] ?? NULL)
       ? (int) $stored['saved_at']
@@ -93,17 +101,19 @@ final class PromptDraft {
   /**
    * Guarda el borrador.
    *
+   * @param string $agentId
+   *   Agente al que pertenece.
    * @param array<string, string> $values
    *   Los campos a guardar. Los que no vengan se guardan vacíos.
    */
-  public function save(array $values): void {
+  public function save(string $agentId, array $values): void {
     $draft = ['saved_at' => $this->time->getRequestTime()];
 
     foreach (self::FIELDS as $field) {
       $draft[$field] = trim((string) ($values[$field] ?? ''));
     }
 
-    $this->state->set(self::STATE_KEY, $draft);
+    $this->state->set($this->key($agentId), $draft);
   }
 
   /**
@@ -113,31 +123,15 @@ final class PromptDraft {
    * ser un borrador, y conservarlo haría que el estudio siguiera mostrando
    * «hay cambios sin publicar» cuando ya no los hay.
    */
-  public function discard(): void {
-    $this->state->delete(self::STATE_KEY);
+  public function discard(string $agentId): void {
+    $this->state->delete($this->key($agentId));
   }
 
   /**
-   * Compone el prompt del borrador, para ensayarlo.
-   *
-   * Misma composición que la del prompt publicado —las tres partes unidas por
-   * una línea en blanco— porque si el ensayo no compusiera igual, probaría algo
-   * distinto de lo que luego vivirá el alumno.
-   *
-   * @param array<string, string> $values
-   *   Campos del borrador.
+   * Clave del estado para un agente.
    */
-  public static function compose(array $values): string {
-    $parts = array_filter(
-      [
-        trim((string) ($values['system_prompt'] ?? '')),
-        trim((string) ($values['instructions'] ?? '')),
-        trim((string) ($values['output_contract'] ?? '')),
-      ],
-      static fn (string $part): bool => $part !== '',
-    );
-
-    return implode("\n\n", $parts);
+  private function key(string $agentId): string {
+    return self::STATE_PREFIX . $agentId;
   }
 
 }

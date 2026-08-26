@@ -206,9 +206,21 @@ sales_leadership_diagnostic.studio:
   requirements:
     _permission: 'edit diagnostic prompt+administer sales leadership diagnostic'
 
+# Mismo estudio, para un agente concreto. La pestana apunta a la ruta sin
+# parametro, que entra directa si solo hay un agente y pregunta si hay varios;
+# esta existe para poder enlazar a cada uno. Mismo patron que los documentos.
+sales_leadership_diagnostic.studio_agent:
+  path: '/admin/config/salesbumm/diagnostic/estudio/agente/{sld_agent}'
+  methods: [GET, POST]
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\PromptStudioController::view'
+    _title: 'Estudio del prompt'
+  requirements:
+    _permission: 'edit diagnostic prompt+administer sales leadership diagnostic'
+
 # Descarta la conversación de ensayo y empieza otra.
 sales_leadership_diagnostic.studio_reset:
-  path: '/admin/config/salesbumm/diagnostic/estudio/reiniciar'
+  path: '/admin/config/salesbumm/diagnostic/estudio/reiniciar/{sld_agent}'
   methods: [POST]
   defaults:
     _controller: 'Drupal\sales_leadership_diagnostic\Controller\PromptStudioController::reset'

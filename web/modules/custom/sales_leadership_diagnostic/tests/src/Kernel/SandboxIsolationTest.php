@@ -7,6 +7,7 @@ namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\Access\SandboxSessionCheck;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSession;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\SandboxSessionManager;
@@ -88,7 +89,7 @@ final class SandboxIsolationTest extends KernelTestBase {
    * El gestor obtiene una conversación marcada como prueba.
    */
   public function testLaConversacionDeEnsayoNaceMarcada(): void {
-    $session = $this->manager()->getOrCreate($this->gestor);
+    $session = $this->manager()->getOrCreate($this->gestor, $this->agente());
 
     $this->assertTrue(
       (bool) $session->get('is_sandbox')->value,
@@ -101,8 +102,8 @@ final class SandboxIsolationTest extends KernelTestBase {
    * Solo hay una conversación de ensayo viva por gestor.
    */
   public function testNoSeAcumulanEnsayos(): void {
-    $primera = $this->manager()->getOrCreate($this->gestor);
-    $segunda = $this->manager()->getOrCreate($this->gestor);
+    $primera = $this->manager()->getOrCreate($this->gestor, $this->agente());
+    $segunda = $this->manager()->getOrCreate($this->gestor, $this->agente());
 
     $this->assertSame($primera->id(), $segunda->id());
   }
@@ -111,8 +112,8 @@ final class SandboxIsolationTest extends KernelTestBase {
    * Reiniciar descarta la anterior en lugar de dejarla acumulada.
    */
   public function testReiniciarSustituyeLaConversacion(): void {
-    $primera = $this->manager()->getOrCreate($this->gestor);
-    $segunda = $this->manager()->reset($this->gestor);
+    $primera = $this->manager()->getOrCreate($this->gestor, $this->agente());
+    $segunda = $this->manager()->reset($this->gestor, $this->agente());
 
     $this->assertNotSame($primera->id(), $segunda->id());
     $this->assertSame(1, $this->contarSesionesDe($this->gestor), 'La anterior debería haberse borrado.');
@@ -129,7 +130,7 @@ final class SandboxIsolationTest extends KernelTestBase {
     $check = $this->container->get(SandboxSessionCheck::class);
     $route = new Route('/irrelevante');
 
-    $ensayoDelGestor = $this->manager()->getOrCreate($this->gestor);
+    $ensayoDelGestor = $this->manager()->getOrCreate($this->gestor, $this->agente());
     $sesionDelAlumno = $this->crearSesionReal($this->alumno);
 
     $this->assertTrue(
@@ -163,7 +164,7 @@ final class SandboxIsolationTest extends KernelTestBase {
    * reproducción de ella: lo que importa es que ESA consulta los excluya.
    */
   public function testUnEnsayoNoCuentaParaElLimitePorPeriodo(): void {
-    $this->manager()->getOrCreate($this->gestor);
+    $this->manager()->getOrCreate($this->gestor, $this->agente());
     $this->crearSesionReal($this->gestor);
 
     $reales = (int) $this->container->get('entity_type.manager')
@@ -177,6 +178,31 @@ final class SandboxIsolationTest extends KernelTestBase {
 
     $this->assertSame(1, $reales, 'Solo la sesión real debería contar.');
     $this->assertSame(2, $this->contarSesionesDe($this->gestor), 'Pero ambas existen.');
+  }
+
+  /**
+   * Agente del ensayo, creado al vuelo la primera vez que se pide.
+   *
+   * El estudio ensaya el prompt de un agente concreto desde el 26-08-2026, así
+   * que ya no se puede pedir una conversación de prueba «a secas».
+   */
+  private function agente(): DiagnosticAgentInterface {
+    $almacen = $this->container->get('entity_type.manager')->getStorage('sld_agent');
+    $agente = $almacen->load('agente_prueba');
+
+    if ($agente === NULL) {
+      $agente = $almacen->create([
+        'id' => 'agente_prueba',
+        'label' => 'Agente de prueba',
+        'status' => TRUE,
+        'version' => '1.0-TEST',
+        'course_id' => '35884',
+        'system_prompt' => 'Prompt de prueba.',
+      ]);
+      $agente->save();
+    }
+
+    return $agente;
   }
 
   /**

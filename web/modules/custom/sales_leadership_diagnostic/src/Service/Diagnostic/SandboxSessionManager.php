@@ -8,6 +8,7 @@ use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 
 /**
@@ -45,10 +46,38 @@ final class SandboxSessionManager {
   /**
    * Devuelve la conversación de ensayo del gestor, creándola si hace falta.
    */
-  public function getOrCreate(AccountInterface $account): DiagnosticSessionInterface {
-    $existing = $this->findFor($account);
+  public function getOrCreate(AccountInterface $account, DiagnosticAgentInterface $agent): DiagnosticSessionInterface {
+    $existing = $this->findFor($account, $agent);
 
-    return $existing ?? $this->create($account);
+    // Se reutiliza solo si se construyó con el MISMO prompt que se ensayaría
+    // ahora. Una sesión de ensayo congela su copia igual que la de un alumno,
+    // así que si el prompt cambió por otra vía —se publicó desde el formulario
+    // del agente, o se desplegó una versión nueva— el gestor estaría editando
+    // un texto y conversando con otro, sin nada que se lo indicara. Guardar y
+    // publicar ya reinician por su cuenta; esto cubre lo que cambia fuera.
+    if ($existing !== NULL && $existing->getPromptHash() === $this->hashPrevisto($agent)) {
+      return $existing;
+    }
+
+    if ($existing !== NULL) {
+      $this->deleteFor($account, $agent);
+    }
+
+    return $this->create($account, $agent);
+  }
+
+  /**
+   * Huella del prompt que se ensayaría ahora mismo con este agente.
+   */
+  private function hashPrevisto(DiagnosticAgentInterface $agent): string {
+    $agentId = (string) $agent->id();
+    $values = $this->draft->exists($agentId) ? $this->draft->get($agentId) : [];
+
+    $prompt = $values === []
+      ? $this->prompts->composeFor($agent)
+      : $this->prompts->composeDraft($agent, $values);
+
+    return $this->prompts->hash($prompt);
   }
 
   /**
@@ -57,10 +86,10 @@ final class SandboxSessionManager {
    * Es la operación más usada del estudio: se cambia el prompt, se reinicia y
    * se vuelve a probar desde el primer turno, que es donde se nota el cambio.
    */
-  public function reset(AccountInterface $account): DiagnosticSessionInterface {
-    $this->deleteFor($account);
+  public function reset(AccountInterface $account, DiagnosticAgentInterface $agent): DiagnosticSessionInterface {
+    $this->deleteFor($account, $agent);
 
-    return $this->create($account);
+    return $this->create($account, $agent);
   }
 
   /**
@@ -69,9 +98,9 @@ final class SandboxSessionManager {
    * Borra la sesión entera, con sus mensajes: Drupal se encarga de la tabla de
    * mensajes al eliminar la sesión, porque cuelga de ella.
    */
-  public function deleteFor(AccountInterface $account): void {
+  public function deleteFor(AccountInterface $account, ?DiagnosticAgentInterface $agent = NULL): void {
     $storage = $this->entityTypeManager->getStorage('sld_diagnostic_session');
-    $sessions = $storage->loadMultiple($this->idsFor($account));
+    $sessions = $storage->loadMultiple($this->idsFor($account, $agent));
 
     if ($sessions !== []) {
       $storage->delete($sessions);
@@ -92,8 +121,8 @@ final class SandboxSessionManager {
   /**
    * Busca la conversación de ensayo viva del gestor.
    */
-  private function findFor(AccountInterface $account): ?DiagnosticSessionInterface {
-    $ids = $this->idsFor($account);
+  private function findFor(AccountInterface $account, DiagnosticAgentInterface $agent): ?DiagnosticSessionInterface {
+    $ids = $this->idsFor($account, $agent);
 
     if ($ids === []) {
       return NULL;
@@ -112,31 +141,39 @@ final class SandboxSessionManager {
    * @return int[]
    *   Identificadores, del más reciente al más antiguo.
    */
-  private function idsFor(AccountInterface $account): array {
-    $ids = $this->entityTypeManager
+  private function idsFor(AccountInterface $account, ?DiagnosticAgentInterface $agent = NULL): array {
+    $consulta = $this->entityTypeManager
       ->getStorage('sld_diagnostic_session')
       ->getQuery()
       ->accessCheck(FALSE)
       ->condition('uid', (int) $account->id())
       ->condition('is_sandbox', TRUE)
-      ->sort('created', 'DESC')
-      ->execute();
+      ->sort('created', 'DESC');
 
-    return array_map('intval', array_values($ids));
+    // Sin agente se devuelven TODOS los ensayos del gestor. Lo usa la limpieza
+    // al salir del estudio; para lo demás se acota, porque cada agente tiene su
+    // propia conversación de prueba y reiniciar la de uno no debe borrar la
+    // del otro.
+    if ($agent !== NULL) {
+      $consulta->condition('agent', $agent->id());
+    }
+
+    return array_map('intval', array_values($consulta->execute()));
   }
 
   /**
    * Crea una conversación de ensayo con el prompt en borrador.
    */
-  private function create(AccountInterface $account): DiagnosticSessionInterface {
-    $values = $this->draft->exists() ? $this->draft->get() : [];
+  private function create(AccountInterface $account, DiagnosticAgentInterface $agent): DiagnosticSessionInterface {
+    $agentId = (string) $agent->id();
+    $values = $this->draft->exists($agentId) ? $this->draft->get($agentId) : [];
 
-    // Sin borrador se ensaya el prompt publicado. Es lo razonable al abrir el
-    // estudio por primera vez: se ve cómo se comporta lo que hay hoy antes de
-    // decidir qué cambiar.
+    // Sin borrador se ensaya el prompt publicado del agente. Es lo razonable
+    // al abrir el estudio por primera vez: se ve cómo se comporta lo que hay
+    // hoy antes de decidir qué cambiar.
     $prompt = $values === []
-      ? $this->prompts->compose()
-      : PromptDraft::compose($values);
+      ? $this->prompts->composeFor($agent)
+      : $this->prompts->composeDraft($agent, $values);
 
     $version = trim((string) ($values['version'] ?? ''));
 
@@ -146,7 +183,10 @@ final class SandboxSessionManager {
         'uid' => $account->id(),
         'wp_user_id' => self::NOT_APPLICABLE,
         'course_id' => self::NOT_APPLICABLE,
-        'diagnostic_version' => $version === '' ? $this->prompts->getCurrentVersion() : $version,
+        // El ensayo se marca con SU agente: sin esto, la bienvenida del chat
+        // no sabría cuál enseñar y el gestor probaría sin ella.
+        'agent' => $agentId,
+        'diagnostic_version' => $version === '' ? $agent->getVersion() : $version,
         'prompt_snapshot' => $prompt,
         'prompt_hash' => $this->prompts->hash($prompt),
         'started_at' => $this->time->getRequestTime(),

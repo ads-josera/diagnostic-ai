@@ -8,10 +8,12 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Form\PromptStudioForm;
 use Drupal\sales_leadership_diagnostic\MessageRole;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\SandboxSessionManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -34,6 +36,7 @@ final class PromptStudioController extends ControllerBase {
 
   public function __construct(
     private readonly SandboxSessionManager $sandbox,
+    private readonly AgentRegistry $agents,
     private readonly DiagnosticMessageRepository $messages,
     private readonly MarkdownRenderer $markdown,
     private readonly DateFormatterInterface $dateFormatter,
@@ -45,6 +48,7 @@ final class PromptStudioController extends ControllerBase {
   public static function create(ContainerInterface $container): static {
     return new static(
       $container->get(SandboxSessionManager::class),
+      $container->get(AgentRegistry::class),
       $container->get(DiagnosticMessageRepository::class),
       $container->get(MarkdownRenderer::class),
       $container->get('date.formatter'),
@@ -54,16 +58,35 @@ final class PromptStudioController extends ControllerBase {
   /**
    * Construye la página del estudio.
    */
-  public function view(): array {
-    $session = $this->sandbox->getOrCreate($this->currentUser());
+  public function view(?DiagnosticAgentInterface $sld_agent = NULL): array {
+    $agente = $this->resolverAgente($sld_agent);
+
+    // Sin agente elegido no hay nada que ensayar: se pinta solo el formulario,
+    // que en ese caso es la pantalla de elección. Crear una conversación de
+    // prueba antes de saber de qué agente sería crearla del equivocado.
+    if ($agente === NULL) {
+      return [
+        '#theme' => 'sld_studio',
+        '#form' => $this->formBuilder()->getForm(PromptStudioForm::class, NULL),
+        '#session_id' => 0,
+        '#messages' => [],
+        '#reset_url' => '',
+        '#cache' => ['contexts' => ['user'], 'max-age' => 0],
+      ];
+    }
+
+    $session = $this->sandbox->getOrCreate($this->currentUser(), $agente);
     $sessionId = (int) $session->id();
 
     return [
       '#theme' => 'sld_studio',
-      '#form' => $this->formBuilder()->getForm(PromptStudioForm::class),
+      '#form' => $this->formBuilder()->getForm(PromptStudioForm::class, $agente),
       '#session_id' => $sessionId,
       '#messages' => $this->buildMessages($sessionId),
-      '#reset_url' => Url::fromRoute('sales_leadership_diagnostic.studio_reset')->toString(),
+      '#reset_url' => Url::fromRoute(
+        'sales_leadership_diagnostic.studio_reset',
+        ['sld_agent' => $agente->id()],
+      )->toString(),
       '#attached' => [
         'library' => ['sales_leadership_diagnostic/studio'],
         'drupalSettings' => [
@@ -91,14 +114,35 @@ final class PromptStudioController extends ControllerBase {
   /**
    * Reinicia la conversación de prueba y vuelve al estudio.
    */
-  public function reset(): RedirectResponse {
-    $this->sandbox->reset($this->currentUser());
+  public function reset(DiagnosticAgentInterface $sld_agent): RedirectResponse {
+    $this->sandbox->reset($this->currentUser(), $sld_agent);
 
     $this->messenger()->addStatus($this->t('Conversación de prueba reiniciada.'));
 
     return new RedirectResponse(
-      Url::fromRoute('sales_leadership_diagnostic.studio')->toString(),
+      Url::fromRoute(
+        'sales_leadership_diagnostic.studio_agent',
+        ['sld_agent' => $sld_agent->id()],
+      )->toString(),
     );
+  }
+
+  /**
+   * Decide sobre qué agente se trabaja.
+   *
+   * Con uno solo se entra directo; con varios hace falta elegir, y devolver
+   * NULL es lo que hace que se pinte la pantalla de elección. Es la misma
+   * regla que la pantalla de documentos, y por el mismo motivo: elegir uno en
+   * silencio lleva a editar el que no era.
+   */
+  private function resolverAgente(?DiagnosticAgentInterface $sld_agent): ?DiagnosticAgentInterface {
+    if ($sld_agent instanceof DiagnosticAgentInterface) {
+      return $sld_agent;
+    }
+
+    $disponibles = $this->agents->getUsable();
+
+    return count($disponibles) === 1 ? reset($disponibles) : NULL;
   }
 
   /**
