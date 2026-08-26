@@ -317,3 +317,13 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository'
       - '@entity_type.manager'
       - '@logger.factory'
+
+  # --- Errores imprevistos ---------------------------------------------------
+
+  # Ultimo recinto: convierte en respuesta presentable lo que ningun controlador
+  # esperaba. Solo actua sobre las rutas del modulo.
+  Drupal\sales_leadership_diagnostic\EventSubscriber\DiagnosticExceptionSubscriber:
+    arguments:
+      - '@logger.factory'
+    tags:
+      - { name: event_subscriber }
