@@ -158,6 +158,56 @@ final class StudentMemoryStore {
   }
 
   /**
+   * El bloque de memoria que se añade al prompt de una sesión nueva.
+   *
+   * Devuelve cadena vacía si no hay nada recordado, de modo que la primera
+   * conversación de un alumno sea exactamente igual que antes de que esto
+   * existiera.
+   *
+   * El texto que envuelve a los hechos es tan importante como los hechos. La
+   * memoria la escribió un modelo leyendo una conversación de hace meses:
+   * puede estar desactualizada y puede estar mal. Si el agente la tratara como
+   * un dato firme, dos cosas malas ocurrirían a la vez —daría por sabido algo
+   * falso y lo contaría entre las evidencias— y la metodología del cliente,
+   * que exige evidencia antes que opinión, quedaría contaminada desde el
+   * primer turno. Por eso se le dice explícitamente que esto NO es evidencia y
+   * que hay que confirmarlo.
+   */
+  public function compose(int $uid): string {
+    $hechos = $this->forUser($uid);
+
+    if ($hechos === []) {
+      return '';
+    }
+
+    $lineas = [];
+
+    foreach ($hechos as $hecho) {
+      $tema = $hecho->getTopic();
+
+      if ($tema !== NULL) {
+        $lineas[] = '- ' . $tema->label() . ': ' . $hecho->getContent();
+      }
+    }
+
+    return implode("\n", [
+      '## Lo que ya sabíamos de esta persona',
+      '',
+      'Recogido en conversaciones anteriores suyas con este sistema.',
+      '',
+      implode("\n", $lineas),
+      '',
+      'Úsalo para no hacerle repetir lo que ya contó: da por sabido el',
+      'contexto y arranca desde ahí.',
+      '',
+      'IMPORTANTE: esto NO es evidencia y no puede citarse como tal. Puede',
+      'haber quedado desactualizado o ser incorrecto. Antes de apoyarte en',
+      'cualquiera de estos datos para una conclusión, confírmalo con ella en',
+      'la conversación.',
+    ]);
+  }
+
+  /**
    * Recorta el texto sin partir una palabra por la mitad.
    */
   private function recortar(string $content): string {

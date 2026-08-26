@@ -97,7 +97,7 @@ class DiagnosticSession extends ContentEntityBase implements DiagnosticSessionIn
 
     $fields['prompt_hash'] = BaseFieldDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Huella del prompt'))
-      ->setDescription(new TranslatableMarkup('SHA-256 del prompt congelado. Permite detectar de un vistazo si dos sesiones de la misma versión usaron contenidos distintos.'))
+      ->setDescription(new TranslatableMarkup('SHA-256 de la metodología congelada. Permite detectar de un vistazo si dos sesiones de la misma versión usaron contenidos distintos. NO incluye la memoria del alumno, que es distinta para cada persona: incluirla haría que no hubiera dos huellas iguales y esa comparación dejaría de servir.'))
       ->setSetting('max_length', 64);
 
     $fields['turn_count'] = BaseFieldDefinition::create('integer')

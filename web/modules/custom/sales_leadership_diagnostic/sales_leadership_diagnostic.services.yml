@@ -225,6 +225,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManager'
       - '@Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker'
       - '@Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry'
+      - '@Drupal\sales_leadership_diagnostic\Service\Memory\StudentMemoryStore'
       - '@Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner'
       - '@Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter'
       - '@config.factory'

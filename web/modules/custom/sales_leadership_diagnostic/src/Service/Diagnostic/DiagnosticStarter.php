@@ -17,6 +17,7 @@ use Drupal\sales_leadership_diagnostic\Exception\CannotStartDiagnosticException;
 use Drupal\sales_leadership_diagnostic\RepeatPolicy;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
+use Drupal\sales_leadership_diagnostic\Service\Memory\StudentMemoryStore;
 use Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter;
 use Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
@@ -59,6 +60,7 @@ final class DiagnosticStarter {
     private readonly DiagnosticPromptManager $prompts,
     private readonly DiagnosticAccessChecker $accessChecker,
     private readonly AgentRegistry $agents,
+    private readonly StudentMemoryStore $memory,
     private readonly UserProvisioner $provisioner,
     private readonly RateLimiter $rateLimiter,
     private readonly ConfigFactoryInterface $configFactory,
@@ -274,6 +276,19 @@ final class DiagnosticStarter {
   private function createSession(AccountInterface $account, DiagnosticAgentInterface $agent, string $externalUserId, string $courseId): DiagnosticSessionInterface {
     $prompt = $this->prompts->composeFor($agent);
 
+    // La memoria se añade DESPUÉS de calcular la huella. La huella sirve para
+    // ver de un vistazo si dos sesiones de la misma versión usaron la misma
+    // metodología, y la memoria es distinta para cada alumno: incluirla haría
+    // que no hubiera dos huellas iguales y esa comparación dejaría de servir
+    // para nada. La copia guardada sí la lleva, porque es el registro literal
+    // de lo que condujo esta conversación.
+    $huella = $this->prompts->hash($prompt);
+    $memoria = $this->memory->compose((int) $account->id());
+
+    if ($memoria !== '') {
+      $prompt .= "\n\n" . $memoria;
+    }
+
     $session = $this->entityTypeManager
       ->getStorage('sld_diagnostic_session')
       ->create([
@@ -286,7 +301,7 @@ final class DiagnosticStarter {
         // Sin ella, un cambio posterior del prompt haría imposible saber con
         // qué instrucciones se generó un diagnóstico antiguo (§57).
         'prompt_snapshot' => $prompt,
-        'prompt_hash' => $this->prompts->hash($prompt),
+        'prompt_hash' => $huella,
         'started_at' => $this->time->getRequestTime(),
       ]);
 

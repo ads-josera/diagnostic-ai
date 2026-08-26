@@ -10,9 +10,11 @@ use Drupal\sales_leadership_diagnostic\DTO\AccessDecision;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSession;
 use Drupal\sales_leadership_diagnostic\Exception\CannotStartDiagnosticException;
+use Drupal\sales_leadership_diagnostic\MemoryTopic;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\CourseAccessProviderInterface;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticStarter;
+use Drupal\sales_leadership_diagnostic\Service\Memory\StudentMemoryStore;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
 use Drupal\Tests\sales_leadership_diagnostic\Kernel\Stub\StubCourseAccessProvider;
 use Drupal\user\Entity\Role;
@@ -86,6 +88,9 @@ final class DiagnosticStarterTest extends KernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('sld_diagnostic_session');
     $this->installEntitySchema('sld_diagnostic_result');
+    // Al crear una sesion se consulta la memoria del alumno para añadirla al
+    // prompt; sin esta tabla el arranque fallaria.
+    $this->installEntitySchema('sld_student_memory');
     $this->installSchema('sales_leadership_diagnostic', ['sld_diagnostic_message']);
     $this->installSchema('externalauth', ['authmap']);
     $this->installConfig(['sales_leadership_diagnostic']);
@@ -133,7 +138,52 @@ final class DiagnosticStarterTest extends KernelTestBase {
     $this->assertSame(
       hash('sha256', $session->getPromptSnapshot()),
       $session->getPromptHash(),
-      'El hash debe corresponder al prompt guardado.',
+      'Sin memoria del alumno, la huella es la del prompt guardado tal cual.',
+    );
+  }
+
+  /**
+   * Si se recuerda algo del alumno, viaja en el prompt de su sesión nueva.
+   *
+   * Es el punto de la memoria 1: que volver no sea empezar de cero. Se
+   * comprueba también el envoltorio, no solo el hecho: la metodología del
+   * cliente exige evidencia antes que opinión, y una memoria presentada como
+   * dato firme la contaminaría desde el primer turno.
+   */
+  public function testLaMemoriaDelAlumnoViajaEnElPromptDeLaSesionNueva(): void {
+    $this->concederAcceso();
+    $this->recordarDelAlumno('Distribuidora de material eléctrico, 40 empleados.');
+
+    $prompt = $this->starter()->start($this->alumno, $this->agente())->getPromptSnapshot();
+
+    $this->assertStringContainsString('Distribuidora de material eléctrico', $prompt);
+    $this->assertStringContainsString('NO es evidencia', $prompt);
+    $this->assertStringContainsString('confírmalo con ella', $prompt);
+  }
+
+  /**
+   * La huella NO cambia porque el alumno tenga memoria.
+   *
+   * La huella sirve para ver si dos sesiones de la misma versión usaron la
+   * misma metodología. Si la memoria entrara en ella, no habría dos huellas
+   * iguales y esa comparación dejaría de servir para nada.
+   */
+  public function testLaMemoriaNoAlteraLaHuellaDelPrompt(): void {
+    $this->concederAcceso();
+
+    $sinMemoria = $this->starter()->start($this->alumno, $this->agente())->getPromptHash();
+
+    // Se cierra la primera para que la segunda no se reanude en vez de nacer.
+    $this->cerrarSesionesDelAlumno();
+    $this->recordarDelAlumno('Distribuidora de material eléctrico, 40 empleados.');
+
+    $conMemoria = $this->starter()->start($this->alumno, $this->agente());
+
+    $this->assertSame($sinMemoria, $conMemoria->getPromptHash());
+    $this->assertNotSame(
+      hash('sha256', $conMemoria->getPromptSnapshot()),
+      $conMemoria->getPromptHash(),
+      'La copia guardada sí lleva la memoria; la huella, no.',
     );
   }
 
@@ -296,6 +346,34 @@ final class DiagnosticStarterTest extends KernelTestBase {
     }
 
     return $agente;
+  }
+
+  /**
+   * Deja algo recordado del alumno de las pruebas.
+   */
+  private function recordarDelAlumno(string $contenido): void {
+    $this->container->get(StudentMemoryStore::class)->remember(
+      (int) $this->alumno->id(),
+      MemoryTopic::Empresa,
+      $contenido,
+      'agente_prueba',
+    );
+  }
+
+  /**
+   * Cierra las sesiones abiertas del alumno.
+   *
+   * Sin esto, el segundo intento devuelve la conversación a medias en vez de
+   * crear una sesión nueva, que es justo la regla que protege al alumno de
+   * perder lo que llevaba escrito.
+   */
+  private function cerrarSesionesDelAlumno(): void {
+    $almacen = $this->container->get('entity_type.manager')->getStorage('sld_diagnostic_session');
+
+    foreach ($almacen->loadMultiple() as $sesion) {
+      $sesion->setStatus(DiagnosticStatus::Completed);
+      $sesion->save();
+    }
   }
 
   /**
