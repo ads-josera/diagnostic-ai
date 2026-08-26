@@ -6,6 +6,7 @@ namespace Drupal\sales_leadership_diagnostic\Service\Diagnostic;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\sales_leadership_diagnostic\ReadinessBlocker;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
 
 /**
@@ -22,6 +23,7 @@ final class DiagnosticReadiness {
   public function __construct(
     private readonly ConfigFactoryInterface $configFactory,
     private readonly SecretsProvider $secrets,
+    private readonly AgentRegistry $agents,
   ) {}
 
   /**
@@ -85,12 +87,20 @@ final class DiagnosticReadiness {
   }
 
   /**
-   * Indica si el prompt del agente está cargado.
+   * Indica si hay al menos un agente en condiciones de diagnosticar.
+   *
+   * Se pregunta a los AGENTES, no a la configuración. Hasta el 26-08-2026
+   * esto miraba el `system_prompt` de la configuración antigua, que dejó de
+   * usarse al pasar a varios agentes: contestaba «sí» porque allí había
+   * quedado el prompt provisional, no porque hubiera nada utilizable. Y el
+   * día que esa configuración se vaciara, el panel del alumno habría dicho
+   * que no puede empezar teniendo su agente perfectamente cargado.
+   *
+   * `getUsable()` ya exige lo que hace falta de verdad: agente activo, con
+   * curso que lo conceda y con prompt.
    */
   public function isAgentLoaded(): bool {
-    $config = $this->configFactory->get('sales_leadership_diagnostic.diagnostic');
-
-    return trim((string) $config->get('system_prompt')) !== '';
+    return $this->agents->getUsable() !== [];
   }
 
   /**
@@ -105,10 +115,11 @@ final class DiagnosticReadiness {
    *   Las etiquetas de cache de las que depende esta decisión.
    */
   public function getCacheTags(): array {
-    return [
-      'config:sales_leadership_diagnostic.settings',
-      'config:sales_leadership_diagnostic.diagnostic',
-    ];
+    return array_merge(
+      ['config:sales_leadership_diagnostic.settings'],
+      // Crear, publicar o deshabilitar un agente cambia esta decisión.
+      $this->agents->getCacheTags(),
+    );
   }
 
 }

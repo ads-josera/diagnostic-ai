@@ -231,14 +231,6 @@ sales_leadership_diagnostic.studio_message:
     _custom_access: 'Drupal\sales_leadership_diagnostic\Access\SandboxSessionCheck::access'
     _csrf_request_header_token: 'TRUE'
 
-sales_leadership_diagnostic.agent_settings:
-  path: '/admin/config/salesbumm/diagnostic/agent'
-  defaults:
-    _form: '\Drupal\sales_leadership_diagnostic\Form\DiagnosticConfigForm'
-    _title: 'Agente de diagnóstico'
-  requirements:
-    _permission: 'administer sales leadership diagnostic'
-
 sales_leadership_diagnostic.branding:
   path: '/admin/config/salesbumm/diagnostic/marca'
   defaults:

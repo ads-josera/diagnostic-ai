@@ -10,6 +10,8 @@ use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
 use Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory;
 use Drupal\sales_leadership_diagnostic\Service\WordPress\PluginVersionTracker;
@@ -32,6 +34,7 @@ final class DiagnosticRequirements {
 
   public function __construct(
     private readonly DiagnosticReadiness $readiness,
+    private readonly AgentRegistry $agents,
     private readonly ConfigFactoryInterface $configFactory,
     private readonly DiagnosticEngineFactory $engineFactory,
     private readonly PluginVersionTracker $pluginVersions,
@@ -207,32 +210,47 @@ final class DiagnosticRequirements {
   }
 
   /**
-   * Verifica que el agente del cliente esté cargado.
+   * Verifica que haya algún agente en condiciones de diagnosticar.
    *
-   * El prompt y las instrucciones son propiedad del cliente (§15) y se cargan
-   * desde la interfaz administrativa. Mientras falten, el diagnóstico no puede
-   * ejecutarse.
+   * El prompt y la metodología son propiedad del cliente (§15) y se cargan
+   * desde la interfaz administrativa. Mientras no haya un agente utilizable,
+   * el diagnóstico no puede ejecutarse.
+   *
+   * Se listan los agentes con su versión, y no la versión de la configuración
+   * antigua como se hacía hasta el 26-08-2026: aquello informaba de un dato
+   * que ya no gobernaba nada, así que el informe podía decir «0.0-PRUEBAS»
+   * mientras los alumnos conversaban con la 1.0.
    */
   private function checkAgent(): array {
-    if (!$this->readiness->isAgentLoaded()) {
+    $usables = $this->agents->getUsable();
+
+    if ($usables === []) {
       return [
-        'title' => $this->t('Diagnostic AI: agente'),
-        'value' => $this->t('Sin prompt cargado'),
+        'title' => $this->t('Diagnostic AI: agentes'),
+        'value' => $this->t('Ninguno disponible'),
         'severity' => RequirementSeverity::Warning,
-        'description' => $this->t('El prompt y las instrucciones del agente los proporciona el cliente. Hasta cargarlos no es posible iniciar diagnósticos.'),
+        'description' => $this->t('Un agente está disponible cuando está activo, tiene curso que lo conceda y tiene prompt. Hasta que haya uno no es posible iniciar diagnósticos.'),
       ];
     }
 
-    $version = trim((string) $this->configFactory
-      ->get('sales_leadership_diagnostic.diagnostic')
-      ->get('version'));
+    $descripciones = array_map(
+      fn (DiagnosticAgentInterface $agente): string => sprintf(
+        '%s (%s)',
+        $agente->label(),
+        $agente->getVersion() !== '' ? $agente->getVersion() : (string) $this->t('sin versión'),
+      ),
+      $usables,
+    );
 
     return [
-      'title' => $this->t('Diagnostic AI: agente'),
-      'value' => $this->t('Cargado (versión @version)', [
-        '@version' => $version !== '' ? $version : $this->t('sin definir'),
-      ]),
+      'title' => $this->t('Diagnostic AI: agentes'),
+      'value' => $this->formatPlural(
+        count($usables),
+        '1 agente disponible',
+        '@count agentes disponibles',
+      ),
       'severity' => RequirementSeverity::OK,
+      'description' => implode(' · ', $descripciones),
     ];
   }
 

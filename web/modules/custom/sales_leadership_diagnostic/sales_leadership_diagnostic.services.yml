@@ -105,6 +105,7 @@ services:
     arguments:
       - '@config.factory'
       - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
+      - '@Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry'
 
   # Composición y versionado del prompt del cliente (§18, §57).
   Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManager:
