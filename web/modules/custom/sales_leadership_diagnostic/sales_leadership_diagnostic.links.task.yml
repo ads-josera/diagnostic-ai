@@ -45,12 +45,6 @@ sales_leadership_diagnostic.results_studio_tab:
   base_route: sales_leadership_diagnostic.admin_results
   weight: 10
 
-sales_leadership_diagnostic.results_welcome_tab:
-  title: 'Bienvenida del chat'
-  route_name: sales_leadership_diagnostic.chat_welcome
-  base_route: sales_leadership_diagnostic.admin_results
-  weight: 20
-
 sales_leadership_diagnostic.home_tab:
   title: 'Portada'
   route_name: sales_leadership_diagnostic.home_settings

@@ -12,6 +12,7 @@ use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 use Drupal\sales_leadership_diagnostic\MessageRole;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\ChatWelcome;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -31,6 +32,7 @@ final class ChatController extends ControllerBase {
     private readonly MarkdownRenderer $markdown,
     private readonly DateFormatterInterface $dateFormatter,
     private readonly ChatWelcome $welcome,
+    private readonly AgentRegistry $agents,
   ) {}
 
   /**
@@ -42,6 +44,7 @@ final class ChatController extends ControllerBase {
       $container->get(MarkdownRenderer::class),
       $container->get('date.formatter'),
       $container->get(ChatWelcome::class),
+      $container->get(AgentRegistry::class),
     );
   }
 
@@ -54,6 +57,13 @@ final class ChatController extends ControllerBase {
     $status = $session->getStatus();
     $statusLabels = DiagnosticStatus::allowedValues();
 
+    // La bienvenida es la del agente con el que se conversa, no una única
+    // para todo el sitio: quien compró el curso de prospección no debe
+    // encontrarse presentándose el diagnóstico de liderazgo. Puede venir NULL
+    // si el agente se borró después de empezar la conversación, y entonces
+    // simplemente no hay bienvenida que enseñar.
+    $agente = $this->agents->get($session->getAgentId());
+
     return [
       '#theme' => 'sld_chat',
       '#session_id' => (int) $session->id(),
@@ -65,10 +75,10 @@ final class ChatController extends ControllerBase {
       // hay conversación, el alumno ya sabe de qué va esto y el cartel
       // estorbaría al leer. Se resuelve aquí y no en la plantilla para que la
       // decisión quede junto al resto de la lógica de la página.
-      '#welcome_icon' => $messages === [] ? $this->welcome->getIconUrl() : NULL,
-      '#welcome_intro' => $messages === [] ? $this->welcome->getIntro() : NULL,
+      '#welcome_icon' => $messages === [] ? $this->welcome->getIconUrl($agente) : NULL,
+      '#welcome_intro' => $messages === [] ? $this->welcome->getIntro($agente) : NULL,
       '#welcome_suggestions' => $messages === [] && $status->acceptsMessages()
-        ? $this->welcome->getSuggestions()
+        ? $this->welcome->getSuggestions($agente)
         : [],
       '#attached' => [
         'library' => ['sales_leadership_diagnostic/chat'],
@@ -99,7 +109,7 @@ final class ChatController extends ControllerBase {
           // Sin esto, cambiar la bienvenida no se vería hasta que la página
           // caducase por otro motivo, que en una sesión sin turnos podría no
           // ocurrir nunca.
-          $this->welcome->getCacheTags(),
+          $this->welcome->getCacheTags($agente),
         ),
       ],
     ];

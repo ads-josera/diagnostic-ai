@@ -262,9 +262,10 @@ services:
   Drupal\sales_leadership_diagnostic\Access\SandboxSessionCheck: {}
 
   # Pantalla que ve el alumno antes de escribir su primer mensaje.
+  # La bienvenida sale del AGENTE con el que se conversa, no de un objeto de
+  # configuracion unico: cada agente se presenta a si mismo.
   Drupal\sales_leadership_diagnostic\Service\Conversation\ChatWelcome:
     arguments:
-      - '@config.factory'
       - '@entity_type.manager'
       - '@file_url_generator'
 

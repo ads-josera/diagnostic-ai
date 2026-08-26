@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Form;
 
+use Drupal\Component\Utility\Bytes;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\file\FileInterface;
+use Drupal\file\FileUsage\FileUsageInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -23,15 +26,32 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 final class DiagnosticAgentForm extends EntityForm {
 
+  /**
+   * Formatos admitidos para el icono de bienvenida.
+   */
+  private const ICON_EXTENSIONS = 'png jpg jpeg webp svg';
+
+  /**
+   * Tamaño máximo del icono.
+   *
+   * Muy por debajo del logotipo: es un icono pequeño, y un archivo de un mega
+   * para pintar 72 píxeles solo retrasa la primera pantalla del alumno.
+   */
+  private const ICON_MAX_SIZE = '512 KB';
+
   public function __construct(
     private readonly EntityTypeManagerInterface $entityTypes,
+    private readonly FileUsageInterface $fileUsage,
   ) {}
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('entity_type.manager'));
+    return new static(
+      $container->get('entity_type.manager'),
+      $container->get('file.usage'),
+    );
   }
 
   /**
@@ -132,6 +152,27 @@ final class DiagnosticAgentForm extends EntityForm {
       '#description' => $this->t('Lo que ve el alumno antes de escribir el primer mensaje.'),
     ];
 
+    $form['bienvenida']['welcome_icon_fid'] = [
+      '#type' => 'managed_file',
+      '#title' => $this->t('Icono'),
+      '#upload_location' => 'public://sales-diagnostic/',
+      '#upload_validators' => [
+        'FileExtension' => ['extensions' => self::ICON_EXTENSIONS],
+        // El límite viaja en BYTES: la restricción de core lo declara como
+        // ?int y lanza un TypeError con una cadena como «512 KB», que aborta
+        // la subida entera antes de comprobar nada.
+        'FileSizeLimit' => ['fileLimit' => (int) Bytes::toNumber(self::ICON_MAX_SIZE)],
+        'SldSafeSvg' => [],
+      ],
+      '#description' => $this->t('Se muestra sobre el texto introductorio, a 72 píxeles de alto. Formatos: @formatos. Máximo @tamano.', [
+        '@formatos' => str_replace(' ', ', ', self::ICON_EXTENSIONS),
+        '@tamano' => self::ICON_MAX_SIZE,
+      ]),
+      '#default_value' => $agente->getWelcomeIconFid() > 0
+        ? [$agente->getWelcomeIconFid()]
+        : [],
+    ];
+
     $form['bienvenida']['welcome_intro'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Texto introductorio'),
@@ -168,6 +209,31 @@ final class DiagnosticAgentForm extends EntityForm {
    * reventara con un TypeError, con la página de alta cargando sin un aviso.
    */
   protected function copyFormValuesToEntity(EntityInterface $entity, array $form, FormStateInterface $form_state): void {
+    // Los navegadores envían los textos largos con saltos CRLF, y guardarlos
+    // así tiene un efecto molesto: abrir el agente y pulsar «Guardar» sin
+    // tocar nada cambiaba el prompt —un retorno de carro por línea, 258 en el
+    // del cliente—, con él su huella, y dejaba un cambio en la configuración
+    // exportada que no correspondía a ninguna edición real.
+    foreach (['system_prompt', 'instructions', 'output_contract', 'welcome_intro'] as $campo) {
+      $texto = $form_state->getValue($campo);
+
+      if (is_string($texto)) {
+        $form_state->setValue($campo, str_replace("\r\n", "\n", $texto));
+      }
+    }
+
+    // El elemento de subida entrega una LISTA de identificadores y la entidad
+    // guarda uno solo. La conversión va aquí por el mismo motivo que la de las
+    // sugerencias, y con la misma guarda: este método corre dos veces.
+    $icono = $form_state->getValue('welcome_icon_fid');
+
+    if (is_array($icono)) {
+      $form_state->setValue(
+        'welcome_icon_fid',
+        $icono === [] ? 0 : (int) reset($icono),
+      );
+    }
+
     $valor = $form_state->getValue('welcome_suggestions');
 
     // Este método se ejecuta DOS veces —al validar y al enviar— y la segunda
@@ -190,7 +256,13 @@ final class DiagnosticAgentForm extends EntityForm {
    * {@inheritdoc}
    */
   public function save(array $form, FormStateInterface $form_state): int {
+    // Se lee ANTES de guardar: después, la entidad ya tiene el nuevo y no
+    // habría forma de saber cuál era el anterior para liberarlo.
+    $anterior = $this->iconoGuardado();
+
     $estado = parent::save($form, $form_state);
+
+    $this->registrarIcono($anterior);
 
     $this->messenger()->addStatus($this->t('Agente «@nombre» guardado.', [
       '@nombre' => $this->entity->label(),
@@ -199,6 +271,73 @@ final class DiagnosticAgentForm extends EntityForm {
     $form_state->setRedirectUrl($this->entity->toUrl('collection'));
 
     return $estado;
+  }
+
+  /**
+   * Identificador del icono que el agente tenía guardado, antes de esta vez.
+   *
+   * Devuelve 0 si es un agente nuevo o si no tenía icono.
+   */
+  private function iconoGuardado(): int {
+    $id = $this->entity->id();
+
+    if ($id === NULL) {
+      return 0;
+    }
+
+    $guardado = $this->entityTypes->getStorage('sld_agent')->loadUnchanged($id);
+
+    return $guardado instanceof DiagnosticAgentInterface
+      ? $guardado->getWelcomeIconFid()
+      : 0;
+  }
+
+  /**
+   * Consolida el icono subido y suelta el que deja de usarse.
+   *
+   * Un archivo recién subido nace TEMPORAL y Drupal lo borra a las pocas
+   * horas: sin marcarlo como permanente, el icono desaparece solo al cabo de
+   * un rato y nadie relaciona la causa con el efecto.
+   *
+   * Soltar el anterior importa por lo contrario: un archivo con uso
+   * registrado no se puede borrar desde la administración de archivos, así
+   * que sin esto cada cambio de icono dejaría el viejo clavado para siempre.
+   *
+   * @param int $anterior
+   *   Icono que tenía antes de guardar.
+   */
+  private function registrarIcono(int $anterior): void {
+    $agente = $this->entity;
+    assert($agente instanceof DiagnosticAgentInterface);
+
+    $actual = $agente->getWelcomeIconFid();
+
+    if ($actual === $anterior) {
+      return;
+    }
+
+    $almacen = $this->entityTypes->getStorage('file');
+
+    if ($actual > 0) {
+      $nuevo = $almacen->load($actual);
+
+      if ($nuevo instanceof FileInterface) {
+        if (!$nuevo->isPermanent()) {
+          $nuevo->setPermanent();
+          $nuevo->save();
+        }
+
+        $this->fileUsage->add($nuevo, 'sales_leadership_diagnostic', 'sld_agent', (string) $agente->id());
+      }
+    }
+
+    if ($anterior > 0) {
+      $viejo = $almacen->load($anterior);
+
+      if ($viejo instanceof FileInterface) {
+        $this->fileUsage->delete($viejo, 'sales_leadership_diagnostic', 'sld_agent', (string) $agente->id());
+      }
+    }
   }
 
   /**

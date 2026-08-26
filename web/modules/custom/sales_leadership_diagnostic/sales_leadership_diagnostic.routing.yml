@@ -252,14 +252,6 @@ sales_leadership_diagnostic.welcome:
 
 # Pantalla de bienvenida del chat. La administra el gestor: son textos de
 # negocio, no ajustes de la instalación.
-sales_leadership_diagnostic.chat_welcome:
-  path: '/admin/config/salesbumm/diagnostic/bienvenida'
-  defaults:
-    _form: 'Drupal\sales_leadership_diagnostic\Form\ChatWelcomeForm'
-    _title: 'Bienvenida del chat'
-  requirements:
-    _permission: 'edit diagnostic prompt+administer sales leadership diagnostic'
-
 # Contenido de la portada. Lo administra quien lleva la marca del cliente.
 sales_leadership_diagnostic.home_settings:
   path: '/admin/config/salesbumm/diagnostic/portada'

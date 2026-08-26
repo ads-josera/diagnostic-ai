@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Service\Conversation;
 
-use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\file\FileInterface;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 
 /**
  * Pantalla que ve el alumno antes de escribir nada.
@@ -17,8 +17,12 @@ use Drupal\file\FileInterface;
  * agente no habla primero, así que la pantalla tiene que explicar de qué va
  * esto y ofrecer por dónde empezar.
  *
- * Lo administra el gestor, no quien mantiene la instalación: son textos de
- * negocio, y quien conoce la metodología es quien debe redactarlos.
+ * **La bienvenida es DEL AGENTE**, y desde el 26-08-2026 se lee de él. Antes
+ * salía de un objeto de configuración único, que era correcto cuando solo
+ * había un agente y dejó de serlo en cuanto hubo varios: quien comprara el
+ * curso de prospección se habría encontrado la bienvenida del diagnóstico de
+ * liderazgo, presentándole algo que no era lo que había comprado. Cada agente
+ * se presenta a sí mismo.
  *
  * Cada pieza del contenido es opcional. Si el gestor la vacía, la pantalla se
  * reduce a lo que había antes en lugar de romperse, y las sugerencias vacías
@@ -27,21 +31,17 @@ use Drupal\file\FileInterface;
 final class ChatWelcome {
 
   /**
-   * Nombre del objeto de configuración.
-   */
-  public const CONFIG_NAME = 'sales_leadership_diagnostic.diagnostic';
-
-  /**
-   * Número de sugerencias que se pueden configurar.
+   * Número de sugerencias que se recomienda configurar.
    *
    * Cuatro caben en una fila en pantalla ancha y en dos columnas en el móvil.
    * Con más, la pantalla de bienvenida empieza a parecer un menú y deja de
-   * cumplir su función, que es quitar la parálisis del primer mensaje.
+   * cumplir su función, que es quitar la parálisis del primer mensaje. Ya no
+   * es un tope duro —el formulario del agente las admite una por línea—, sino
+   * la guía que se le da al gestor.
    */
   public const SUGGESTION_SLOTS = 4;
 
   public function __construct(
-    private readonly ConfigFactoryInterface $configFactory,
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly FileUrlGeneratorInterface $fileUrlGenerator,
   ) {}
@@ -49,8 +49,8 @@ final class ChatWelcome {
   /**
    * Texto introductorio, o NULL si el gestor lo dejó vacío.
    */
-  public function getIntro(): ?string {
-    $value = trim((string) $this->config()->get('welcome_intro'));
+  public function getIntro(?DiagnosticAgentInterface $agent): ?string {
+    $value = $agent === NULL ? '' : trim($agent->getWelcomeIntro());
 
     return $value === '' ? NULL : $value;
   }
@@ -61,16 +61,14 @@ final class ChatWelcome {
    * @return string[]
    *   Las sugerencias no vacías.
    */
-  public function getSuggestions(): array {
-    $stored = $this->config()->get('welcome_suggestions');
-
-    if (!is_array($stored)) {
+  public function getSuggestions(?DiagnosticAgentInterface $agent): array {
+    if ($agent === NULL) {
       return [];
     }
 
     $suggestions = array_map(
       static fn ($value): string => is_string($value) ? trim($value) : '',
-      $stored,
+      $agent->getWelcomeSuggestions(),
     );
 
     // array_values() reindexa: sin él, un hueco en medio dejaría un array con
@@ -85,14 +83,14 @@ final class ChatWelcome {
   /**
    * URL del icono del agente, o NULL si no hay ninguno.
    */
-  public function getIconUrl(): ?string {
-    $fid = $this->config()->get('welcome_icon_fid');
+  public function getIconUrl(?DiagnosticAgentInterface $agent): ?string {
+    $fid = $agent === NULL ? 0 : $agent->getWelcomeIconFid();
 
-    if (!is_numeric($fid) || (int) $fid <= 0) {
+    if ($fid <= 0) {
       return NULL;
     }
 
-    $file = $this->entityTypeManager->getStorage('file')->load((int) $fid);
+    $file = $this->entityTypeManager->getStorage('file')->load($fid);
 
     // El archivo pudo borrarse desde la administración sin pasar por el
     // formulario. Un icono que ya no existe no debe dejar una imagen rota en
@@ -110,27 +108,27 @@ final class ChatWelcome {
    * Sin esto habría que comprobar las tres cosas en la plantilla, y una
    * pantalla de bienvenida completamente vacía ocuparía sitio sin decir nada.
    */
-  public function hasContent(): bool {
-    return $this->getIntro() !== NULL
-      || $this->getSuggestions() !== []
-      || $this->getIconUrl() !== NULL;
+  public function hasContent(?DiagnosticAgentInterface $agent): bool {
+    return $this->getIntro($agent) !== NULL
+      || $this->getSuggestions($agent) !== []
+      || $this->getIconUrl($agent) !== NULL;
   }
 
   /**
-   * Etiquetas de cache de la configuración que consulta.
+   * Etiquetas de cache de las que depende la bienvenida.
+   *
+   * Se marca el agente concreto cuando se conoce, y la lista cuando no: así,
+   * editar la bienvenida de un agente no invalida las páginas de los demás.
    *
    * @return string[]
    *   Etiquetas de cache.
    */
-  public function getCacheTags(): array {
-    return $this->config()->getCacheTags();
-  }
+  public function getCacheTags(?DiagnosticAgentInterface $agent): array {
+    if ($agent === NULL) {
+      return $this->entityTypeManager->getDefinition('sld_agent')->getListCacheTags();
+    }
 
-  /**
-   * Configuración del agente.
-   */
-  private function config() {
-    return $this->configFactory->get(self::CONFIG_NAME);
+    return $agent->getCacheTags();
   }
 
 }
