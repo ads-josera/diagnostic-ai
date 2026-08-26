@@ -562,3 +562,25 @@ function sales_leadership_diagnostic_update_10010(): string {
     SalesLeadershipDiagnostic::FIRST_AGENT_ID,
   );
 }
+
+/**
+ * Crea el almacén de la memoria del alumno.
+ *
+ * Empieza vacío a propósito. La memoria se escribe al terminar un
+ * diagnóstico, a partir de la conversación, y las conversaciones anteriores a
+ * este cambio ya se cerraron: rellenarla a posteriori exigiría volver a
+ * pasarlas por el modelo, con su coste y su margen de error, para producir
+ * hechos que nadie ha revisado. Quien vuelva a diagnosticar la estrenará.
+ */
+function sales_leadership_diagnostic_update_10011(): string {
+  $manager = \Drupal::entityDefinitionUpdateManager();
+
+  if ($manager->getEntityType('sld_student_memory') !== NULL) {
+    return 'El almacén de la memoria ya existía; no se ha modificado nada.';
+  }
+
+  $tipo = \Drupal::entityTypeManager()->getDefinition('sld_student_memory');
+  $manager->installEntityType($tipo);
+
+  return 'Creado el almacén de la memoria del alumno, vacío. Se irá llenando a medida que se terminen diagnósticos.';
+}

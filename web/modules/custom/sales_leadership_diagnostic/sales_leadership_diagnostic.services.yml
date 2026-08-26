@@ -287,3 +287,11 @@ services:
   Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry:
     arguments:
       - '@entity_type.manager'
+
+  # --- Memoria del alumno ----------------------------------------------------
+
+  # Unico punto por el que se escribe memoria. Mantiene la regla de un hecho
+  # por tema y alumno, y ninguna de sus consultas prescinde del uid.
+  Drupal\sales_leadership_diagnostic\Service\Memory\StudentMemoryStore:
+    arguments:
+      - '@entity_type.manager'
