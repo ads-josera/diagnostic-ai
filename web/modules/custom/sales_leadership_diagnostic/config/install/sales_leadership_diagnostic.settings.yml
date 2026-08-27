@@ -34,3 +34,7 @@ diagnostic:
   # siempre: activar un límite de fábrica cambiaría en silencio lo que ya
   # funciona en una instalación existente.
   repeat_policy: unlimited
+  # Cero: no se purga nada. Una instalación existente no debe empezar a borrar
+  # datos porque alguien actualice el módulo; activarlo es una decisión que
+  # alguien tiene que tomar a sabiendas.
+  conversation_retention_days: 0

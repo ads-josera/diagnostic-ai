@@ -327,3 +327,16 @@ services:
       - '@logger.factory'
     tags:
       - { name: event_subscriber }
+
+  # --- Retencion -------------------------------------------------------------
+
+  # Retira las conversaciones viejas conservando los diagnosticos y la copia
+  # del prompt. Es privacidad, no espacio: medido, el modulo entero ocupa
+  # menos de 700 KB con diez sesiones.
+  Drupal\sales_leadership_diagnostic\Service\Diagnostic\ConversationPurger:
+    arguments:
+      - '@entity_type.manager'
+      - '@Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository'
+      - '@config.factory'
+      - '@datetime.time'
+      - '@logger.factory'

@@ -55,6 +55,13 @@ sales_leadership_diagnostic.settings:
           # como herramienta de seguimiento o como entregable de cada compra.
           type: string
           label: 'Cuántos diagnósticos puede hacer un alumno'
+        conversation_retention_days:
+          # Cuánto se conserva lo que el alumno ESCRIBIÓ. No afecta a los
+          # diagnósticos, que son su entregable y se conservan siempre, ni a
+          # la copia del prompt, que es lo que los hace reproducibles (§57).
+          # Cero conserva indefinidamente.
+          type: integer
+          label: 'Días que se conservan las conversaciones'
 
     security:
       type: mapping

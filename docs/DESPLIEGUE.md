@@ -56,6 +56,27 @@ También hay directorio privado que crear, para los documentos de conocimiento:
 
 Si falta, subir un documento falla con un error poco explícito.
 
+### Conservación de las conversaciones
+
+En **Configuración → Salesbumm → Diagnostic AI → Reglas de uso** hay un plazo
+en días. Pasado ese tiempo se borra lo que el alumno **escribió** en los
+diagnósticos ya terminados.
+
+Lo que NO se toca, y conviene saberlo antes de fijar el número:
+
+- **Los diagnósticos**, que son el entregable del alumno. Desde que guardan la
+  puntuación por dimensión siguen siendo legibles sin la conversación detrás.
+- **La copia del prompt** de cada sesión, que es lo que permite saber años
+  después con qué instrucciones se produjo cada diagnóstico (§57).
+- **Las conversaciones a medias**, lleven lo que lleven paradas: el alumno
+  puede volver a ellas.
+
+De fábrica viene en **cero**, que conserva todo indefinidamente. Es a
+propósito: actualizar el módulo no debe empezar a borrar datos de nadie.
+
+Esto es una decisión de privacidad, no de espacio. Medido el 26-08-2026 con
+diez sesiones reales, el módulo entero ocupaba menos de 700 KB.
+
 ## 2. Código y dependencias
 
 ```bash
@@ -316,7 +337,10 @@ proveedor de IA, así que no cuesta llamadas.
 - [ ] Prueba de humo superada con un alumno real
 - [ ] Copia de la base de datos guardada
 - [ ] `bin/humo.mjs` en verde
-- [ ] Cron programado y ejecutándose (sin él, la memoria del alumno no se escribe)
+- [ ] Cron programado y ejecutándose (sin él, la memoria del alumno no se
+      escribe y no se purga ninguna conversación)
+- [ ] Decidido el plazo de conservación de las conversaciones (de fábrica: no
+      se purga nada)
 - [ ] Directorio `sites/default/files-private` creado y con permisos de escritura
 - [ ] Versión del plugin subida y anotada en su CHANGELOG
 - [ ] El informe de estado muestra la versión correcta del plugin

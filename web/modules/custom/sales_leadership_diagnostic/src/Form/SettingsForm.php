@@ -302,6 +302,15 @@ final class SettingsForm extends ConfigFormBase {
         '#options_descriptions' => $descriptions,
         '#config_target' => self::CONFIG_NAME . ':diagnostic.repeat_policy',
       ],
+
+      'conversation_retention_days' => [
+        '#type' => 'number',
+        '#title' => $this->t('Días que se conservan las conversaciones'),
+        '#min' => 0,
+        '#step' => 1,
+        '#description' => $this->t('Pasado ese plazo se borra lo que el alumno ESCRIBIÓ en los diagnósticos ya terminados. Sus resultados no se tocan nunca: son su entregable, y desde que guardan la puntuación por dimensión siguen siendo legibles sin la conversación detrás. Tampoco se toca la copia del prompt, que es lo que permite saber años después con qué instrucciones se produjo cada diagnóstico. Las conversaciones a medias se conservan siempre, lleven lo que lleven paradas: el alumno puede volver a ellas. <strong>Cero conserva todo indefinidamente</strong>, que es como viene de fábrica.'),
+        '#config_target' => self::CONFIG_NAME . ':diagnostic.conversation_retention_days',
+      ],
     ];
   }
 
