@@ -369,3 +369,50 @@
   outline: 2px solid var(--sld-color-primary);
   outline-offset: 2px;
 }
+
+/**
+ * Tablas dentro de un mensaje del agente.
+ *
+ * El informe final del cliente trae una de diez filas. Se admiten desde el
+ * 26-08-2026: antes se pintaban como un párrafo lleno de barras verticales.
+ *
+ * El envoltorio con scroll propio es lo que impide que una tabla ancha empuje
+ * la burbuja y con ella toda la conversación: el desbordamiento se queda
+ * dentro de la tabla, nunca en la página.
+ */
+.sld-chat__bubble table {
+  display: block;
+  width: 100%;
+  margin: var(--sld-space-sm) 0;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.sld-chat__bubble th,
+.sld-chat__bubble td {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--sld-color-border);
+  text-align: start;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.sld-chat__bubble th {
+  background: var(--sld-color-surface);
+  font-weight: 600;
+}
+
+/* Los encabezados del informe no deben competir con el título de la página. */
+.sld-chat__bubble h2,
+.sld-chat__bubble h3,
+.sld-chat__bubble h4 {
+  margin: var(--sld-space-md) 0 var(--sld-space-xs);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.sld-chat__bubble h2:first-child,
+.sld-chat__bubble h3:first-child {
+  margin-top: 0;
+}

