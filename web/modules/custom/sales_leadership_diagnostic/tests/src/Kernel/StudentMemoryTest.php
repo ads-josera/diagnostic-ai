@@ -68,6 +68,9 @@ final class StudentMemoryTest extends KernelTestBase {
 
     $this->installEntitySchema('user');
     $this->installEntitySchema('sld_diagnostic_session');
+    // Borrar una cuenta arrastra también sus diagnósticos desde el 26-08-2026,
+    // así que su tabla tiene que existir aunque esta prueba no la use.
+    $this->installEntitySchema('sld_diagnostic_result');
     $this->installEntitySchema('sld_student_memory');
     // Borrar una cuenta limpia sus datos de usuario y su vínculo con
     // WordPress. Sin estas tablas la prueba del borrado fallaría por algo que
