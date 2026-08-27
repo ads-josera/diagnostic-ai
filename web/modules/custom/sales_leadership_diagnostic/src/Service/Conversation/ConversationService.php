@@ -39,8 +39,10 @@ use Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter;
  *     propósito es precisamente evitar esa llamada.
  *  3. El mensaje del alumno se guarda antes de llamar al motor. Si el motor
  *     falla, lo que el alumno escribió no se pierde.
- *  4. El contador de límite se registra al final, solo si el turno tuvo éxito:
- *     un fallo del sistema no debe consumir cupo del alumno.
+ *  4. El contador de límite se registra JUSTO ANTES de llamar al proveedor.
+ *     Lo que cuesta dinero es el intento, no el acierto: una llamada que
+ *     falla se paga igual. Contarla solo al terminar con éxito permitía
+ *     reintentar sin tope un turno que falla siempre.
  */
 final class ConversationService {
 
@@ -109,13 +111,28 @@ final class ConversationService {
       $this->messages->append($sessionId, MessageRole::User, $text);
 
       $context = $this->contextBuilder->build($session);
+
+      // El consumo se registra ANTES de llamar al proveedor, no después de que
+      // el turno salga bien. Lo que cuesta dinero es el intento: la llamada se
+      // paga entera aunque la respuesta llegue mal, y de hecho las que fallan
+      // por presupuesto de tokens son de las más caras, porque el modelo llegó
+      // a generar.
+      //
+      // Contarlo solo al terminar con éxito dejaba abierto justo lo que este
+      // límite existe para cerrar: un alumno atascado en un fallo podía
+      // reintentar sin tope, pagando cada vez. Se corrigió el 26-08-2026.
+      //
+      // El motivo por el que estaba al revés era razonable —no penalizar al
+      // alumno por errores del sistema— pero el remedio era peor: con 20
+      // mensajes por cada cinco minutos hay margen de sobra para que unos
+      // cuantos fallos no dejen a nadie fuera, y ese margen es configurable.
+      $this->rateLimiter->registerMessage($uid);
+
       $turn = $this->engine->process($context);
 
       $this->messages->append($sessionId, MessageRole::Assistant, $turn->message, $turn->raw);
 
       $resultId = $this->finalizeSession($session, $turn);
-
-      $this->rateLimiter->registerMessage($uid);
 
       $this->logger->info('Turno completado en la sesión @id (turno @n).', [
         '@id' => $sessionId,

@@ -7,6 +7,7 @@ namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 use Drupal\Core\Queue\QueueInterface;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
+use Drupal\sales_leadership_diagnostic\Exception\DiagnosticException;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSession;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
@@ -154,6 +155,44 @@ final class ConversationServiceTest extends KernelTestBase {
     $this->conversarHastaElFinal($session);
 
     $this->assertSame(0, $this->cola()->numberOfItems());
+  }
+
+  /**
+   * Un turno que falla TAMBIÉN consume cupo.
+   *
+   * Lo que cuesta dinero es el intento, no el acierto: la llamada al proveedor
+   * se paga entera aunque la respuesta llegue mal, y las que fallan por
+   * presupuesto de tokens son de las más caras, porque el modelo llegó a
+   * generar.
+   *
+   * Hasta el 26-08-2026 el consumo se registraba solo al terminar con éxito, y
+   * eso dejaba abierto justo lo que este límite existe para cerrar: un alumno
+   * atascado en un fallo podía reintentar sin tope, pagando cada vez.
+   */
+  public function testUnTurnoQueFallaTambienConsumeCupo(): void {
+    $session = $this->crearSesion('agente_gap');
+    $uid = (int) $this->alumno->id();
+    $flood = $this->container->get('flood');
+    $evento = 'sales_leadership_diagnostic.message';
+
+    $this->assertTrue($flood->isAllowed($evento, 1, 300, (string) $uid), 'Debe empezar sin consumo.');
+
+    // Se rompe el motor para que el turno falle DESPUÉS de haber llamado.
+    $this->setSetting(DiagnosticEngineFactory::MOCK_SETTING, FALSE);
+    $this->setSetting('sld_openai_api_key', '');
+
+    try {
+      $this->container->get(ConversationService::class)->submitMessage($session, 'Hola');
+      $this->fail('El turno debería haber fallado.');
+    }
+    catch (DiagnosticException) {
+      // Es lo esperado: sin credenciales el motor se niega de forma visible.
+    }
+
+    $this->assertFalse(
+      $flood->isAllowed($evento, 1, 300, (string) $uid),
+      'El intento fallido debe haber quedado contado.',
+    );
   }
 
   /**
