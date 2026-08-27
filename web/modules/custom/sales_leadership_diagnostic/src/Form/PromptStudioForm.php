@@ -166,9 +166,13 @@ final class PromptStudioForm extends FormBase {
         '#button_type' => 'primary',
         '#attributes' => [
           'class' => ['button--danger'],
-          // Publicar afecta a todos los alumnos a partir de ese momento, así
-          // que no debe poder ocurrir por un clic distraído.
-          'data-sld-confirm' => 'true',
+          // La pregunta viaja en el atributo, y la lee sld-confirm.js. Antes
+          // aquí ponía «true» y NADA lo leía: el botón parecía protegido y no
+          // lo estaba. Publicar cambia el prompt de todos los alumnos de este
+          // agente a partir de ese momento.
+          'data-sld-confirm' => $this->t('Se va a publicar este prompt en «@agente». A partir de ahora, los diagnósticos que empiecen lo usarán. ¿Continuar?', [
+            '@agente' => $this->agente?->label(),
+          ]),
         ],
       ],
 

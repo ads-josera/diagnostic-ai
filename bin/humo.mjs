@@ -292,15 +292,36 @@ export default async function run(page) {
     anotar(enConversacion, 'alumno: llega a la conversación', `acabó en ${page.url()}`);
 
     if (enConversacion) {
-      const sugerencias = await page.locator('.sld-chat__suggestion').count();
-      anotar(sugerencias > 0, 'alumno: ve las sugerencias de inicio',
-        'la conversación arranca vacía, sin nada que oriente al alumno');
+      // La bienvenida solo existe ANTES del primer turno, y eso es correcto:
+      // una vez hay conversación el alumno ya sabe de qué va esto y el cartel
+      // estorbaría al leer.
+      //
+      // El botón del panel dice «Continuar» cuando el alumno tiene una
+      // conversación a medias, así que esta prueba puede aterrizar en una que
+      // ya tiene mensajes. Durante días esto produjo tres fallos permanentes
+      // que no eran del código, y una prueba que falla siempre se deja de
+      // leer, que es peor que no tenerla. Se comprueba primero DÓNDE se
+      // aterrizó y solo entonces qué debe haber.
+      const turnos = await page.locator('.sld-chat__message').count();
 
-      await legibleEnAmbosModos(
-        page.url().replace(SITIO, ''),
-        '.sld-chat__welcome-title',
-        'título de la bienvenida',
-      );
+      if (turnos === 0) {
+        const sugerencias = await page.locator('.sld-chat__suggestion').count();
+        anotar(sugerencias > 0, 'alumno: ve las sugerencias de inicio',
+          'la conversación arranca vacía, sin nada que oriente al alumno');
+
+        await legibleEnAmbosModos(
+          page.url().replace(SITIO, ''),
+          '.sld-chat__welcome-title',
+          'título de la bienvenida',
+        );
+      }
+      else {
+        // Reanudar también hay que comprobarlo: que se vean los turnos
+        // anteriores y que pueda seguir escribiendo.
+        const compositor = await page.locator('[data-sld-input]').count();
+        anotar(compositor === 1, 'alumno: puede seguir su conversación a medias',
+          `reanudó con ${turnos} turno(s) pero no hay dónde escribir`);
+      }
     }
   }
 
