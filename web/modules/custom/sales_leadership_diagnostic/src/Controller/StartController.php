@@ -12,6 +12,7 @@ use Drupal\sales_leadership_diagnostic\Exception\RateLimitException;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticStarter;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\sales_leadership_diagnostic\Service\Security\ExceptionRedactor;
 
 /**
  * Inicia un diagnóstico y lleva al alumno a la conversación.
@@ -59,7 +60,7 @@ final class StartController extends ControllerBase {
       // (§58). Se registra tal cual y se le muestra una explicación neutra.
       $this->getLogger('sales_leadership_diagnostic')->warning(
         'Inicio de diagnóstico rechazado por límite de uso: @detalle',
-        ['@detalle' => $e->getMessage()],
+        ['@detalle' => ExceptionRedactor::redact($e)],
       );
 
       $this->messenger()->addWarning($this->t('Has iniciado varios diagnósticos hoy. Vuelve a intentarlo mañana.'));

@@ -11,6 +11,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\file\FileInterface;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Smalot\PdfParser\Parser as PdfParser;
+use Drupal\sales_leadership_diagnostic\Service\Security\ExceptionRedactor;
 
 /**
  * Extrae el texto plano de un documento de conocimiento.
@@ -84,7 +85,7 @@ final class DocumentTextExtractor {
       // documento de conocimiento es material propietario del cliente.
       $this->logger->error(
         'No se pudo extraer el texto de @archivo: @motivo',
-        ['@archivo' => $file->getFilename(), '@motivo' => $e->getMessage()],
+        ['@archivo' => $file->getFilename(), '@motivo' => ExceptionRedactor::redact($e)],
       );
 
       return ExtractionResult::fallo(

@@ -8,6 +8,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\Service\Security\ExceptionRedactor;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -38,6 +39,10 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * Lo que sí faltaba: que el alumno se quedara ante una página que no dice nada
  * útil ni ofrece por dónde salir, y que quedara registro con el contexto del
  * módulo.
+ *
+ * El mensaje del error se registra REDACTADO. Un error de base de datos
+ * arrastra en su mensaje la consulta entera con los valores enlazados —el
+ * texto del alumno—, y escribirlo tal cual es justo lo que §43 prohíbe.
  *
  * **Solo actúa sobre las rutas del módulo.** El resto del sitio es problema
  * del sitio, y un módulo que secuestrara los errores de todas las páginas
@@ -132,7 +137,10 @@ final class DiagnosticExceptionSubscriber implements EventSubscriberInterface {
         '@ruta' => $route,
         '@sesion' => $sesion === NULL ? '' : ', sesión ' . (is_object($sesion) ? $sesion->id() : $sesion),
         '@clase' => get_class($exception),
-        '@mensaje' => $exception->getMessage(),
+        // El mensaje pasa por el redactor: no es una etiqueta escrita por un
+        // programador, es texto no fiable. El de un error de base de datos
+        // arrastra la consulta con sus valores, o sea el texto del alumno.
+        '@mensaje' => ExceptionRedactor::redact($exception),
         '@archivo' => $exception->getFile(),
         '@linea' => $exception->getLine(),
       ],

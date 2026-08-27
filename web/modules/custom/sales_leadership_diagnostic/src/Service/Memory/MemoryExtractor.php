@@ -12,6 +12,7 @@ use Drupal\sales_leadership_diagnostic\MemoryTopic;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIClient;
+use Drupal\sales_leadership_diagnostic\Service\Security\ExceptionRedactor;
 
 /**
  * Saca de una conversación terminada lo que conviene recordar del alumno.
@@ -97,7 +98,9 @@ final class MemoryExtractor {
       // corre en segundo plano y su único deber es no arrastrar a nada más.
       $this->logger->warning(
         'No se pudo extraer la memoria de la sesión @id: @motivo. El diagnóstico no se ve afectado.',
-        ['@id' => $sessionId, '@motivo' => $e->getMessage()],
+        // Redactado: aqui llega cualquier cosa, incluidos errores de base de
+        // datos, cuyo mensaje arrastra la conversacion del alumno.
+        ['@id' => $sessionId, '@motivo' => ExceptionRedactor::redact($e)],
       );
 
       return FALSE;

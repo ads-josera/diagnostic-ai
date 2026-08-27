@@ -18,6 +18,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Drupal\sales_leadership_diagnostic\Service\Security\ExceptionRedactor;
 
 /**
  * Endpoint de envío de mensajes de la conversación (§23).
@@ -82,7 +83,7 @@ final class ConversationApiController extends ControllerBase {
     catch (SessionBusyException $e) {
       // No se registra como error: es el comportamiento previsto cuando el
       // alumno envía dos veces seguidas o tiene dos pestañas abiertas.
-      $this->logger->info('Envío rechazado por turno en curso: @message', ['@message' => $e->getMessage()]);
+      $this->logger->info('Envío rechazado por turno en curso: @message', ['@message' => ExceptionRedactor::redact($e)]);
 
       return $this->error(
         $this->t('Ya hay una respuesta en curso. Espera un momento.'),
@@ -90,7 +91,7 @@ final class ConversationApiController extends ControllerBase {
       );
     }
     catch (RateLimitException $e) {
-      $this->logger->warning('Límite de uso alcanzado: @message', ['@message' => $e->getMessage()]);
+      $this->logger->warning('Límite de uso alcanzado: @message', ['@message' => ExceptionRedactor::redact($e)]);
 
       return $this->error(
         $this->t('Has enviado demasiados mensajes en poco tiempo. Espera unos minutos antes de continuar.'),
@@ -103,7 +104,7 @@ final class ConversationApiController extends ControllerBase {
       $this->logger->error('Fallo procesando un turno de la sesión @id: @type: @message', [
         '@id' => $sld_diagnostic_session->id(),
         '@type' => get_class($e),
-        '@message' => $e->getMessage(),
+        '@message' => ExceptionRedactor::redact($e),
       ]);
 
       return $this->error(

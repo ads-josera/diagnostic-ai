@@ -10,6 +10,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\Exception\WordPressUnavailableException;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\Service\Security\ExceptionRedactor;
 
 /**
  * Traduce la consulta de autorización a una respuesta de sí o no (§12).
@@ -74,7 +75,7 @@ final class DiagnosticAccessChecker {
     }
     catch (WordPressUnavailableException $e) {
       $this->logger->warning('No se pudo determinar la autorización; se deniega el acceso. Motivo: @reason', [
-        '@reason' => $e->getMessage(),
+        '@reason' => ExceptionRedactor::redact($e),
       ]);
 
       return NULL;
