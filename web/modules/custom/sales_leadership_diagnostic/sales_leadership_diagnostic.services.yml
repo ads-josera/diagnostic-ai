@@ -341,3 +341,12 @@ services:
       - '@config.factory'
       - '@datetime.time'
       - '@logger.factory'
+
+  # Saca al alumno de las paginas de cuenta de Drupal, que no le sirven de nada
+  # y le ofrecen editar una identidad que manda WordPress. Al gestor y a los
+  # administradores no les afecta.
+  Drupal\sales_leadership_diagnostic\EventSubscriber\StudentProfileRedirectSubscriber:
+    arguments:
+      - '@current_user'
+    tags:
+      - { name: event_subscriber }
