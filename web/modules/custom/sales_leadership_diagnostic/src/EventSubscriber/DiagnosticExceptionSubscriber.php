@@ -14,6 +14,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
 
@@ -99,17 +101,32 @@ final class DiagnosticExceptionSubscriber implements EventSubscriberInterface {
   public function onException(ExceptionEvent $event): void {
     $exception = $event->getThrowable();
 
-    // Un 403 o un 404 no son fallos: son respuestas con significado, y Drupal
-    // ya las presenta bien. Tocarlas rompería el control de acceso, que es
-    // justamente lo que sostiene el aislamiento entre alumnos.
-    if ($exception instanceof HttpExceptionInterface) {
-      return;
-    }
-
     $request = $event->getRequest();
     $route = (string) $request->attributes->get('_route');
 
+    // El resto del sitio es problema del sitio.
     if (!str_starts_with($route, self::ROUTE_PREFIX)) {
+      return;
+    }
+
+    // Un acceso denegado en una ruta NUESTRA se responde con nuestra página,
+    // conservando el 403. No cambia quién entra: la decisión ya está tomada y
+    // el código de estado sigue siendo el mismo, así que cualquier revisión
+    // del control de acceso ve exactamente lo que veía antes. Lo único que
+    // cambia es lo que lee la persona, y eso importa: la página estándar dice
+    // «no tiene permiso», que es falso cuando lo que ha pasado es que no
+    // pudimos comprobarlo.
+    if ($exception instanceof AccessDeniedHttpException) {
+      $event->setResponse($this->responderDenegado($request, $route));
+      $event->stopPropagation();
+
+      return;
+    }
+
+    // Los demás errores con significado —un 404, un método no admitido— los
+    // presenta Drupal. Convertirlos en páginas de error dejaría de distinguir
+    // «no existe» de «algo se rompió».
+    if ($exception instanceof HttpExceptionInterface) {
       return;
     }
 
@@ -148,6 +165,43 @@ final class DiagnosticExceptionSubscriber implements EventSubscriberInterface {
   }
 
   /**
+   * La respuesta a un acceso denegado en una ruta del módulo.
+   *
+   * Distingue los dos motivos, que hasta el 28-08-2026 se confundían en uno:
+   *
+   *  - **No se pudo comprobar.** El alumno probablemente SÍ tiene acceso; lo
+   *    que falló fue la consulta a WordPress. Decirle que no tiene permiso le
+   *    manda a reclamarle al cliente por una compra que está perfectamente
+   *    bien, y eso pasó de verdad el día que su alojamiento bloqueó nuestra IP.
+   *  - **Se comprobó y no lo tiene.** Ahí sí procede decírselo.
+   *
+   * El aviso lo deja el propio control de acceso, que es el único que sabe
+   * cuál de los dos ocurrió.
+   */
+  private function responderDenegado(Request $request, string $route): Response {
+    $sinVerificar = (bool) $request->attributes->get(DiagnosticAccessCheck::ATRIBUTO_SIN_VERIFICAR);
+
+    $mensaje = $sinVerificar
+      ? (string) $this->t('No hemos podido verificar tu acceso en este momento. No es un problema con tu compra: vuelve a intentarlo en unos minutos y, si sigue ocurriendo, avísanos.')
+      : (string) $this->t('Tu cuenta no tiene acceso a este diagnóstico. Si acabas de adquirir el curso, espera unos minutos e inténtalo de nuevo.');
+
+    $titulo = $sinVerificar
+      ? (string) $this->t('No hemos podido verificar tu acceso')
+      : (string) $this->t('Acceso no disponible');
+
+    if (in_array($route, self::JSON_ROUTES, TRUE)) {
+      return new JsonResponse(['error' => $mensaje], Response::HTTP_FORBIDDEN);
+    }
+
+    return new Response(
+      $this->pagina($mensaje, $titulo),
+      // El código NO cambia: sigue siendo una denegación.
+      Response::HTTP_FORBIDDEN,
+      ['Content-Type' => 'text/html; charset=UTF-8'],
+    );
+  }
+
+  /**
    * La respuesta que recibe quien se encontró el error.
    *
    * Es deliberadamente autónoma: no pasa por el sistema de temas ni consulta
@@ -180,8 +234,8 @@ final class DiagnosticExceptionSubscriber implements EventSubscriberInterface {
    * del alumno y ofrezca por dónde seguir. La alternativa era la página del
    * sitio, que no hace ninguna de las dos cosas.
    */
-  private function pagina(string $mensaje): string {
-    $titulo = (string) $this->t('Algo no ha ido bien');
+  private function pagina(string $mensaje, ?string $titulo = NULL): string {
+    $titulo ??= (string) $this->t('Algo no ha ido bien');
     $volver = (string) $this->t('Volver a mi panel');
 
     return <<<HTML

@@ -10,6 +10,7 @@ use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner;
 
 /**
@@ -29,9 +30,19 @@ use Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner;
  */
 final class DiagnosticAccessCheck implements AccessInterface {
 
+  /**
+   * Nombre del atributo que marca una denegación por no poder comprobar.
+   *
+   * Se deja anotado en la petición para que la página de error pueda decir la
+   * verdad. No influye en la decisión —esta clase ya denegó— y por eso vive
+   * aquí y no en la respuesta: es información sobre POR QUÉ, no sobre QUÉ.
+   */
+  public const ATRIBUTO_SIN_VERIFICAR = 'sld_sin_verificar';
+
   public function __construct(
     private readonly UserProvisioner $provisioner,
     private readonly DiagnosticAccessChecker $accessChecker,
+    private readonly RequestStack $requestStack,
   ) {}
 
   /**
@@ -60,11 +71,36 @@ final class DiagnosticAccessCheck implements AccessInterface {
       return $deny;
     }
 
-    if (!$this->accessChecker->isAuthorized($externalUserId)) {
+    // Se usa decide() y no isAuthorized() para distinguir dos cosas que el
+    // segundo confunde: NULL es «no se pudo comprobar» y una decisión no
+    // concedida es «se comprobó y es que no». La DECISIÓN es la misma —no
+    // entra—, pero al alumno hay que decirle cosas distintas, porque en el
+    // primer caso probablemente sí tiene acceso.
+    $decision = $this->accessChecker->decide($externalUserId);
+
+    if ($decision === NULL) {
+      $this->anotarQueNoSePudoVerificar();
+
+      return $deny;
+    }
+
+    if (!$decision->granted) {
       return $deny;
     }
 
     return AccessResult::allowed()->cachePerUser()->setCacheMaxAge(0);
+  }
+
+  /**
+   * Deja constancia en la petición de que la denegación fue por avería.
+   *
+   * Lo lee el suscriptor que compone la página de error. Si la petición no
+   * estuviera disponible —fuera de un ciclo HTTP— simplemente no se anota: la
+   * denegación sigue siendo la misma y lo único que se pierde es el matiz del
+   * mensaje.
+   */
+  private function anotarQueNoSePudoVerificar(): void {
+    $this->requestStack->getCurrentRequest()?->attributes->set(self::ATRIBUTO_SIN_VERIFICAR, TRUE);
   }
 
   /**

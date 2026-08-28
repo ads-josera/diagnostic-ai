@@ -19,6 +19,8 @@
  * - can_start: si el sistema está listo para iniciar diagnósticos.
  * - agents: agentes a los que el alumno tiene derecho. Cada uno con id,
  *   label, description, start_url y resume_session_id.
+ * - cannot_verify: cierto si no se pudo comprobar la autorización. Distinto
+ *   de no tener derecho a ningún agente.
  * - repeat_notice: aviso sobre la política de repetición, o nulo.
  * - unavailable_notice: motivo, si no puede. Un alumno recibe un mensaje
  *   neutro; un administrador, el detalle técnico.
@@ -105,6 +107,15 @@
       {% if repeat_notice %}
         <p class="sld__muted">{{ repeat_notice }}</p>
       {% endif %}
+    {% elseif can_start and cannot_verify %}
+      {#
+        No se pudo comprobar la autorización. NO se le dice que no tiene
+        acceso: probablemente lo tiene, y decirle lo contrario le manda a
+        reclamarle al cliente por una compra que está bien.
+      #}
+      <div class="sld__notice sld__notice--warning" role="status">
+        <p>{{ 'No hemos podido verificar tu acceso en este momento. No es un problema con tu compra: vuelve a intentarlo en unos minutos y, si sigue ocurriendo, avísanos.'|t }}</p>
+      </div>
     {% elseif can_start %}
       {# Listo, pero sin derecho a ningún agente: no es un fallo del sistema. #}
       <p class="sld__muted">

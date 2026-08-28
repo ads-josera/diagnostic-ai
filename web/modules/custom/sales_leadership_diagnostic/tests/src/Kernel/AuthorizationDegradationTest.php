@@ -206,6 +206,93 @@ final class AuthorizationDegradationTest extends KernelTestBase {
   }
 
   /**
+   * Una avería no se pregunta dos veces seguidas.
+   *
+   * Es el freno que se añadió el 28-08-2026, y el motivo se vio en real: el
+   * alojamiento del cliente bloqueó nuestra IP, y como un fallo no se
+   * recordaba, CADA carga de página volvía a intentarlo y esperaba el tiempo
+   * de espera completo. El alumno veía el navegador colgado diez segundos
+   * antes de que le dijeran que no, y nosotros seguíamos llamando a la puerta
+   * del cortafuegos que acababa de marcarnos, con lo que el bloqueo se
+   * renovaba solo en vez de caducar.
+   */
+  public function testUnaAveriaNoSePreguntaDosVecesSeguidas(): void {
+    $proveedor = $this->crearProveedor();
+    $this->proveedorExterno->caido = TRUE;
+
+    // Tres intentos seguidos sin nada en cache: los tres deben denegar.
+    foreach ([1, 2, 3] as $intento) {
+      try {
+        $proveedor->checkAccess('1', self::CURSO);
+        $this->fail("El intento $intento debería haberse denegado.");
+      }
+      catch (WordPressUnavailableException) {
+        // Es lo esperado.
+      }
+    }
+
+    $this->assertSame(
+      1,
+      $this->proveedorExterno->llamadas,
+      'Solo la primera debe salir a la red; las demás ya saben que no hay nadie.',
+    );
+  }
+
+  /**
+   * El freno NO cambia quién entra y quién no.
+   *
+   * Es la comprobación que importa de verdad: un atajo de rendimiento que
+   * alterase la decisión de acceso sería mucho peor que la lentitud que viene
+   * a resolver. Con una concesión reciente en cache, la degradación sigue
+   * mandando y el alumno entra igual, con o sin freno.
+   */
+  public function testElFrenoNoCambiaQuienEntra(): void {
+    $proveedor = $this->crearProveedor();
+    $this->sembrarCache('1', concedido: TRUE, antiguedadSegundos: 1200);
+    $this->proveedorExterno->caido = TRUE;
+
+    $primera = $proveedor->checkAccess('1', self::CURSO);
+    $segunda = $proveedor->checkAccess('1', self::CURSO);
+
+    $this->assertTrue($primera->granted, 'La concesión reciente debe sobrevivir la caída.');
+    $this->assertTrue($segunda->granted, 'Y también con el freno puesto.');
+    $this->assertSame(1, $this->proveedorExterno->llamadas);
+  }
+
+  /**
+   * Cuando el servicio vuelve, el freno se levanta.
+   *
+   * Si no se levantara, una avería de un segundo dejaría al módulo sin
+   * preguntar durante toda la ventana, y una compra reciente tardaría en
+   * surtir efecto sin motivo.
+   */
+  public function testCuandoElServicioVuelveSeLevantaElFreno(): void {
+    $proveedor = $this->crearProveedor();
+
+    $this->proveedorExterno->caido = TRUE;
+
+    try {
+      $proveedor->checkAccess('1', self::CURSO);
+    }
+    catch (WordPressUnavailableException) {
+      // Esperado: queda anotada la avería.
+    }
+
+    // El servicio vuelve y se invalida la anotación de avería a mano, que es
+    // lo que haría el paso del tiempo. Sin esto la prueba comprobaría el
+    // caducado de la cache, no el levantamiento del freno.
+    $this->proveedorExterno->caido = FALSE;
+    \Drupal::service('cache_tags.invalidator')
+      ->invalidateTags([CachedCourseAccessProvider::CACHE_TAG]);
+
+    $decision = $proveedor->checkAccess('1', self::CURSO);
+
+    $this->assertTrue($decision->granted);
+    $this->assertSame(AccessDecision::SOURCE_LIVE, $decision->source);
+    $this->assertSame(2, $this->proveedorExterno->llamadas);
+  }
+
+  /**
    * Construye el decorador sobre el doble.
    */
   private function crearProveedor(): CachedCourseAccessProvider {

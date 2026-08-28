@@ -9,6 +9,7 @@ use Drupal\Core\Access\CsrfTokenGenerator;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\sales_leadership_diagnostic\DTO\AccessDecision;
 use Drupal\Core\Url;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\ReadinessBlocker;
@@ -83,6 +84,11 @@ final class DashboardController extends ControllerBase {
     $sessions = $this->sessions->loadForUser($uid);
     $results = $this->results->loadForUserIndexedBySession($uid);
 
+    // Se decide UNA vez y se reparte. Antes se preguntaba en dos sitios; la
+    // cache lo absorbía, pero además se perdía la distinción que importa:
+    // NULL significa «no se pudo comprobar», no «no tiene acceso».
+    $decision = $this->decisionDelAlumno($account);
+
     return [
       '#theme' => 'sld_dashboard',
       // El nombre de usuario es técnico —«sld_wp_4821»— porque derivarlo del
@@ -93,10 +99,13 @@ final class DashboardController extends ControllerBase {
       // abrir otra vía de HTML arbitrario en la página del alumno.
       '#welcome_text' => $this->branding->getWelcomeText(),
       '#can_start' => $this->readiness->isReady(),
-      '#agents' => $this->buildAgents($account, $sessions),
+      '#agents' => $this->buildAgents($decision, $sessions),
+      // El panel debe poder decir la verdad: que no sepamos si tiene acceso
+      // no es lo mismo que saber que no lo tiene.
+      '#cannot_verify' => $decision === NULL && $this->provisioner->getExternalUserId($account) !== NULL,
       '#repeat_notice' => $this->buildRepeatNotice(),
       '#unavailable_notice' => $this->buildUnavailableNotice(),
-      '#expiry_notice' => $this->buildExpiryNotice($account),
+      '#expiry_notice' => $this->buildExpiryNotice($decision),
       '#history' => $this->buildHistory($sessions, $results),
       '#memory' => $this->buildMemory($uid),
       '#memory_forget_all_url' => $this->buildForgetAllUrl(),
@@ -126,6 +135,21 @@ final class DashboardController extends ControllerBase {
         ),
       ],
     ];
+  }
+
+  /**
+   * Autorización del alumno, o NULL si no se pudo comprobar.
+   *
+   * NULL sale por dos motivos distintos que aquí se tratan igual: que la
+   * cuenta no proceda de WordPress, o que WordPress no respondiera. Quien
+   * necesita distinguirlos lo hace fuera.
+   */
+  private function decisionDelAlumno(AccountInterface $account): ?AccessDecision {
+    $externalUserId = $this->provisioner->getExternalUserId($account);
+
+    return $externalUserId === NULL
+      ? NULL
+      : $this->accessChecker->decide($externalUserId);
   }
 
   /**
@@ -190,20 +214,15 @@ final class DashboardController extends ControllerBase {
    * pantalla para elegir entre una sola opción es empeorarla. La plantilla
    * decide cómo mostrarlo según cuántos haya.
    *
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   Alumno.
+   * @param \Drupal\sales_leadership_diagnostic\DTO\AccessDecision|null $decision
+   *   Autorización ya resuelta. NULL si no se pudo comprobar.
    * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[] $sessions
    *   Sus sesiones, para saber cuáles tiene a medias.
    *
    * @return array<int, array<string, mixed>>
    *   Una entrada por agente disponible.
    */
-  private function buildAgents(AccountInterface $account, array $sessions): array {
-    $externalUserId = $this->provisioner->getExternalUserId($account);
-    $decision = $externalUserId === NULL
-      ? NULL
-      : $this->accessChecker->decide($externalUserId);
-
+  private function buildAgents(?AccessDecision $decision, array $sessions): array {
     $filas = [];
 
     foreach ($this->agents->forDecision($decision) as $agent) {
@@ -340,15 +359,7 @@ final class DashboardController extends ControllerBase {
    * Solo aparece en la recta final: mostrarlo durante todo el año lo
    * convertiría en ruido que nadie lee.
    */
-  private function buildExpiryNotice(AccountInterface $account): ?array {
-    $externalUserId = $this->provisioner->getExternalUserId($account);
-
-    if ($externalUserId === NULL) {
-      return NULL;
-    }
-
-    $decision = $this->accessChecker->decide($externalUserId);
-
+  private function buildExpiryNotice(?AccessDecision $decision): ?array {
     if ($decision === NULL || !$decision->granted) {
       return NULL;
     }

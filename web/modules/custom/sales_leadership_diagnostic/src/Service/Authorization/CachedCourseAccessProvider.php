@@ -36,6 +36,24 @@ use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
  * verificado hace poco no debería quedarse fuera por una caída ajena. Una
  * denegación anterior nunca se reutiliza de este modo, y una avería jamás
  * concede acceso a quien no lo tenía ya.
+ *
+ * FRENO ANTE UNA AVERÍA (añadido el 28-08-2026). Hasta entonces un fallo no
+ * se recordaba: la petición siguiente volvía a intentarlo, y la siguiente, y
+ * cada una esperaba el tiempo de espera completo. Eso tenía tres consecuencias
+ * que se vieron juntas el día que el alojamiento del cliente bloqueó nuestra
+ * IP:
+ *
+ *  - Cada página del alumno se quedaba colgada diez segundos antes de
+ *    denegar. No parecía «no tienes acceso», parecía que el sitio estaba roto.
+ *  - Seguíamos llamando a la puerta del cortafuegos que acababa de marcarnos,
+ *    así que un bloqueo automático se renovaba solo en lugar de caducar.
+ *  - En producción eso se multiplica por el número de alumnos, justo cuando
+ *    menos conviene insistir.
+ *
+ * Ahora una avería se anota durante unos segundos y mientras tanto se falla de
+ * inmediato, sin salir a la red. NO cambia quién entra y quién no: la
+ * degradación sigue mandando, y con ella el periodo de gracia. Solo deja de
+ * preguntar lo que ya se sabe que no va a contestar.
  */
 final class CachedCourseAccessProvider implements CourseAccessProviderInterface {
 
@@ -48,6 +66,15 @@ final class CachedCourseAccessProvider implements CourseAccessProviderInterface 
    * Etiqueta que permite invalidar todas las autorizaciones de una vez.
    */
   public const CACHE_TAG = 'sld_authorization';
+
+  /**
+   * Clave donde se anota que el servicio no responde.
+   *
+   * Es una sola para todo el módulo y no una por alumno: si WordPress no
+   * contesta, no contesta para nadie, y anotarlo por alumno significaría que
+   * el primero de cada uno paga el tiempo de espera igualmente.
+   */
+  private const CACHE_KEY_AVERIA = self::CACHE_PREFIX . 'averia';
 
   /**
    * Canal de log del módulo.
@@ -78,16 +105,67 @@ final class CachedCourseAccessProvider implements CourseAccessProviderInterface 
       return $stored->fromCache();
     }
 
+    // Si consta que el servicio está caído, no se vuelve a preguntar: se
+    // degrada directamente. Ahorra el tiempo de espera a quien navega y deja
+    // de insistirle a un servidor que ya dijo que no está.
+    if ($this->constaAveria()) {
+      return $this->degrade(
+        $stored,
+        $courseId,
+        $now,
+        new WordPressUnavailableException('WordPress no respondió hace un momento; no se vuelve a intentar todavía.'),
+      );
+    }
+
     try {
       $decision = $this->inner->checkAccess($externalUserId, $courseId);
     }
     catch (WordPressUnavailableException $e) {
+      $this->anotarAveria();
+
       return $this->degrade($stored, $courseId, $now, $e);
     }
 
+    // Una respuesta buena levanta el freno de inmediato: si el servicio ha
+    // vuelto, no tiene sentido seguir tratándolo como caído.
+    $this->olvidarAveria();
     $this->store($key, $decision);
 
     return $decision;
+  }
+
+  /**
+   * Indica si consta que el servicio no responde.
+   */
+  private function constaAveria(): bool {
+    return $this->cache->get(self::CACHE_KEY_AVERIA) !== FALSE;
+  }
+
+  /**
+   * Anota que el servicio no responde.
+   *
+   * La ventana es corta a propósito. No es un castigo al servicio caído sino
+   * un respiro: lo justo para no repetir la misma llamada fallida decenas de
+   * veces seguidas, y lo bastante breve para que el servicio recuperado se
+   * note enseguida. Se reutiliza el TTL de las denegaciones, que es del mismo
+   * orden y ya es configurable.
+   */
+  private function anotarAveria(): void {
+    $ventana = max(10, $this->getDeniedTtl());
+
+    $this->cache->set(
+      self::CACHE_KEY_AVERIA,
+      TRUE,
+      $this->time->getRequestTime() + $ventana,
+      [self::CACHE_TAG],
+    );
+  }
+
+  /**
+   * Levanta el freno.
+   */
+  private function olvidarAveria(): void {
+    $this->cache->delete(self::CACHE_KEY_AVERIA);
   }
 
   /**

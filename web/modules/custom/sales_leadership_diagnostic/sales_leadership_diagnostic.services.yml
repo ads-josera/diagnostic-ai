@@ -41,6 +41,7 @@ services:
     arguments:
       - '@Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner'
       - '@Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker'
+      - '@request_stack'
 
   # Límites de uso por alumno (§44).
   Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter:

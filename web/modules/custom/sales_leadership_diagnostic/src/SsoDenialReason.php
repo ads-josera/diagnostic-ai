@@ -26,6 +26,17 @@ enum SsoDenialReason: string {
   case NoCourse = 'curso';
 
   /*
+   * No se pudo COMPROBAR la autorización porque WordPress no respondió.
+   *
+   * Es distinto de no tener el curso, y confundirlos tiene consecuencias
+   * reales: hasta el 28-08-2026 a este alumno se le decía «tu cuenta no tiene
+   * acceso a este diagnóstico», que es falso —lo tiene, solo que no pudimos
+   * verificarlo— y le mandaba a reclamarle al cliente por una compra que
+   * estaba perfectamente bien.
+   */
+  case CannotVerify = 'verificacion';
+
+  /*
    * No se pudo preparar la cuenta: colisión de correo o cuenta bloqueada.
    */
   case AccountUnavailable = 'cuenta';

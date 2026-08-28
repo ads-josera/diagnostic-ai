@@ -120,7 +120,19 @@ final class SsoController extends ControllerBase {
     }
 
     // La autorización se comprueba ANTES de tocar la base de datos de usuarios.
-    if (!$this->accessChecker->isAuthorized($identity->externalUserId)) {
+    //
+    // Se usa decide() y no isAuthorized() para poder distinguir dos cosas que
+    // el segundo confunde: NULL es «no se pudo comprobar» y una decisión no
+    // concedida es «se comprobó y es que no». Al alumno hay que decirle cosas
+    // distintas, porque en el primer caso sí tiene acceso.
+    $decision = $this->accessChecker->decide($identity->externalUserId);
+
+    if ($decision === NULL) {
+      // El detalle ya quedó registrado por el comprobador.
+      return $this->deny(SsoDenialReason::CannotVerify);
+    }
+
+    if (!$decision->granted) {
       $this->logger->info('Acceso denegado por falta de curso al alumno externo @uid.', [
         '@uid' => $identity->externalUserId,
       ]);
@@ -189,6 +201,9 @@ final class SsoController extends ControllerBase {
     $messages = [
       SsoDenialReason::InvalidToken->value => $this->t('El enlace de acceso no es válido o ha caducado. Vuelve a WordPress y pulsa de nuevo el botón del diagnóstico.'),
       SsoDenialReason::NoCourse->value => $this->t('Tu cuenta no tiene acceso a este diagnóstico. Si acabas de adquirir el curso, espera unos minutos e inténtalo de nuevo.'),
+      // Deliberadamente NO dice que no tenga acceso: probablemente lo tiene.
+      // Decirle lo contrario le manda a reclamar una compra que está bien.
+      SsoDenialReason::CannotVerify->value => $this->t('No hemos podido verificar tu acceso en este momento. No es un problema con tu compra: vuelve a intentarlo en unos minutos y, si sigue ocurriendo, avísanos.'),
       SsoDenialReason::AccountUnavailable->value => $this->t('No hemos podido preparar tu acceso. Ponte en contacto con soporte para que lo revisen.'),
       SsoDenialReason::TooManyAttempts->value => $this->t('Demasiados intentos seguidos. Espera unos minutos antes de volver a intentarlo.'),
     ];

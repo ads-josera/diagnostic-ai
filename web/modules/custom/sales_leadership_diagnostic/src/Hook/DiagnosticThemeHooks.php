@@ -79,6 +79,10 @@ final class DiagnosticThemeHooks {
           // no tiene derecho a ninguno, que es distinto de que el sistema no
           // esté listo (`can_start`).
           'agents' => [],
+          // Cierto solo si NO se pudo comprobar la autorización. Es distinto
+          // de no tener derecho a ningún agente, y al alumno hay que decirle
+          // cosas distintas.
+          'cannot_verify' => FALSE,
           'repeat_notice' => NULL,
           'unavailable_notice' => NULL,
           'expiry_notice' => NULL,

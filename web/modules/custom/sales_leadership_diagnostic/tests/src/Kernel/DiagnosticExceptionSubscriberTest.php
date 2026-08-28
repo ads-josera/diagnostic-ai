@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck;
 use Drupal\sales_leadership_diagnostic\EventSubscriber\DiagnosticExceptionSubscriber;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -23,11 +24,19 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
  * Drupal y salía como su página genérica, o como HTML donde el navegador
  * esperaba JSON.
  *
- * Las dos pruebas que más importan aquí no son las del caso feliz, sino las
- * que fijan lo que este suscriptor NO debe tocar: los 403 y 404, que son
- * respuestas con significado, y las rutas ajenas al módulo. Un 403 secuestrado
- * rompería el control de acceso, que es lo que sostiene el aislamiento entre
- * alumnos.
+ * Desde el 28-08-2026 también compone la página de un acceso denegado en las
+ * rutas del módulo, para poder distinguir «no pudimos comprobarlo» de «no
+ * tienes acceso». Esa distinción no es cosmética: decirle a quien pagó que no
+ * tiene acceso le manda a reclamarle al cliente por una compra que está bien,
+ * y pasó de verdad.
+ *
+ * Las pruebas que más importan aquí no son las del caso feliz, sino las que
+ * fijan los límites:
+ *
+ *  - Un acceso denegado SIGUE respondiendo 403. Cambia el texto, nunca el
+ *    código: si dejara de ser un 403, cualquier revisión futura del
+ *    aislamiento entre alumnos se volvería ciega.
+ *  - Los 404 y las rutas ajenas al módulo no se tocan.
  */
 #[CoversClass(DiagnosticExceptionSubscriber::class)]
 final class DiagnosticExceptionSubscriberTest extends KernelTestBase {
@@ -101,17 +110,73 @@ final class DiagnosticExceptionSubscriberTest extends KernelTestBase {
   }
 
   /**
-   * Un 403 se deja pasar intacto.
+   * Un acceso denegado SIGUE SIENDO un 403.
    *
-   * Es la prueba que protege el aislamiento entre alumnos: si este suscriptor
-   * convirtiera los accesos denegados en páginas de error, dejaría de
-   * distinguirse «no es tuyo» de «algo se rompió», y cualquier revisión futura
-   * del control de acceso se volvería ciega.
+   * Es la prueba que protege el control de acceso. Desde el 28-08-2026 el
+   * módulo pinta su propia página en un 403 de sus rutas, para poder decirle
+   * al alumno la verdad; lo que NO puede cambiar nunca es el código de
+   * estado. Si un acceso denegado dejara de responder 403, cualquier revisión
+   * futura del aislamiento entre alumnos se volvería ciega.
    */
-  public function testUnAccesoDenegadoNoSeToca(): void {
+  public function testUnAccesoDenegadoSigueSiendoUn403(): void {
     $evento = $this->lanzar(
       new AccessDeniedHttpException('No es tuyo.'),
       'sales_leadership_diagnostic.result',
+    );
+
+    $this->assertSame(403, $evento->getResponse()->getStatusCode());
+  }
+
+  /**
+   * Sin poder verificar se dice eso, y NO que no tenga acceso.
+   *
+   * El aviso lo deja el control de acceso, que es el único que sabe si la
+   * denegación vino de una comprobación o de una avería. Decirle a quien pagó
+   * que no tiene acceso le manda a reclamar una compra que está bien: pasó de
+   * verdad el día que el alojamiento del cliente bloqueó nuestra IP.
+   */
+  public function testSinPoderVerificarNoSeDiceQueNoTengaAcceso(): void {
+    $evento = $this->lanzar(
+      new AccessDeniedHttpException('No se pudo comprobar.'),
+      'sales_leadership_diagnostic.dashboard',
+      sinVerificar: TRUE,
+    );
+
+    $contenido = (string) $evento->getResponse()->getContent();
+
+    $this->assertSame(403, $evento->getResponse()->getStatusCode());
+    $this->assertStringContainsString('No hemos podido verificar tu acceso', $contenido);
+    $this->assertStringContainsString('No es un problema con tu compra', $contenido);
+    $this->assertStringNotContainsString('no tiene acceso a este diagnóstico', $contenido);
+  }
+
+  /**
+   * Una denegación comprobada sí dice que no tiene acceso.
+   *
+   * La otra mitad: quien de verdad no tiene el curso debe saberlo, y no
+   * quedarse esperando a que «vuelva a funcionar».
+   */
+  public function testUnaDenegacionComprobadaSiLoDice(): void {
+    $evento = $this->lanzar(
+      new AccessDeniedHttpException('No tiene el curso.'),
+      'sales_leadership_diagnostic.dashboard',
+    );
+
+    $contenido = (string) $evento->getResponse()->getContent();
+
+    $this->assertStringContainsString('no tiene acceso a este diagnóstico', $contenido);
+    $this->assertStringNotContainsString('No hemos podido verificar', $contenido);
+  }
+
+  /**
+   * Un acceso denegado en una ruta AJENA no se toca.
+   *
+   * El resto del sitio lo presenta el sitio.
+   */
+  public function testUnAccesoDenegadoAjenoNoSeToca(): void {
+    $evento = $this->lanzar(
+      new AccessDeniedHttpException('Otra parte.'),
+      'system.admin_content',
     );
 
     $this->assertFalse($evento->hasResponse());
@@ -160,12 +225,18 @@ final class DiagnosticExceptionSubscriberTest extends KernelTestBase {
    *   Error que se produjo.
    * @param string|null $ruta
    *   Nombre de la ruta, o NULL si el enrutador no llegó a resolverla.
+   * @param bool $sinVerificar
+   *   Si la denegación vino de no haber podido comprobar la autorización.
    */
-  private function lanzar(\Throwable $error, ?string $ruta): ExceptionEvent {
+  private function lanzar(\Throwable $error, ?string $ruta, bool $sinVerificar = FALSE): ExceptionEvent {
     $peticion = Request::create('/sales-diagnostic');
 
     if ($ruta !== NULL) {
       $peticion->attributes->set('_route', $ruta);
+    }
+
+    if ($sinVerificar) {
+      $peticion->attributes->set(DiagnosticAccessCheck::ATRIBUTO_SIN_VERIFICAR, TRUE);
     }
 
     $evento = new ExceptionEvent(
