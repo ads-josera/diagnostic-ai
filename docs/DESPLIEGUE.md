@@ -33,6 +33,40 @@ que importa esté versionado.
 | HTTPS | **Obligatorio.** El token de acceso viaja en la URL |
 | Cron | **Debe ejecutarse.** Ver más abajo |
 
+### La IP del servidor tiene que estar autorizada en el WordPress del cliente
+
+**Requisito previo al despliegue.** El módulo consulta la autorización de cada
+alumno contra `salesbumm.com`. Si el alojamiento del cliente marca al servidor
+como abusivo y le corta, **se quedan fuera todos los alumnos a la vez**.
+
+No es hipotético: ocurrió el 28-08-2026 con la IP de la oficina. Hostinger la
+bloqueó por el volumen de consultas durante el desarrollo, y el diagnóstico
+dejó de conceder acceso.
+
+Lo que hay que hacer, en el hPanel de Hostinger del cliente:
+
+1. Autorizar la IP del servidor de producción. A 28-08-2026 es
+   **`72.167.47.47`**.
+2. **Comprobar que esa es la IP de SALIDA**, no solo la de entrada. Con NAT o
+   balanceadores pueden ser distintas, y entonces se estaría autorizando una
+   que nunca aparece en las peticiones. Desde el servidor:
+
+       curl https://api.ipify.org
+
+   Debe devolver exactamente la IP autorizada. Verificado el 28-08-2026:
+   devuelve `72.167.47.47`.
+
+3. Confirmar que esa pantalla del panel **autoriza** y no **bloquea**. En
+   algunas versiones sirve para lo contrario, y añadir ahí la IP la dejaría
+   fuera. En el panel del cliente a 28-08-2026 es una **lista blanca**, que es
+   lo correcto; si el panel cambia, se comprueba cargando el sitio desde esa
+   red sin VPN.
+
+Aun con todo autorizado, el módulo aguanta una caída: mantiene el acceso de
+quien fue verificado dentro del periodo de gracia y, desde el 28-08-2026, deja
+de insistir mientras el servicio no responda en lugar de reintentar en cada
+página.
+
 ### El cron no es opcional
 
 La memoria del alumno —lo que el sistema recuerda de su negocio para no
@@ -337,6 +371,8 @@ proveedor de IA, así que no cuesta llamadas.
 - [ ] Prueba de humo superada con un alumno real
 - [ ] Copia de la base de datos guardada
 - [ ] `bin/humo.mjs` en verde
+- [ ] **IP del servidor autorizada en el Hostinger del cliente**, y verificada
+      con `curl https://api.ipify.org` desde el propio servidor
 - [ ] Cron programado y ejecutándose (sin él, la memoria del alumno no se
       escribe y no se purga ninguna conversación)
 - [ ] Decidido el plazo de conservación de las conversaciones (de fábrica: no
