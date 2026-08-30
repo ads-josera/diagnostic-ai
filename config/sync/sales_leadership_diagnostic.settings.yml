@@ -18,6 +18,7 @@ openai:
   max_completion_tokens: 8000
 diagnostic:
   repeat_policy: unlimited
+  conversation_retention_days: 0
 security:
   messages_per_window: 20
   window_seconds: 300

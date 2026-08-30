@@ -632,3 +632,32 @@ function sales_leadership_diagnostic_update_10012(): string {
     $liberados,
   );
 }
+
+/**
+ * Crea el plazo de conservación de las conversaciones, que faltaba.
+ *
+ * El ajuste se añadió el 26-08-2026 al archivo de instalación del módulo, y
+ * eso solo alcanza a las instalaciones NUEVAS: en un sitio donde el módulo ya
+ * estaba instalado la clave nunca llegó a existir. Se detectó el 29-08 al
+ * consultarla y encontrarse con que no estaba.
+ *
+ * No era peligroso —una clave ausente se lee como cero, que significa no
+ * purgar nada— pero sí engañoso: el formulario habría dejado fijar un plazo
+ * que la configuración exportada nunca tuvo, y en producción el ajuste no
+ * habría existido.
+ *
+ * Se crea en CERO, que es conservar indefinidamente. Actualizar el módulo no
+ * debe empezar a borrar datos de nadie: activarlo es una decisión que alguien
+ * tiene que tomar a sabiendas.
+ */
+function sales_leadership_diagnostic_update_10013(): string {
+  $config = \Drupal::configFactory()->getEditable('sales_leadership_diagnostic.settings');
+
+  if ($config->get('diagnostic.conversation_retention_days') !== NULL) {
+    return 'El plazo de conservación ya existía; no se ha modificado nada.';
+  }
+
+  $config->set('diagnostic.conversation_retention_days', 0)->save();
+
+  return 'Creado el plazo de conservación de las conversaciones, en 0 (no se purga nada). Se fija en Configuración → Salesbumm → Diagnostic AI → Reglas de uso.';
+}
