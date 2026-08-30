@@ -189,16 +189,23 @@ drush config:status       # esperado: "No differences between DB and sync direct
 drush core:requirements | grep -i diagnostic
 ```
 
-En el ensayo, un despliegue correcto deja el informe así:
+Un despliegue recién hecho deja el informe así:
 
 ```
 [OK]      Diagnostic AI: WordPress / LearnDash => Configurado
 [OK]      Diagnostic AI: secretos              => Configurados
-[Warning] Diagnostic AI: agente                => Sin prompt cargado
+[Warning] Diagnostic AI: agentes               => Ninguno disponible
+[Warning] Diagnostic AI: plugin de WordPress   => Sin comprobar todavía
 ```
 
-El aviso del agente es normal hasta que el cliente cargue su prompt. **No debe
-aparecer ninguna línea sobre el motor simulado**: si aparece, retira
+El aviso de los agentes es normal hasta crear el primero (§6). Un agente cuenta
+como disponible cuando está **activo, tiene curso y tiene prompt**: si falta
+alguna de las tres, no aparece y los alumnos no pueden empezar.
+
+El del plugin desaparece en cuanto se consulta la autorización de alguien por
+primera vez.
+
+**No debe aparecer ninguna línea sobre el motor simulado**: si aparece, retira
 `sld_use_mock_engine` de `settings.php` y limpia caché.
 
 ## 6. Configuración desde la interfaz
@@ -210,7 +217,49 @@ En **Configuración → Salesbumm → Sales Leadership Diagnostic AI**:
 | WordPress | URL base y curso vienen del repositorio; confirma que son los del entorno |
 | Proveedor de IA | Cargar el catálogo de modelos y elegir uno |
 | Seguridad | Revisar límites y periodo de gracia |
-| Agente | Cargar prompt, instrucciones y versión del cliente |
+| Reglas de uso | Política de repetición y plazo de conservación (§Conservación) |
+| Marca y Portada | Colores, logotipos y textos del cliente |
+
+### Crear el agente
+
+Desde el 26-08-2026 el diagnóstico lo conducen **agentes**, no un prompt único.
+La pestaña «Agente» que hubo aquí se retiró: escribía en un sitio que ya no
+gobernaba nada.
+
+En **Configuración → Salesbumm → Sales Leadership Diagnostic AI → Agentes**,
+«Añadir agente». Un agente necesita tres cosas para estar disponible:
+
+1. Estar **activo**.
+2. Tener el **curso de LearnDash** que lo concede. Es lo que decide qué alumno
+   lo ve: quien compró ese curso, y nadie más.
+3. Tener **prompt del sistema**. Lo aporta el cliente y se usa tal cual (§15).
+
+Si falta cualquiera de las tres no aparece en el informe de estado ni se le
+ofrece a ningún alumno.
+
+En su ficha van además el contrato de salida, la pantalla de bienvenida y el
+icono. Los **documentos de conocimiento** se cargan aparte, en su propia
+pantalla, y necesitan el directorio privado del §1.
+
+Para probar un agente antes de exponerlo hay el **Estudio del prompt**:
+conversa con el motor y el prompt reales, marcando la sesión como ensayo, de
+modo que no gasta el cupo de nadie ni ensucia el listado del gestor.
+
+### La cuenta del gestor
+
+Los roles llegan con la configuración exportada, pero **las cuentas no**. Quien
+vaya a dar soporte necesita una:
+
+```bash
+drush user:create gestor --mail="gestor@salesbumm.com" \
+  --password="$(openssl rand -base64 18)"
+drush user:role:add gestor_sam gestor
+```
+
+Con ese rol entra a **Contenido → Resultados de diagnóstico**, que es su sitio:
+el listado de diagnósticos, los agentes, el estudio del prompt y los
+documentos. NO necesita el rol de administrador, y no conviene dárselo: el
+permiso de gestor no incluye ver los secretos ni la integración.
 
 ## 7. Conectar WordPress
 
@@ -224,15 +273,48 @@ https://diagnostico.salesbumm.com/sales-diagnostic/sso
 > ⚠ Ese campo apunta a los alumnos reales. Nunca debe contener una URL de
 > desarrollo: un alumno que pulse el botón acabaría en un sitio inexistente.
 
-## 8. Prueba de humo
+## 8. Cuentas de prueba en el WordPress del cliente
 
-Con un alumno real que tenga el curso:
+Acordado con el cliente el 29-08-2026: **dos usuarios de prueba en su
+WordPress**, uno por agente. Permiten enseñar el producto y verificar la
+cadena entera sin inventar ningún atajo en el módulo.
+
+| | Curso en LearnDash | Verá |
+|---|---|---|
+| Usuario A | el del primer agente | Solo ese agente |
+| Usuario B | el del segundo agente | Solo el otro |
+
+Tres cosas que evitan sustos:
+
+- **Un curso por usuario, nunca los dos.** Es lo que hace útil la prueba:
+  demuestra que quien compró uno ve SOLO su agente. Con los dos cursos se ven
+  los dos agentes y no se habrá probado nada.
+- **Correos distintos, y que no coincidan con una cuenta de Drupal existente.**
+  Si chocan, el módulo se niega a vincular y pide resolución manual: no une
+  cuentas por correo, a propósito (§7.3).
+- **La primera consulta arranca su reloj de acceso.** Si se fija una caducidad,
+  las cuentas de prueba también caducan.
+
+Se descartó crear cuentas de demostración que se saltaran la comprobación de
+WordPress: habría metido un desvío del control de autorización viviendo en
+producción, que es algo que se queda encendido por descuido.
+
+## 9. Prueba de humo
+
+Con uno de los usuarios de prueba, o con un alumno real que tenga el curso:
 
 1. Inicia sesión en WordPress y pulsa **Acceder al Diagnostic AI**.
 2. Debe aterrizar autenticado en `/sales-diagnostic`, saludado por su nombre.
 3. Recarga la URL con el mismo token: debe llevar a la página de rechazo.
 4. Con una cuenta **sin** el curso: debe llevar a la página de rechazo con el
-   mensaje del curso.
+   mensaje del curso — que dice que no tiene acceso, no que haya fallado algo.
+5. **Con los dos usuarios de prueba**, comprobar el aislamiento: que cada uno
+   vea solo su agente, y que ninguno alcance el resultado ni la conversación
+   del otro. El cliente marcó este punto como crítico.
+
+Si WordPress no responde durante la prueba, el mensaje debe decir **«No hemos
+podido verificar tu acceso»** y no «no tienes acceso»: son cosas distintas y se
+distinguen desde el 28-08-2026.
 
 ---
 
@@ -358,25 +440,49 @@ proveedor de IA, así que no cuesta llamadas.
 
 ## Lista de comprobación
 
+### Antes de tocar el servidor
+
+- [ ] **IP del servidor autorizada en el Hostinger del cliente**, verificada
+      con `curl https://api.ipify.org` desde el propio servidor. Sin esto se
+      quedan fuera TODOS los alumnos a la vez
+- [ ] Los dos usuarios de prueba creados en su WordPress, un curso cada uno
+- [ ] El prompt de cada agente y su curso de LearnDash, confirmados por escrito
+
+### Servidor y secretos
+
 - [ ] HTTPS activo y `DRUPAL_TRUSTED_HOST` configurado
 - [ ] Los tres secretos definidos, con 32 caracteres o más
 - [ ] Secretos distintos de los de desarrollo
 - [ ] `sld_use_mock_engine` **ausente** de `settings.php`
+- [ ] Directorio `sites/default/files-private` creado y con permisos de escritura
+- [ ] Cron programado y ejecutándose. Sin él la memoria del alumno no se
+      escribe NUNCA, y no falla de forma visible
+
+### Instalación
+
 - [ ] `drush updatedb:status` sin pendientes
 - [ ] `drush config:status` sin diferencias
-- [ ] Informe de estado sin errores, salvo el aviso del agente
+- [ ] Informe de estado sin errores. El aviso de «ningún agente disponible» es
+      normal hasta crear el primero
+- [ ] Cuenta del gestor creada y con el rol `gestor_sam`
+
+### Configuración del producto
+
 - [ ] Modelo de IA elegido del catálogo
-- [ ] Prompt del cliente cargado, con su versión
-- [ ] URL de acceso configurada en WordPress
-- [ ] Prueba de humo superada con un alumno real
-- [ ] Copia de la base de datos guardada
-- [ ] `bin/humo.mjs` en verde
-- [ ] **IP del servidor autorizada en el Hostinger del cliente**, y verificada
-      con `curl https://api.ipify.org` desde el propio servidor
-- [ ] Cron programado y ejecutándose (sin él, la memoria del alumno no se
-      escribe y no se purga ninguna conversación)
+- [ ] **Un agente por curso**, cada uno activo, con su curso y con su prompt
+- [ ] Documentos de conocimiento cargados en cada agente, si los hay
+- [ ] Presupuesto de tokens holgado. Con 2.000 el informe final del cliente NO
+      cabe y el alumno pierde el diagnóstico al concluir
 - [ ] Decidido el plazo de conservación de las conversaciones (de fábrica: no
       se purga nada)
-- [ ] Directorio `sites/default/files-private` creado y con permisos de escritura
+- [ ] URL de acceso configurada en WordPress
+
+### Verificación
+
+- [ ] Prueba de humo superada con un usuario de prueba
+- [ ] **Aislamiento comprobado con los dos usuarios de prueba**: cada uno ve
+      solo su agente y no alcanza nada del otro
+- [ ] `bin/humo.mjs` en verde
 - [ ] Versión del plugin subida y anotada en su CHANGELOG
 - [ ] El informe de estado muestra la versión correcta del plugin
+- [ ] Copia de la base de datos guardada
