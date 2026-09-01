@@ -19,8 +19,10 @@ use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
 use Drupal\sales_leadership_diagnostic\Service\Branding\Branding;
+use Drupal\sales_leadership_diagnostic\Service\Conversation\ChatWelcome;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticStarter;
+use Drupal\sales_leadership_diagnostic\Service\Diagnostic\StudentHistoryBuilder;
 use Drupal\sales_leadership_diagnostic\Service\Memory\StudentMemoryStore;
 use Drupal\sales_leadership_diagnostic\Service\Security\UserProvisioner;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -52,6 +54,8 @@ final class DashboardController extends ControllerBase {
     private readonly DiagnosticStarter $starter,
     private readonly StudentMemoryStore $memory,
     private readonly CsrfTokenGenerator $csrfToken,
+    private readonly StudentHistoryBuilder $history,
+    private readonly ChatWelcome $welcome,
   ) {}
 
   /**
@@ -71,6 +75,8 @@ final class DashboardController extends ControllerBase {
       $container->get(DiagnosticStarter::class),
       $container->get(StudentMemoryStore::class),
       $container->get('csrf_token'),
+      $container->get(StudentHistoryBuilder::class),
+      $container->get(ChatWelcome::class),
     );
   }
 
@@ -89,6 +95,17 @@ final class DashboardController extends ControllerBase {
     // NULL significa «no se pudo comprobar», no «no tiene acceso».
     $decision = $this->decisionDelAlumno($account);
 
+    // Cuántos agentes tiene decide la forma de toda la pantalla, así que se
+    // resuelve una sola vez y de aquí sale todo lo demás.
+    //
+    // Con UNO, el panel lo enseña todo: su botón y su historial completo,
+    // igual que antes de que hubiera varios. Con VARIOS aparecen las tarjetas
+    // y el historial se va a la página de cada agente, porque una tabla que
+    // mezcla los diagnósticos de dos agentes sin decir de cuál es cada fila no
+    // se puede leer.
+    $agentes = $this->agents->forDecision($decision);
+    $varios = count($agentes) > 1;
+
     return [
       '#theme' => 'sld_dashboard',
       // El nombre de usuario es técnico —«sld_wp_4821»— porque derivarlo del
@@ -99,14 +116,22 @@ final class DashboardController extends ControllerBase {
       // abrir otra vía de HTML arbitrario en la página del alumno.
       '#welcome_text' => $this->branding->getWelcomeText(),
       '#can_start' => $this->readiness->isReady(),
-      '#agents' => $this->buildAgents($decision, $sessions),
+      '#agents' => $this->buildAgents($agentes, $sessions, $varios),
+      '#multiple_agents' => $varios,
       // El panel debe poder decir la verdad: que no sepamos si tiene acceso
       // no es lo mismo que saber que no lo tiene.
       '#cannot_verify' => $decision === NULL && $this->provisioner->getExternalUserId($account) !== NULL,
       '#repeat_notice' => $this->buildRepeatNotice(),
       '#unavailable_notice' => $this->buildUnavailableNotice(),
       '#expiry_notice' => $this->buildExpiryNotice($decision),
-      '#history' => $this->buildHistory($sessions, $results),
+      // Con un agente, todo. Con varios, solo lo que NO tiene página propia
+      // donde salir: una sesión de un agente que ya no aparece —deshabilitado,
+      // o cuyo curso caducó— se quedaría sin enlace y el alumno perdería de
+      // vista un resultado que es suyo. Lo normal es que esté vacío.
+      '#history' => $varios
+        ? $this->history->excludingAgents($sessions, $results, array_map('strval', array_keys($agentes)))
+        : $this->history->all($sessions, $results),
+      '#history_is_leftover' => $varios,
       '#memory' => $this->buildMemory($uid),
       '#memory_forget_all_url' => $this->buildForgetAllUrl(),
       '#attached' => [
@@ -207,37 +232,81 @@ final class DashboardController extends ControllerBase {
   }
 
   /**
-   * Agentes que el alumno puede usar, cada uno con su botón.
+   * Agentes que el alumno puede usar, cada uno con lo que necesita su tarjeta.
    *
-   * El alumno con UN agente no ve ningún selector: el panel le enseña su
-   * botón y entra directo. Decisión del usuario, 25-08-2026 — poner una
-   * pantalla para elegir entre una sola opción es empeorarla. La plantilla
-   * decide cómo mostrarlo según cuántos haya.
+   * El alumno con UN agente no ve ningún selector: el panel le enseña su botón
+   * y entra directo. Decisión del usuario, 25-08-2026 — poner una pantalla
+   * para elegir entre una sola opción es empeorarla, y se confirmó el
+   * 31-08-2026 al añadir el segundo nivel.
    *
-   * @param \Drupal\sales_leadership_diagnostic\DTO\AccessDecision|null $decision
-   *   Autorización ya resuelta. NULL si no se pudo comprobar.
+   * De ahí que las filas lleven DOS destinos, y que la plantilla use uno u
+   * otro: con uno solo, el formulario que empieza la conversación; con varios,
+   * el enlace a la página del agente, donde lee de qué va antes de decidir.
+   *
+   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface[] $agentes
+   *   Agentes a los que tiene derecho, indexados por identificador.
    * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[] $sessions
    *   Sus sesiones, para saber cuáles tiene a medias.
+   * @param bool $varios
+   *   Si tiene más de uno. Decide qué datos hacen falta.
    *
    * @return array<int, array<string, mixed>>
    *   Una entrada por agente disponible.
    */
-  private function buildAgents(?AccessDecision $decision, array $sessions): array {
+  private function buildAgents(array $agentes, array $sessions, bool $varios): array {
     $filas = [];
 
-    foreach ($this->agents->forDecision($decision) as $agent) {
-      $enCurso = $this->findResumableId($sessions, (string) $agent->id());
+    foreach ($agentes as $agent) {
+      $id = (string) $agent->id();
+      $enCurso = $this->findResumableId($sessions, $id);
 
       $filas[] = [
-        'id' => $agent->id(),
+        'id' => $id,
         'label' => $agent->label(),
         'description' => $agent->getDescription(),
         'resume_session_id' => $enCurso,
-        'start_url' => $this->buildStartUrl((string) $agent->id()),
+        'start_url' => $this->buildStartUrl($id),
+        // El icono ya existía: se cargaba en la ficha del agente y solo se
+        // veía dentro del chat, con la conversación vacía. Aquí es lo que
+        // distingue una tarjeta de otra de un vistazo.
+        'icon_url' => $varios ? $this->welcome->getIconUrl($agent) : NULL,
+        'page_url' => $varios
+          ? Url::fromRoute('sales_leadership_diagnostic.agent_page', ['sld_agent' => $id])->toString()
+          : NULL,
+        'state' => $varios ? $this->estadoDe($enCurso, $sessions, $id) : NULL,
       ];
     }
 
     return $filas;
+  }
+
+  /**
+   * En qué punto está el alumno con un agente, para su tarjeta.
+   *
+   * Se dice en la tarjeta y no solo dentro, porque es lo que hace que la
+   * elección sea informada: quien dejó una conversación a medias necesita
+   * verlo antes de entrar, no después.
+   *
+   * @param int|null $enCurso
+   *   Conversación a medias con este agente, si la hay.
+   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[] $sessions
+   *   Sesiones del alumno.
+   * @param string $agentId
+   *   Agente de la tarjeta.
+   */
+  private function estadoDe(?int $enCurso, array $sessions, string $agentId): string {
+    if ($enCurso !== NULL) {
+      return (string) $this->t('A medias');
+    }
+
+    foreach ($sessions as $session) {
+      if ($session->getAgentId() === $agentId
+        && $session->getStatus() === DiagnosticStatus::Completed) {
+        return (string) $this->t('Realizado');
+      }
+    }
+
+    return (string) $this->t('Sin empezar');
   }
 
   /**
@@ -314,39 +383,6 @@ final class DashboardController extends ControllerBase {
     }
 
     return (string) $this->t('Tu acceso incluye un diagnóstico. Podrás realizar uno nuevo cuando renueves.');
-  }
-
-  /**
-   * Construye las filas del historial (§36).
-   *
-   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[] $sessions
-   *   Sesiones del alumno, de la más reciente a la más antigua.
-   * @param array<int, \Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface> $results
-   *   Sus resultados, indexados por la sesión que los produjo.
-   */
-  private function buildHistory(array $sessions, array $results): array {
-    $rows = [];
-    $statusLabels = DiagnosticStatus::allowedValues();
-
-    foreach ($sessions as $session) {
-      $id = (int) $session->id();
-      $status = $session->getStatus();
-
-      $rows[] = [
-        'id' => $id,
-        'date' => $this->dateFormatter->format((int) $session->get('created')->value, 'short'),
-        'status' => $statusLabels[$status->value] ?? $status->value,
-        'status_machine' => $status->value,
-        'version' => $session->getDiagnosticVersion(),
-        // El enlace al resultado solo aparece si el resultado existe de verdad.
-        // Ofrecer un enlace que lleva a un 403 o a un 404 sería peor que no
-        // ofrecer ninguno.
-        'result_id' => isset($results[$id]) ? (int) $results[$id]->id() : NULL,
-        'is_resumable' => $status->acceptsMessages(),
-      ];
-    }
-
-    return $rows;
   }
 
   /**

@@ -273,6 +273,18 @@ export default async function run(page) {
       page.waitForNavigation({ waitUntil: 'networkidle' }),
       page.click('a[href*="/estudio"]'),
     ]);
+
+    // Con VARIOS agentes el estudio pregunta primero cual, en vez de abrir el
+    // editor. Es correcto, asi que la prueba elige uno y sigue; dar por hecho
+    // que siempre se entra directo la hacia fallar en cuanto habia dos.
+    const eleccion = await page.locator('a[href*="/estudio/agente/"]').count();
+    if (eleccion > 0) {
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle' }),
+        page.click('a[href*="/estudio/agente/"]'),
+      ]);
+    }
+
     const campos = await page.locator('.sld-studio__form textarea').count();
     const chat = await page.locator('[data-sld-input]').count();
     anotar(campos >= 3 && chat === 1, 'gestor: el estudio trae editor y chat',
@@ -285,8 +297,27 @@ export default async function run(page) {
   anotar(dondeAterrizaAlumno.includes('/sales-diagnostic'),
     'alumno: aterriza en su panel', `aterrizó en ${dondeAterrizaAlumno}`);
 
+  // Con VARIOS agentes el panel enseña tarjetas y el boton de inicio vive en
+  // la pagina de cada agente (31-08-2026). Con uno solo sigue estando en el
+  // panel. La prueba recorre el camino que le toque al alumno de pruebas, que
+  // es justamente lo que hay que comprobar: que llega a poder empezar.
+  const tarjetas = await page.locator('.sld-card').count();
+
+  if (tarjetas > 0) {
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle' }),
+      page.click('.sld-card'),
+    ]);
+
+    anotar(page.url().includes('/agente/'), 'alumno: la tarjeta lleva a su agente',
+      `acabó en ${page.url()}`);
+  }
+
   const boton = await page.locator('.sld-dashboard__start button').count();
-  anotar(boton > 0, 'alumno: puede iniciar un diagnóstico', 'no hay botón de inicio');
+  anotar(boton > 0, 'alumno: puede iniciar un diagnóstico',
+    tarjetas > 0
+      ? 'no hay botón de inicio en la página del agente'
+      : 'no hay botón de inicio en el panel');
 
   if (boton > 0) {
     // Iniciar no gasta llamadas al proveedor de IA: solo las gasta enviar un

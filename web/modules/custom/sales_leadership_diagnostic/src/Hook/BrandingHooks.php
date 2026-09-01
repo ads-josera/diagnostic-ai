@@ -28,6 +28,11 @@ final class BrandingHooks {
    */
   private const BRANDED_ROUTES = [
     'sales_leadership_diagnostic.dashboard',
+    // La página de cada agente. Se olvidó al crearla el 31-08-2026 y el fallo
+    // no se vio hasta medir el color efectivo: la página cargaba perfecta, con
+    // el azul de fábrica del módulo en vez del de la marca, entre dos páginas
+    // que sí lo llevaban. Mirarla no bastaba; los dos azules se parecen.
+    'sales_leadership_diagnostic.agent_page',
     'sales_leadership_diagnostic.session',
     'sales_leadership_diagnostic.result',
     'sales_leadership_diagnostic.sso_denied',

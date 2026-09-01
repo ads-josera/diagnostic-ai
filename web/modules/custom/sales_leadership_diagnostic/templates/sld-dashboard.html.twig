@@ -18,7 +18,11 @@
  * - welcome_text: mensaje de bienvenida personalizado, o nulo.
  * - can_start: si el sistema está listo para iniciar diagnósticos.
  * - agents: agentes a los que el alumno tiene derecho. Cada uno con id,
- *   label, description, start_url y resume_session_id.
+ *   label, description, start_url y resume_session_id; y, solo cuando hay
+ *   varios, icon_url, page_url y state.
+ * - multiple_agents: cierto si tiene más de uno. Cambia la forma de la
+ *   pantalla entera, no solo de esta sección: con varios aparecen las
+ *   tarjetas y el historial se va a la página de cada agente.
  * - cannot_verify: cierto si no se pudo comprobar la autorización. Distinto
  *   de no tener derecho a ningún agente.
  * - repeat_notice: aviso sobre la política de repetición, o nulo.
@@ -26,6 +30,9 @@
  *   neutro; un administrador, el detalle técnico.
  * - history: filas del historial, cada una con id, date, status,
  *   status_machine, version, result_id e is_resumable.
+ * - history_is_leftover: cierto cuando `history` no es el historial completo
+ *   sino lo que quedó sin página de agente donde salir. Cambia el título y
+ *   hace que la sección desaparezca si está vacía.
  * - memory: lo que el sistema recuerda del alumno. Cada entrada con topic,
  *   content, updated y forget_url. Vacío mientras no termine un diagnóstico.
  * - memory_forget_all_url: destino del botón de olvidarlo todo.
@@ -67,42 +74,76 @@
   <div class="sld-dashboard__start">
     {% if can_start and agents is not empty %}
       {#
-        Un formulario por agente, y no un enlace: iniciar crea una sesión, y
-        con GET la crearía cualquier cosa que precargue enlaces. El token CSRF
-        impide además que otro sitio lo dispare desde el navegador del alumno.
-
-        Toda la política se aplica en el servidor, en DiagnosticStarter, que
-        vuelve a comprobar que el alumno tiene derecho a ESE agente. Estos
-        botones solo evitan ofrecer algo que se va a rechazar; no son la
-        defensa.
-
-        Con un solo agente no hay encabezado ni nombre: el alumno ve su botón
-        y entra, igual que antes de que hubiera varios.
+        Dos formas para la misma sección, según cuántos agentes tenga. No es
+        adorno: con uno solo no hay nada que elegir, y meterle una pantalla
+        intermedia le costaría un clic en cada visita a cambio de nada.
       #}
-      {% if agents|length > 1 %}
+      {% if multiple_agents %}
+        {#
+          Con varios agentes se elige antes de empezar, así que la tarjeta no
+          lanza la conversación: lleva a la página del agente, donde lee de qué
+          va y en qué punto está. El botón que crea la sesión vive allí.
+
+          Es un enlace y no un formulario justamente por eso: mirar no cambia
+          nada, y no hay motivo para exigir POST ni token.
+        #}
         <h2 class="sld-dashboard__section-title">{{ 'Tus diagnósticos disponibles'|t }}</h2>
-      {% endif %}
 
-      <ul class="sld-dashboard__agents">
+        <ul class="sld-dashboard__cards">
+          {% for agent in agents %}
+            <li>
+              <a class="sld-card" href="{{ agent.page_url }}">
+                {#
+                  Sin icono se pinta la inicial del agente, no un hueco.
+
+                  El hueco se reserva igual —si no, un agente sin icono
+                  desalinea su texto respecto a los demás— pero vacío parece
+                  una imagen que no cargó. La inicial distingue las tarjetas
+                  aunque el cliente olvide subir el icono, que es lo que va a
+                  pasar cada vez que cree un agente nuevo.
+                #}
+                <span class="sld-card__icon" aria-hidden="true">
+                  {% if agent.icon_url %}
+                    <img src="{{ agent.icon_url }}" alt="">
+                  {% else %}
+                    <span class="sld-card__initial">{{ agent.label|slice(0, 1)|upper }}</span>
+                  {% endif %}
+                </span>
+
+                <span class="sld-card__body">
+                  <span class="sld-card__name">{{ agent.label }}</span>
+                  {% if agent.description %}
+                    <span class="sld-card__description">{{ agent.description }}</span>
+                  {% endif %}
+                  <span class="sld-card__state">{{ agent.state }}</span>
+                </span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {#
+          Un solo agente: su botón y adentro. Sin nombre, sin tarjeta y sin
+          pantalla intermedia, porque no hay nada que elegir.
+
+          Formulario y no enlace: iniciar crea una sesión, y con GET la crearía
+          cualquier cosa que precargue enlaces. El token CSRF impide además que
+          otro sitio lo dispare desde el navegador del alumno.
+
+          Toda la política se aplica en el servidor, en DiagnosticStarter, que
+          vuelve a comprobar que el alumno tiene derecho a ESE agente. El botón
+          solo evita ofrecer algo que se va a rechazar; no es la defensa.
+        #}
         {% for agent in agents %}
-          <li class="sld-dashboard__agent">
-            {% if agents|length > 1 %}
-              <p class="sld-dashboard__agent-name">{{ agent.label }}</p>
-              {% if agent.description %}
-                <p class="sld__muted">{{ agent.description }}</p>
-              {% endif %}
-            {% endif %}
-
-            <form action="{{ agent.start_url }}" method="post">
-              <button type="submit" class="sld__button">
-                {{ agent.resume_session_id
-                  ? 'Continuar mi diagnóstico'|t
-                  : 'Iniciar diagnóstico'|t }}
-              </button>
-            </form>
-          </li>
+          <form action="{{ agent.start_url }}" method="post">
+            <button type="submit" class="sld__button">
+              {{ agent.resume_session_id
+                ? 'Continuar mi diagnóstico'|t
+                : 'Iniciar diagnóstico'|t }}
+            </button>
+          </form>
         {% endfor %}
-      </ul>
+      {% endif %}
 
       {% if repeat_notice %}
         <p class="sld__muted">{{ repeat_notice }}</p>
@@ -128,10 +169,29 @@
     {% endif %}
   </div>
 
+{#
+  El historial.
+
+  Con UN agente es el historial del alumno, y va aquí entero.
+
+  Con VARIOS, el de cada agente vive en su página —que es lo que sustituye a
+  ponerle una columna «Agente» a esta tabla— y aquí solo queda lo que no tiene
+  dónde salir: sesiones de un agente que ya no aparece. Es una red de
+  seguridad para no dejar sin enlace un resultado pagado, así que cuando está
+  vacía no se pinta nada: un apartado vacío titulado «Otros diagnósticos» solo
+  haría preguntarse qué falta.
+#}
+{% if not history_is_leftover or history is not empty %}
   <section aria-labelledby="sld-history-title">
     <h2 class="sld-dashboard__section-title" id="sld-history-title">
-      {{ 'Mis diagnósticos'|t }}
+      {{ history_is_leftover ? 'Otros diagnósticos'|t : 'Mis diagnósticos'|t }}
     </h2>
+
+    {% if history_is_leftover %}
+      <p class="sld__muted">
+        {{ 'Diagnósticos que hiciste con agentes que ya no tienes disponibles. Tus resultados siguen siendo tuyos.'|t }}
+      </p>
+    {% endif %}
 
     {% if history is empty %}
       <p class="sld-dashboard__empty">
@@ -180,6 +240,7 @@
       </div>
     {% endif %}
   </section>
+{% endif %}
 
   {#
     Lo que el sistema recuerda del alumno.

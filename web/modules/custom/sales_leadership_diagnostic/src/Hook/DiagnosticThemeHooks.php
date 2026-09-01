@@ -41,6 +41,7 @@ final class DiagnosticThemeHooks {
    */
   private const INNER_ROUTES = [
     'sales_leadership_diagnostic.dashboard',
+    'sales_leadership_diagnostic.agent_page',
     'sales_leadership_diagnostic.result',
   ];
 
@@ -79,6 +80,10 @@ final class DiagnosticThemeHooks {
           // no tiene derecho a ninguno, que es distinto de que el sistema no
           // esté listo (`can_start`).
           'agents' => [],
+          // Cierto si tiene más de uno. Cambia la forma de la pantalla
+          // entera: con varios aparecen las tarjetas y el historial se va a
+          // la página de cada agente.
+          'multiple_agents' => FALSE,
           // Cierto solo si NO se pudo comprobar la autorización. Es distinto
           // de no tener derecho a ningún agente, y al alumno hay que decirle
           // cosas distintas.
@@ -87,10 +92,33 @@ final class DiagnosticThemeHooks {
           'unavailable_notice' => NULL,
           'expiry_notice' => NULL,
           'history' => [],
+          // Cierto cuando `history` no es el historial completo sino lo que
+          // quedó sin página de agente donde salir. Lo normal es que entonces
+          // esté vacío, y la sección desaparece.
+          'history_is_leftover' => FALSE,
           // Lo que el sistema recuerda del alumno. Vacio en su primera visita
           // y mientras no termine ningun diagnostico.
           'memory' => [],
           'memory_forget_all_url' => '',
+        ],
+      ],
+      // Página de UN agente. Solo la ve el alumno con varios: teniendo uno
+      // solo, el panel lo enseña entero y no hay segundo nivel.
+      'sld_agent_page' => [
+        'variables' => [
+          'agent_label' => '',
+          'agent_description' => '',
+          'icon_url' => NULL,
+          'intro' => NULL,
+          // Identificador de la conversación a medias con ESTE agente, si la
+          // hay. Solo cambia el texto del botón.
+          'resume_session_id' => NULL,
+          'start_url' => '',
+          'dashboard_url' => '',
+          'repeat_notice' => NULL,
+          // Historial de este agente. No lleva columna «Agente» a propósito:
+          // la página entera ya dice de quién es.
+          'history' => [],
         ],
       ],
       'sld_chat' => [

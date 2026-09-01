@@ -1,0 +1,153 @@
+{#
+/**
+ * @file
+ * La página de UN agente: su presentación y su historial.
+ *
+ * Segundo nivel de la navegación del alumno. Solo la ve quien tiene varios
+ * agentes; con uno solo, el panel lo enseña todo y esta página no se usa.
+ *
+ * Comparte el marco de la portada (page--sld-inner.html.twig), que no imprime
+ * el título de la ruta: por eso el nombre del agente se marca aquí como `<h1>`,
+ * igual que el saludo del panel.
+ *
+ * La memoria del alumno NO se pinta aquí a propósito. Se guarda por alumno y
+ * se le da entera a todos sus agentes; enseñarla dentro de uno diría que cada
+ * agente recuerda por su cuenta, que es falso. Vive en el panel.
+ *
+ * Variables disponibles:
+ * - agent_label: nombre del agente.
+ * - agent_description: para qué sirve, en una línea.
+ * - icon_url: su icono, o nulo.
+ * - intro: la presentación que hasta ahora solo se veía dentro del chat.
+ * - resume_session_id: conversación a medias con este agente, o nulo. Solo
+ *   cambia el texto del botón.
+ * - start_url: destino del formulario que crea la sesión, con su token.
+ * - dashboard_url: vuelta al panel.
+ * - repeat_notice: aviso sobre la política de repetición, o nulo.
+ * - history: filas de ESTE agente, cada una con id, date, status,
+ *   status_machine, version, result_id e is_resumable.
+ *
+ * Twig autoescapa todas las variables, de modo que ningún dato de usuario
+ * puede inyectar marcado.
+ */
+#}
+<div class="sld sld-dashboard sld-agent-page">
+
+  {#
+    La vuelta va ARRIBA y es lo primero que se lee. Esta página se alcanza
+    siempre desde el panel, y sin salida visible el alumno solo tiene el botón
+    del navegador.
+  #}
+  <a class="sld__link sld-agent-page__back" href="{{ dashboard_url }}">
+    {{ '← Volver a mis diagnósticos'|t }}
+  </a>
+
+  <header class="sld-agent-page__header">
+    {# Sin icono, la inicial: igual que en la tarjeta del panel. #}
+    {% if icon_url %}
+      <img class="sld-agent-page__icon" src="{{ icon_url }}" alt="">
+    {% else %}
+      <span class="sld-agent-page__icon sld-agent-page__icon--initial" aria-hidden="true">
+        {{ agent_label|slice(0, 1)|upper }}
+      </span>
+    {% endif %}
+
+    <div>
+      <h1 class="sld-dashboard__greeting">{{ agent_label }}</h1>
+
+      {% if agent_description %}
+        <p class="sld__muted">{{ agent_description }}</p>
+      {% endif %}
+    </div>
+  </header>
+
+  {#
+    La presentación del agente. Hasta ahora solo aparecía DENTRO del chat y
+    únicamente mientras la conversación estuviera vacía, así que quien la
+    reanudaba no volvía a verla nunca. Aquí se lee antes de empezar, que es
+    cuando sirve para decidir a cuál de sus agentes le dedica el rato.
+  #}
+  {% if intro %}
+    <p class="sld-agent-page__intro">{{ intro }}</p>
+  {% endif %}
+
+  <div class="sld-dashboard__start">
+    {#
+      Formulario y no enlace: iniciar crea una sesión, y con GET la crearía
+      cualquier cosa que precargue enlaces. El token CSRF impide además que
+      otro sitio lo dispare desde el navegador del alumno.
+
+      Quien decide de verdad es DiagnosticStarter, que vuelve a comprobar que
+      el alumno tiene derecho a ESTE agente antes de crear nada.
+    #}
+    <form action="{{ start_url }}" method="post">
+      <button type="submit" class="sld__button">
+        {{ resume_session_id
+          ? 'Continuar mi diagnóstico'|t
+          : 'Iniciar diagnóstico'|t }}
+      </button>
+    </form>
+
+    {% if repeat_notice %}
+      <p class="sld__muted">{{ repeat_notice }}</p>
+    {% endif %}
+  </div>
+
+  {#
+    El historial de este agente. Sin columna «Agente»: la página entera ya
+    dice de quién es, y repetir el título en cada fila sería ruido.
+  #}
+  <section aria-labelledby="sld-agent-history-title">
+    <h2 class="sld-dashboard__section-title" id="sld-agent-history-title">
+      {{ 'Tus diagnósticos con este agente'|t }}
+    </h2>
+
+    {% if history is empty %}
+      <p class="sld-dashboard__empty">
+        {{ 'Todavía no has realizado ningún diagnóstico con este agente.'|t }}
+      </p>
+    {% else %}
+      <div class="sld-dashboard__table-wrapper">
+        <table class="sld-dashboard__table">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'Fecha'|t }}</th>
+              <th scope="col">{{ 'Estado'|t }}</th>
+              <th scope="col">{{ 'Versión'|t }}</th>
+              <th scope="col">
+                <span class="sld__visually-hidden">{{ 'Acciones'|t }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in history %}
+              <tr>
+                <td data-label="{{ 'Fecha'|t }}">{{ row.date }}</td>
+                <td data-label="{{ 'Estado'|t }}">
+                  <span class="sld-status sld-status--{{ row.status_machine }}">
+                    {{ row.status }}
+                  </span>
+                </td>
+                <td data-label="{{ 'Versión'|t }}">{{ row.version }}</td>
+                <td data-label="{{ 'Acciones'|t }}">
+                  {% if row.result_id %}
+                    <a class="sld__link" href="{{ path('sales_leadership_diagnostic.result', {'sld_diagnostic_result': row.result_id}) }}">
+                      {{ 'Ver resultado'|t }}
+                    </a>
+                  {% elseif row.is_resumable %}
+                    <a class="sld__link" href="{{ path('sales_leadership_diagnostic.session', {'sld_diagnostic_session': row.id}) }}">
+                      {{ 'Continuar'|t }}
+                    </a>
+                  {% else %}
+                    <span class="sld__muted">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+
+</div>

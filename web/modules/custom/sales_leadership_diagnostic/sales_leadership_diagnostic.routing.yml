@@ -47,6 +47,28 @@ sales_leadership_diagnostic.dashboard:
     # ella el contenedor no lo encuentra e instancia la clase sin argumentos.
     _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::access'
 
+# Página de un agente: su presentación y su historial.
+#
+# Segundo nivel de la navegación del alumno, y solo se usa cuando tiene varios
+# agentes: con uno solo, el panel lo enseña todo y nadie llega aquí.
+#
+# Que el agente viaje en la URL no autoriza a verlo. El control de acceso de
+# las rutas del alumno comprueba que tenga acceso al diagnóstico; que tenga
+# derecho a ESTE agente lo comprueba el controller, que es quien puede cruzar
+# los cursos que posee con el curso que lo concede.
+sales_leadership_diagnostic.agent_page:
+  path: '/sales-diagnostic/agente/{sld_agent}'
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\AgentPageController::view'
+    # El título sale del agente: con varios, uno común los volvería
+    # indistinguibles en las pestañas y en los marcadores.
+    _title_callback: 'Drupal\sales_leadership_diagnostic\Controller\AgentPageController::title'
+  requirements:
+    _permission: 'access sales leadership diagnostic'
+    # Sin barra invertida inicial: el ID del servicio se registra sin ella, y con
+    # ella el contenedor no lo encuentra e instancia la clase sin argumentos.
+    _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::access'
+
 # Inicio de un diagnóstico.
 #
 # Solo POST y con token CSRF: crear una sesión cambia el estado del sistema, y

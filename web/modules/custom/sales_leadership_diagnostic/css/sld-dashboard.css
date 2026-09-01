@@ -117,28 +117,154 @@
 }
 
 /**
- * Agentes disponibles.
+ * Las tarjetas de agente.
  *
- * Lista y no rejilla: con uno solo debe verse exactamente igual que el botón
- * único de antes, y una rejilla de un elemento habría cambiado su posición sin
- * motivo. Con varios, cada agente ocupa su fila con su nombre encima.
+ * Solo aparecen cuando el alumno tiene VARIOS. Con uno solo el panel enseña su
+ * botón directamente, sin tarjeta y sin pantalla intermedia, porque no hay
+ * nada que elegir.
+ *
+ * Rejilla que se adapta sola: dos columnas cuando caben, una cuando no. Se usa
+ * `auto-fit` con un minimo en vez de puntos de ruptura fijos porque el numero
+ * de agentes lo decide lo que haya comprado el alumno, y con paquetes de tres
+ * o seis podrian ser bastantes.
  */
-.sld-dashboard__agents {
+.sld-dashboard__cards {
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: var(--sld-space-lg);
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--sld-space-md);
 }
 
-.sld-dashboard__agent-name {
-  margin: 0 0 var(--sld-space-xs);
+/*
+ * La tarjeta entera es el enlace, no solo el titulo.
+ *
+ * Un area de pulsacion grande importa sobre todo en movil, y ademas evita el
+ * problema de accesibilidad de meter varios enlaces al mismo destino dentro de
+ * una misma tarjeta: aqui hay uno y su nombre accesible es el del agente.
+ */
+.sld-card {
+  display: flex;
+  gap: var(--sld-space-md);
+  align-items: flex-start;
+  height: 100%;
+  box-sizing: border-box;
+  padding: var(--sld-space-lg);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-bg);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sld-card:hover,
+.sld-card:focus-visible {
+  border-color: var(--sld-color-primary);
+  box-shadow: var(--sld-shadow);
+}
+
+/*
+ * El hueco del icono se reserva SIEMPRE, tenga icono o no.
+ *
+ * Sin reservarlo, un agente sin icono desalinea su texto respecto a los demas
+ * y la rejilla se ve rota por un dato que falta en la ficha.
+ */
+.sld-card__icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-surface);
+}
+
+.sld-card__icon img {
+  max-width: 2rem;
+  max-height: 2rem;
+}
+
+/* La inicial que sustituye al icono que falta. */
+.sld-card__initial {
+  color: var(--sld-color-primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sld-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-xs);
+  min-width: 0;
+}
+
+.sld-card__name {
   font-weight: 600;
+  line-height: 1.3;
 }
 
-.sld-dashboard__agent form {
-  margin-top: var(--sld-space-sm);
+.sld-card__description {
+  color: var(--sld-color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
+
+/*
+ * El estado va en minusculas y discreto: acompana a la eleccion, no compite
+ * con el nombre del agente, que es lo que se lee primero.
+ */
+.sld-card__state {
+  margin-top: var(--sld-space-xs);
+  color: var(--sld-color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* La pagina de un agente ---------------------------------------------- */
+
+.sld-agent-page__back {
+  display: inline-block;
+  margin-bottom: var(--sld-space-lg);
+  font-size: 0.9rem;
+}
+
+.sld-agent-page__header {
+  display: flex;
+  gap: var(--sld-space-md);
+  align-items: center;
+  margin-bottom: var(--sld-space-md);
+}
+
+.sld-agent-page__icon {
+  flex: 0 0 auto;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: var(--sld-space-sm);
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-surface);
+  box-sizing: border-box;
+  object-fit: contain;
+}
+
+.sld-agent-page__icon--initial {
+  display: grid;
+  place-items: center;
+  color: var(--sld-color-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.sld-agent-page__intro {
+  margin: 0 0 var(--sld-space-lg);
+  max-width: 42rem;
+  line-height: 1.6;
+}
+
 
 /**
  * Lo que el sistema recuerda del alumno.

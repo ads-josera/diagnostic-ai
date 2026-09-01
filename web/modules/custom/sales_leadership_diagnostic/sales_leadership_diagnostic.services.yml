@@ -108,6 +108,12 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
       - '@Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry'
 
+  # Las filas del historial del alumno. Lo pintan el panel y la página de cada
+  # agente, y por eso no vive dentro de un controller.
+  Drupal\sales_leadership_diagnostic\Service\Diagnostic\StudentHistoryBuilder:
+    arguments:
+      - '@date.formatter'
+
   # Composición y versionado del prompt del cliente (§18, §57).
   Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManager:
     arguments:
