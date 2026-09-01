@@ -55,7 +55,15 @@ export default async function run(page) {
   /** Inicia sesión con usuario y contraseña, como lo hace una persona. */
   const entrar = async ({ usuario, clave }) => {
     await page.goto(`${SITIO}/user/logout/confirm`, { waitUntil: 'networkidle' }).catch(() => {});
-    await page.locator('input[type=submit], button[type=submit]').first().click().catch(() => {});
+
+    // Se pulsa SOLO si de verdad estamos en la confirmacion de cierre de
+    // sesion. Pulsar «el primer boton de la pagina» a ciegas costo dinero el
+    // 31-08-2026: al estar ya fuera se aterrizaba en el panel del alumno, y
+    // ahi el primer boton es «Iniciar diagnostico». Asi, la prueba de humo
+    // abria una conversacion real contra OpenAI en cada ejecucion.
+    if (page.url().includes('/user/logout')) {
+      await page.locator('form input[type=submit], form button[type=submit]').first().click().catch(() => {});
+    }
     await page.waitForTimeout(500);
     await page.goto(`${SITIO}/user/login`, { waitUntil: 'domcontentloaded' });
     await page.fill('#edit-name', usuario);
