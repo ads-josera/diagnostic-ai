@@ -50,6 +50,14 @@ final class DiagnosticStarterTest extends KernelTestBase {
   ];
 
   /**
+   * Curso del segundo agente de las pruebas.
+   *
+   * Distinto del principal a propósito: es lo que obliga a que el alumno
+   * posea los dos para ver los dos agentes.
+   */
+  private const CURSO_SECUNDARIO = '99999';
+
+  /**
    * Doble del proveedor de autorización.
    *
    * @var \Drupal\Tests\sales_leadership_diagnostic\Kernel\Stub\StubCourseAccessProvider
@@ -321,6 +329,99 @@ final class DiagnosticStarterTest extends KernelTestBase {
   }
 
   /**
+   * Un alumno con DOS agentes puede empezar los dos.
+   *
+   * Es la garantía de base del producto multi-agente y hasta el 31-08-2026 no
+   * la fijaba nada: funcionaba, se comprobó a mano en el navegador, pero un
+   * cambio podría haberla roto en silencio. El cliente va a vender paquetes de
+   * varios agentes, así que conviene que esté escrita.
+   */
+  public function testUnAlumnoConDosAgentesPuedeEmpezarLosDos(): void {
+    $this->concederAmbosCursos();
+
+    $primera = $this->starter()->start($this->alumno, $this->agente());
+    $segunda = $this->starter()->start($this->alumno, $this->agenteSecundario());
+
+    $this->assertNotSame(
+      $primera->id(),
+      $segunda->id(),
+      'Cada agente debe abrir su propia conversación.',
+    );
+    $this->assertSame('agente_prueba', $primera->getAgentId());
+    $this->assertSame('agente_prueba_b', $segunda->getAgentId());
+  }
+
+  /**
+   * Una conversación a medias con un agente NO bloquea al otro.
+   *
+   * Es la que más falta hace, porque el fallo ya ocurrió: la búsqueda de
+   * conversación reanudable miraba las del alumno sin filtrar por agente, así
+   * que pulsar «empezar» en el segundo le devolvía la conversación del
+   * primero. Está arreglado y comentado en `findResumableSession()`, pero
+   * nada impedía que alguien quitara esa condición al refactorizar.
+   *
+   * Se deja la primera ABIERTA a propósito: cerrarla haría pasar la prueba
+   * incluso con el fallo puesto.
+   */
+  public function testUnaConversacionSinTerminarNoBloqueaElOtroAgente(): void {
+    $this->concederAmbosCursos();
+
+    $abierta = $this->starter()->start($this->alumno, $this->agente());
+
+    $this->assertTrue(
+      $abierta->getStatus()->acceptsMessages(),
+      'La primera debe quedar abierta, o la prueba no comprobaría nada.',
+    );
+
+    $otra = $this->starter()->start($this->alumno, $this->agenteSecundario());
+
+    $this->assertNotSame($abierta->id(), $otra->id());
+    $this->assertSame('agente_prueba_b', $otra->getAgentId());
+  }
+
+  /**
+   * Volver a pulsar en el MISMO agente devuelve su conversación.
+   *
+   * Es el límite contrario, y hace falta justo por la prueba anterior: quien
+   * «arreglase» aquello abriendo sesión nueva siempre haría que el alumno
+   * perdiera lo que llevaba escrito al pulsar dos veces.
+   */
+  public function testRepetirEnElMismoAgenteDevuelveSuConversacion(): void {
+    $this->concederAmbosCursos();
+
+    $primera = $this->starter()->start($this->alumno, $this->agente());
+    $repetida = $this->starter()->start($this->alumno, $this->agente());
+
+    $this->assertSame($primera->id(), $repetida->id());
+  }
+
+  /**
+   * HOY el límite por periodo cuenta por ALUMNO, no por agente.
+   *
+   * Esta prueba afirma un comportamiento que consideramos EQUIVOCADO, y lo
+   * hace a propósito. El ajuste está apagado (`unlimited`), así que hoy no
+   * afecta a nadie; el día que el cliente lo active, un alumno con dos cursos
+   * hará un diagnóstico y se quedará sin el otro habiendo pagado los dos.
+   *
+   * Escribirlo lo convierte de trampa invisible en decisión visible, y deja
+   * señalado el sitio exacto que hay que tocar: `countSessionsSince()` en
+   * DiagnosticStarter, añadiéndole la condición del agente.
+   *
+   * CUANDO SE DECIDA: si la respuesta es «uno por agente», esta prueba pasa a
+   * esperar que la segunda SÍ se cree, y hay que cambiarla junto con el
+   * servicio. Si la respuesta es «uno en total», se queda como está.
+   */
+  public function testHoyElLimitePorPeriodoCuentaPorAlumno(): void {
+    $this->activarLimitePorPeriodo();
+    $this->concederAmbosCursos(periodStart: 1_000_000);
+
+    $this->starter()->start($this->alumno, $this->agente());
+
+    $this->expectException(CannotStartDiagnosticException::class);
+    $this->starter()->start($this->alumno, $this->agenteSecundario());
+  }
+
+  /**
    * Agente de la prueba, creado al vuelo la primera vez que se pide.
    *
    * Su curso coincide con el que la prueba configura en WordPress, que es lo
@@ -346,6 +447,55 @@ final class DiagnosticStarterTest extends KernelTestBase {
     }
 
     return $agente;
+  }
+
+  /**
+   * Segundo agente, con OTRO curso.
+   *
+   * El curso distinto es lo que hace útil la prueba: obliga a que el alumno
+   * posea los dos para verlos, que es exactamente el caso que preguntó el
+   * cliente el 31-08-2026. Con los dos agentes sobre el mismo curso, una
+   * autorización mal filtrada pasaría desapercibida.
+   */
+  private function agenteSecundario(): DiagnosticAgentInterface {
+    $almacen = $this->container->get('entity_type.manager')->getStorage('sld_agent');
+    $agente = $almacen->load('agente_prueba_b');
+
+    if ($agente === NULL) {
+      $agente = $almacen->create([
+        'id' => 'agente_prueba_b',
+        'label' => 'Segundo agente de prueba',
+        'status' => TRUE,
+        'version' => '1.0-TEST',
+        'course_id' => self::CURSO_SECUNDARIO,
+        'system_prompt' => 'Prompt del segundo agente.',
+        'output_contract' => 'Contrato.',
+      ]);
+      $agente->save();
+    }
+
+    return $agente;
+  }
+
+  /**
+   * Autoriza al alumno con los DOS cursos.
+   *
+   * Se rellena `ownedCourses`, que es lo que envía el plugin desde la 1.2.0 y
+   * lo único que permite tener derecho a más de un agente: `concederAcceso()`
+   * lo deja vacío, y entonces el registro cae al respaldo del plugin antiguo,
+   * que concede solo el agente del curso principal.
+   *
+   * @param int|null $periodStart
+   *   Inicio del periodo que debe informar.
+   */
+  private function concederAmbosCursos(?int $periodStart = NULL): void {
+    $this->provider->decision = new AccessDecision(
+      granted: TRUE,
+      courseId: '35884',
+      checkedAt: 2_500_000,
+      startedAt: $periodStart,
+      ownedCourses: ['35884', self::CURSO_SECUNDARIO],
+    );
   }
 
   /**
