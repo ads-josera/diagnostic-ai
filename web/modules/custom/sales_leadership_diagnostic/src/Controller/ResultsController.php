@@ -8,6 +8,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -65,10 +66,42 @@ final class ResultsController extends ControllerBase {
   }
 
   /**
-   * Título de la página.
+   * Título de la página, que puede fijar cada agente.
+   *
+   * No todos los agentes entregan un diagnóstico. El de prospección cierra con
+   * un Weekly GOLD Pack —cuentas, buyers, routing y outreach—, y encabezar esa
+   * página con «Resultado de tu diagnóstico» describe mal lo que la persona
+   * tiene delante. Cuando el agente no dice nada se usa el de siempre, así que
+   * los agentes que ya existían no cambian.
+   *
+   * El agente se carga del almacén y NO del registro de agentes utilizables:
+   * un resultado antiguo puede pertenecer a uno deshabilitado, y ahí lo que se
+   * quiere es el título con el que se generó, no un 404.
    */
   public function title(DiagnosticResultInterface $sld_diagnostic_result): string {
-    return (string) $this->t('Resultado de tu diagnóstico');
+    $propio = $this->agenteDe($sld_diagnostic_result)?->getResultTitle() ?? '';
+
+    return $propio !== ''
+      ? $propio
+      : (string) $this->t('Resultado de tu diagnóstico');
+  }
+
+  /**
+   * Agente con el que se generó un resultado, si todavía existe.
+   */
+  private function agenteDe(DiagnosticResultInterface $result): ?DiagnosticAgentInterface {
+    $id = $result->getAgentId();
+
+    if ($id === '') {
+      return NULL;
+    }
+
+    // Se usa el accesor de ControllerBase en lugar de inyectarlo: la clase
+    // base ya declara esa propiedad, y volver a declararla como readonly es un
+    // error fatal de PHP que tumba la reconstrucción de cache entera.
+    $agente = $this->entityTypeManager()->getStorage('sld_agent')->load($id);
+
+    return $agente instanceof DiagnosticAgentInterface ? $agente : NULL;
   }
 
   /**

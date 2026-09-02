@@ -73,6 +73,15 @@ interface DiagnosticAgentInterface extends ConfigEntityInterface {
   public function getWelcomeIntro(): string;
 
   /**
+   * Encabezado de la página de resultado, o cadena vacía si usa el de serie.
+   *
+   * Existe porque no todos los agentes entregan un diagnóstico. El de
+   * prospección cierra con un Weekly GOLD Pack, y encabezar esa página con
+   * «Resultado de tu diagnóstico» describe mal lo que se está leyendo.
+   */
+  public function getResultTitle(): string;
+
+  /**
    * Sugerencias para empezar.
    *
    * @return string[]

@@ -188,6 +188,14 @@ final class DiagnosticAgentForm extends EntityForm {
       '#rows' => 4,
     ];
 
+    $form['result_title'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Encabezado de la página de resultado'),
+      '#description' => $this->t('Lo que el alumno lee arriba de su resultado. Déjalo vacío para usar «Resultado de tu diagnóstico», que es lo que se muestra si no se indica nada. Cámbialo cuando el agente no entregue un diagnóstico: el de prospección, por ejemplo, cierra con un Weekly GOLD Pack.'),
+      '#default_value' => $agente->getResultTitle(),
+      '#maxlength' => 100,
+    ];
+
     $form['weight'] = [
       '#type' => 'number',
       '#title' => $this->t('Orden'),

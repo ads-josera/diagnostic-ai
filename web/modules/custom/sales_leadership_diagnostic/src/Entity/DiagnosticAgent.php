@@ -87,6 +87,7 @@ use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
     'welcome_icon_fid',
     'welcome_intro',
     'welcome_suggestions',
+    'result_title',
     'weight',
   ],
 )]
@@ -147,6 +148,15 @@ final class DiagnosticAgent extends ConfigEntityBase implements DiagnosticAgentI
    * Icono de la pantalla de bienvenida.
    */
   protected int $welcome_icon_fid = 0;
+
+  /**
+   * Encabezado de la página de resultado.
+   *
+   * Vacío significa «el de siempre». No todos los agentes entregan un
+   * diagnóstico: el de prospección cierra con un Weekly GOLD Pack, y llamarlo
+   * «Resultado de tu diagnóstico» describe mal lo que la persona está leyendo.
+   */
+  protected string $result_title = '';
 
   /**
    * Texto introductorio del chat.
@@ -235,6 +245,13 @@ final class DiagnosticAgent extends ConfigEntityBase implements DiagnosticAgentI
    */
   public function getWelcomeIntro(): string {
     return trim($this->welcome_intro);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getResultTitle(): string {
+    return trim($this->result_title);
   }
 
   /**

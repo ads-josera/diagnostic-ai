@@ -194,6 +194,9 @@ sales_leadership_diagnostic.agent.*:
       label: 'Sugerencias para empezar'
       sequence:
         type: label
+    result_title:
+      type: label
+      label: 'Encabezado de la página de resultado'
     weight:
       type: integer
       label: 'Orden'
