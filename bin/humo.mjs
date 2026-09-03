@@ -278,7 +278,29 @@ export default async function run(page) {
     // editor. Es correcto, asi que la prueba elige uno y sigue; dar por hecho
     // que siempre se entra directo la hacia fallar en cuanto habia dos.
     const eleccion = await page.locator('a[href*="/estudio/agente/"]').count();
+
     if (eleccion > 0) {
+      // La pantalla de eleccion NO debe ofrecer la caja del chat. Durante dias
+      // la ofrecio: el gestor escribia, no pasaba nada y parecia roto, porque
+      // el JS que la anima no se adjunta hasta que hay agente. Un control
+      // muerto es peor que ninguno. Esta prueba existe porque el fallo se
+      // colo justo por aqui: el humo entraba DIRECTO al estudio de un agente y
+      // nunca miraba esta pantalla.
+      anotar(
+        await page.locator('[data-sld-composer]').count() === 0,
+        'gestor: la eleccion de agente no ofrece un chat que no funciona',
+        'hay caja de mensaje en una pantalla sin conversacion',
+      );
+
+      // Y debe llevar sus estilos. Sin ellos los botones salian pegados uno a
+      // otro y se leian como un solo nombre.
+      const separados = await page.evaluate(() => {
+        const marco = document.querySelector('.sld-studio');
+        return marco ? getComputedStyle(marco).display === 'grid' : false;
+      });
+      anotar(separados, 'gestor: la eleccion de agente lleva sus estilos',
+        'la hoja del estudio no se cargo en esta pantalla');
+
       await Promise.all([
         page.waitForNavigation({ waitUntil: 'networkidle' }),
         page.click('a[href*="/estudio/agente/"]'),

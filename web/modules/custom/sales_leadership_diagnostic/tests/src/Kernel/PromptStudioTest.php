@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\sales_leadership_diagnostic\Controller\PromptStudioController;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManager;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\PromptDraft;
@@ -206,6 +207,53 @@ final class PromptStudioTest extends KernelTestBase {
       $agente->getSystemPrompt(),
       'Lo publicado no se toca al ensayar.',
     );
+  }
+
+  /**
+   * La pantalla de ELECCIÓN de agente lleva sus estilos y ninguna conversación.
+   *
+   * Con varios agentes, entrar al estudio sin decir cuál pinta una pantalla de
+   * elección. Hasta el 02-09-2026 esa rama no adjuntaba nada, y se notaba de
+   * dos formas que el gestor vivió como «esto está roto»:
+   *
+   *  - Sin hoja de estilos, los botones de elección salían pegados uno a otro
+   *    y se leían como un solo nombre.
+   *  - La plantilla pintaba igual la caja del chat, pero el JavaScript que la
+   *    anima solo se adjunta cuando hay agente: se escribía y no pasaba nada.
+   *
+   * Un control muerto es peor que ninguno, así que lo que se fija aquí es que
+   * NO haya conversación —de ahí el cero— y que la hoja sí venga.
+   *
+   * El fallo se coló porque la prueba de humo entraba directa al estudio de un
+   * agente y nunca miraba esta pantalla. Ahora la mira también.
+   */
+  public function testLaEleccionDeAgenteLlevaEstilosSinEnsayo(): void {
+    $this->crearAgente('agente_a');
+    $this->crearAgente('agente_b');
+
+    $pagina = PromptStudioController::create($this->container)->view();
+
+    $this->assertSame(0, $pagina['#session_id'], 'Sin agente elegido no puede haber conversación.');
+    $this->assertSame([], $pagina['#messages']);
+    $this->assertContains(
+      'sales_leadership_diagnostic/studio',
+      $pagina['#attached']['library'],
+      'Sin la hoja de estilos la pantalla sale sin formato.',
+    );
+  }
+
+  /**
+   * Con UN solo agente se entra directo a su estudio, sin elegir.
+   *
+   * La otra mitad: poner una pantalla para elegir entre una sola opción es
+   * empeorarla, y además ahí sí debe haber conversación de prueba.
+   */
+  public function testConUnSoloAgenteSeEntraDirecto(): void {
+    $this->crearAgente('agente_unico');
+
+    $pagina = PromptStudioController::create($this->container)->view();
+
+    $this->assertGreaterThan(0, $pagina['#session_id'], 'Con un agente debe abrirse su ensayo.');
   }
 
   /**

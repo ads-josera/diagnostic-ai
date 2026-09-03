@@ -208,10 +208,18 @@ final class PromptStudioForm extends FormBase {
       ];
     }
 
-    $enlaces = [];
+    $enlaces = [
+      // Los enlaces van dentro de su propio contenedor y no sueltos en el
+      // formulario. Sin él salían pegados uno detrás de otro —«Sales
+      // Leadership Diagnostic AIGAP Prospecting AI»— porque nada los separaba:
+      // son elementos en línea y la clase de botón no los distancia por sí
+      // sola. Lo vio el usuario el 02-09-2026.
+      '#type' => 'container',
+      '#attributes' => ['class' => ['sld-studio__chooser-options']],
+    ];
 
     foreach ($disponibles as $agent) {
-      $enlaces[] = [
+      $enlaces[$agent->id()] = [
         '#type' => 'link',
         '#title' => $agent->label(),
         '#url' => Url::fromRoute(
@@ -224,6 +232,7 @@ final class PromptStudioForm extends FormBase {
 
     return [
       '#type' => 'container',
+      '#attributes' => ['class' => ['sld-studio__chooser']],
       'titulo' => [
         '#markup' => '<p>' . $this->t('¿De qué agente quiere ajustar el prompt?') . '</p>',
       ],

@@ -110,3 +110,36 @@ h3.sld-knowledge__switch {
   font-weight: 600;
   margin: 0 0 0.25rem;
 }
+
+/**
+ * La pantalla de elección de agente.
+ *
+ * Solo aparece cuando hay VARIOS agentes; con uno se entra directo al suyo.
+ * Va a una columna y acotada: son un par de botones, y estirarlos al ancho de
+ * la rejilla de dos columnas dejaría media pantalla vacía al lado.
+ */
+.sld-studio--eligiendo {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 42rem;
+}
+
+.sld-studio__chooser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-md);
+}
+
+.sld-studio__chooser p {
+  margin: 0;
+}
+
+/*
+ * Los botones necesitan su propio contenedor con separación: son elementos en
+ * línea, y la clase de botón no los distancia por sí sola. Sin esto salían
+ * pegados y se leían como un solo nombre.
+ */
+.sld-studio__chooser-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sld-space-sm);
+}

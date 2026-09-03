@@ -64,13 +64,24 @@ final class PromptStudioController extends ControllerBase {
     // Sin agente elegido no hay nada que ensayar: se pinta solo el formulario,
     // que en ese caso es la pantalla de elección. Crear una conversación de
     // prueba antes de saber de qué agente sería crearla del equivocado.
+    //
+    // Esta rama SÍ adjunta la hoja de estilos, aunque no adjunte el JavaScript
+    // del chat. Sin ella la pantalla salía sin ningún estilo —los botones de
+    // elección se pintaban como enlaces pegados uno a otro— y nadie se
+    // enteraba, porque la prueba de humo entra directa al estudio de un agente
+    // y nunca pasaba por aquí. Lo encontró el usuario el 02-09-2026.
     if ($agente === NULL) {
       return [
         '#theme' => 'sld_studio',
         '#form' => $this->formBuilder()->getForm(PromptStudioForm::class, NULL),
+        // Cero significa «no hay ensayo», y la plantilla se apoya en eso para
+        // no pintar el panel de la conversación. Antes lo pintaba igual: se
+        // ofrecía una caja de texto que no podía funcionar, porque el JS que
+        // la anima ni siquiera estaba en la página.
         '#session_id' => 0,
         '#messages' => [],
         '#reset_url' => '',
+        '#attached' => ['library' => ['sales_leadership_diagnostic/studio']],
         '#cache' => ['contexts' => ['user'], 'max-age' => 0],
       ];
     }

@@ -5,7 +5,9 @@
  *
  * Variables disponibles:
  * - form: el formulario del prompt, con borrador y publicación.
- * - session_id: conversación de ensayo del gestor.
+ * - session_id: conversación de ensayo del gestor. CERO significa que
+ *   todavía no se ha elegido agente; entonces esta pantalla es solo la
+ *   elección y NO se pinta el panel de la conversación.
  * - messages: turnos de esa conversación, en el mismo formato que el chat del
  *   alumno (role, is_assistant, body, time, sequence).
  * - reset_url: destino del formulario que reinicia el ensayo.
@@ -16,13 +18,35 @@
  * aparecen en la página real.
  */
 #}
-<div class="sld sld-studio">
+{#
+  Sin agente elegido la pantalla es solo la elección, así que va a una columna:
+  la rejilla de dos dejaría media pantalla vacía al lado de dos botones.
+#}
+<div class="sld sld-studio{{ session_id ? '' : ' sld-studio--eligiendo' }}">
 
   <div class="sld-studio__panel sld-studio__panel--editor">
-    <h2 class="sld-studio__panel-title">{{ 'Prompt'|t }}</h2>
+    {#
+      El encabezado dice lo que hay debajo. Mientras se elige agente no hay
+      ningún prompt en pantalla, y titularlo «Prompt» promete un editor que no
+      está. Sigue siendo un h2 y no un párrafo para no romper el esquema del
+      documento ni dejar la sección sin nombre para un lector de pantalla.
+    #}
+    <h2 class="sld-studio__panel-title">
+      {{ session_id ? 'Prompt'|t : 'Elige un agente'|t }}
+    </h2>
     {{ form }}
   </div>
 
+  {#
+    El panel de la conversación SOLO existe si hay ensayo que enseñar.
+
+    Antes se pintaba siempre, y en la pantalla de elección eso dejaba una caja
+    de texto que no podía funcionar —el JavaScript que la anima no se adjunta
+    hasta que hay agente— y un botón «Reiniciar» cuyo formulario no tenía
+    destino. Ofrecer un control muerto es peor que no ofrecer ninguno: quien lo
+    usa cree que el sistema está roto, y tiene razón.
+  #}
+  {% if session_id %}
   <div class="sld-studio__panel sld-studio__panel--chat">
     <div class="sld-studio__chat-header">
       <h2 class="sld-studio__panel-title">{{ 'Conversación de prueba'|t }}</h2>
@@ -101,5 +125,6 @@
       </p>
     </div>
   </div>
+  {% endif %}
 
 </div>
