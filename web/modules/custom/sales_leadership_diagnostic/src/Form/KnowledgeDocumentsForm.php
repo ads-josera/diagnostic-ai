@@ -14,6 +14,7 @@ use Drupal\Core\StringTranslation\ByteSizeMarkup;
 use Drupal\file\FileInterface;
 use Drupal\file\FileUsage\FileUsageInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentChooser;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Knowledge\DocumentTextExtractor;
 use Drupal\sales_leadership_diagnostic\Service\Knowledge\KnowledgeLibrary;
@@ -48,6 +49,11 @@ final class KnowledgeDocumentsForm extends FormBase {
    * Biblioteca de documentos.
    */
   private KnowledgeLibrary $library;
+
+  /**
+   * La pantalla de elección de agente, compartida con el Estudio.
+   */
+  private AgentChooser $chooser;
 
   /**
    * Fábrica de configuración.
@@ -98,6 +104,8 @@ final class KnowledgeDocumentsForm extends FormBase {
    *   Gestor de tipos de entidad.
    * @param \Drupal\file\FileUsage\FileUsageInterface $fileUsage
    *   Registro de uso de archivos.
+   * @param \Drupal\sales_leadership_diagnostic\Service\Agent\AgentChooser $chooser
+   *   La pantalla de elección de agente, compartida con el Estudio.
    */
   public function __construct(
     KnowledgeLibrary $library,
@@ -105,12 +113,14 @@ final class KnowledgeDocumentsForm extends FormBase {
     ConfigFactoryInterface $configs,
     EntityTypeManagerInterface $entityTypes,
     FileUsageInterface $fileUsage,
+    AgentChooser $chooser,
   ) {
     $this->library = $library;
     $this->agents = $agents;
     $this->configs = $configs;
     $this->entityTypes = $entityTypes;
     $this->fileUsage = $fileUsage;
+    $this->chooser = $chooser;
   }
 
   /**
@@ -123,6 +133,7 @@ final class KnowledgeDocumentsForm extends FormBase {
       $container->get('config.factory'),
       $container->get('entity_type.manager'),
       $container->get('file.usage'),
+      $container->get(AgentChooser::class),
     );
   }
 
@@ -154,6 +165,7 @@ final class KnowledgeDocumentsForm extends FormBase {
     $this->configs = $container->get('config.factory');
     $this->entityTypes = $container->get('entity_type.manager');
     $this->fileUsage = $container->get('file.usage');
+    $this->chooser = $container->get(AgentChooser::class);
   }
 
   /**
@@ -176,26 +188,17 @@ final class KnowledgeDocumentsForm extends FormBase {
     $this->agente = $sld_agent ?? (count($disponibles) === 1 ? reset($disponibles) : NULL);
 
     if ($this->agente === NULL) {
-      $form['elegir'] = $disponibles === []
-        ? [
-          '#type' => 'item',
-          '#markup' => $this->t('No hay ningún agente configurado todavía. Crea uno antes de cargarle documentos.'),
-        ]
-        : [
-          '#theme' => 'item_list',
-          '#title' => $this->t('¿A qué agente quieres cargarle documentos?'),
-          '#items' => array_map(
-            fn ($agent) => [
-              '#type' => 'link',
-              '#title' => $agent->label(),
-              '#url' => Url::fromRoute(
-                'sales_leadership_diagnostic.knowledge_agent',
-                ['sld_agent' => $agent->id()],
-              ),
-            ],
-            array_values($disponibles),
-          ),
-        ];
+      // El mismo selector que el Estudio, y del mismo sitio. Antes cada
+      // pantalla construía el suyo: esta pintaba una lista de viñetas y
+      // aquella botones, de modo que la misma pregunta se veía de dos formas
+      // según por qué pestaña se hubiera entrado. Lo vio el usuario el
+      // 02-09-2026.
+      $form['elegir'] = $this->chooser->build(
+        $disponibles,
+        'sales_leadership_diagnostic.knowledge_agent',
+        (string) $this->t('¿A qué agente quieres cargarle documentos?'),
+        (string) $this->t('No hay ningún agente configurado todavía. Crea uno antes de cargarle documentos.'),
+      );
 
       return $form;
     }

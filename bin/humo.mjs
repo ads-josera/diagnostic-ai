@@ -301,6 +301,27 @@ export default async function run(page) {
       anotar(separados, 'gestor: la eleccion de agente lleva sus estilos',
         'la hoja del estudio no se cargo en esta pantalla');
 
+      // Documentos hace la MISMA pregunta y comparte el selector desde el
+      // 02-09-2026. Se comprueba aparte porque antes cada pantalla construia
+      // el suyo y divergieron sin que nadie lo viera: una pintaba botones y la
+      // otra una lista de viñetas.
+      await page.goto(`${SITIO}/admin/config/salesbumm/diagnostic/documentos`, { waitUntil: 'networkidle' });
+
+      const docs = await page.evaluate(() => {
+        const caja = document.querySelector('.sld-chooser__options');
+        return {
+          hayCaja: !!caja,
+          separacion: caja ? getComputedStyle(caja).gap : null,
+          opciones: caja ? caja.querySelectorAll('a').length : 0,
+        };
+      });
+
+      anotar(docs.hayCaja && docs.opciones > 1 && docs.separacion !== '0px' && docs.separacion !== 'normal',
+        'gestor: documentos usa el mismo selector de agente que el estudio',
+        `caja ${docs.hayCaja}, ${docs.opciones} opcion(es), separacion ${docs.separacion}`);
+
+      await page.goBack({ waitUntil: 'networkidle' });
+
       await Promise.all([
         page.waitForNavigation({ waitUntil: 'networkidle' }),
         page.click('a[href*="/estudio/agente/"]'),

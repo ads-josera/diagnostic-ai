@@ -10,6 +10,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentChooser;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManager;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\PromptDraft;
@@ -54,6 +55,7 @@ final class PromptStudioForm extends FormBase {
     private readonly KnowledgeLibrary $knowledge,
     private readonly DateFormatterInterface $dateFormatter,
     private readonly AccountInterface $account,
+    private readonly AgentChooser $chooser,
   ) {}
 
   /**
@@ -68,6 +70,7 @@ final class PromptStudioForm extends FormBase {
       $container->get(KnowledgeLibrary::class),
       $container->get('date.formatter'),
       $container->get('current_user'),
+      $container->get(AgentChooser::class),
     );
   }
 
@@ -198,46 +201,12 @@ final class PromptStudioForm extends FormBase {
    *   Elemento de renderizado.
    */
   private function buildChooser(array $disponibles): array {
-    if ($disponibles === []) {
-      return [
-        '#type' => 'container',
-        '#attributes' => ['class' => ['sld__notice', 'sld__notice--warning']],
-        'texto' => [
-          '#markup' => $this->t('Todavía no hay ningún agente disponible. Cree uno antes de ajustar su prompt.'),
-        ],
-      ];
-    }
-
-    $enlaces = [
-      // Los enlaces van dentro de su propio contenedor y no sueltos en el
-      // formulario. Sin él salían pegados uno detrás de otro —«Sales
-      // Leadership Diagnostic AIGAP Prospecting AI»— porque nada los separaba:
-      // son elementos en línea y la clase de botón no los distancia por sí
-      // sola. Lo vio el usuario el 02-09-2026.
-      '#type' => 'container',
-      '#attributes' => ['class' => ['sld-studio__chooser-options']],
-    ];
-
-    foreach ($disponibles as $agent) {
-      $enlaces[$agent->id()] = [
-        '#type' => 'link',
-        '#title' => $agent->label(),
-        '#url' => Url::fromRoute(
-          'sales_leadership_diagnostic.studio_agent',
-          ['sld_agent' => $agent->id()],
-        ),
-        '#attributes' => ['class' => ['sld__button', 'sld__button--secondary']],
-      ];
-    }
-
-    return [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['sld-studio__chooser']],
-      'titulo' => [
-        '#markup' => '<p>' . $this->t('¿De qué agente quiere ajustar el prompt?') . '</p>',
-      ],
-      'enlaces' => $enlaces,
-    ];
+    return $this->chooser->build(
+      $disponibles,
+      'sales_leadership_diagnostic.studio_agent',
+      (string) $this->t('¿De qué agente quiere ajustar el prompt?'),
+      (string) $this->t('Todavía no hay ningún agente disponible. Cree uno antes de ajustar su prompt.'),
+    );
   }
 
   /**

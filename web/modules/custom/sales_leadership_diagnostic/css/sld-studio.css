@@ -123,13 +123,13 @@ h3.sld-knowledge__switch {
   max-width: 42rem;
 }
 
-.sld-studio__chooser {
+.sld-chooser {
   display: flex;
   flex-direction: column;
   gap: var(--sld-space-md);
 }
 
-.sld-studio__chooser p {
+.sld-chooser p {
   margin: 0;
 }
 
@@ -138,7 +138,7 @@ h3.sld-knowledge__switch {
  * línea, y la clase de botón no los distancia por sí sola. Sin esto salían
  * pegados y se leían como un solo nombre.
  */
-.sld-studio__chooser-options {
+.sld-chooser__options {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sld-space-sm);

@@ -108,6 +108,10 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
       - '@Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry'
 
+  # La pantalla de «¿sobre qué agente trabajas?». La comparten el Estudio y los
+  # Documentos: escrita dos veces, divergió.
+  Drupal\sales_leadership_diagnostic\Service\Agent\AgentChooser: {}
+
   # Las filas del historial del alumno. Lo pintan el panel y la página de cada
   # agente, y por eso no vive dentro de un controller.
   Drupal\sales_leadership_diagnostic\Service\Diagnostic\StudentHistoryBuilder:
