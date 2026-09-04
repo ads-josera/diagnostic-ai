@@ -106,6 +106,11 @@ final class Branding {
       '.sld.sld',
       '.sld-page.sld-page',
       '.sld-home.sld-home',
+      // El marco del gestor, desde el 04-09-2026. Es la MISMA lista que
+      // declara los tokens en sld-base.css, y las dos hay que ampliarlas al
+      // añadir un marco: sin la de allí la barra sale transparente, y sin esta
+      // sale con el azul de fábrica del módulo en vez del del cliente.
+      '.sld-manager.sld-manager',
     ]);
 
     return $selectores . " {\n" . implode("\n", $declarations) . "\n}\n";

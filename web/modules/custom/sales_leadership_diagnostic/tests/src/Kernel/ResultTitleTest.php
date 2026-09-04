@@ -7,6 +7,7 @@ namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\Controller\ResultsController;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
+use Drupal\user\Entity\User;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
@@ -40,13 +41,37 @@ final class ResultTitleTest extends KernelTestBase {
   private const POR_DEFECTO = 'Resultado de tu diagnóstico';
 
   /**
+   * Dueño de los resultados de la prueba.
+   */
+  private int $dueno;
+
+  /**
+   * Alguien que NO es el dueño: el gestor mirando desde su listado.
+   */
+  private int $ajeno;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
     parent::setUp();
 
+    $this->installEntitySchema('user');
     $this->installEntitySchema('sld_diagnostic_result');
     $this->installConfig(['system', 'sales_leadership_diagnostic']);
+    $this->container->get('router.builder')->rebuild();
+
+    // El uid 1 es superusuario y saltaria toda comprobacion.
+    User::create(['name' => 'uid1_no_usar', 'status' => 1])->save();
+
+    $this->dueno = $this->crearCuenta('alumno');
+    $this->ajeno = $this->crearCuenta('gestor');
+
+    // Por defecto mira el DUEÑO. Las pruebas del título del agente hablan de
+    // otra cosa, y sin espectador el usuario en curso es el anónimo, que no es
+    // el dueño: darían «Resultado del diagnóstico» por un motivo que no es el
+    // que están comprobando.
+    $this->mirarComo($this->dueno);
   }
 
   /**
@@ -107,6 +132,73 @@ final class ResultTitleTest extends KernelTestBase {
   }
 
   /**
+   * A quien NO es su dueño no se le dice «tu diagnóstico».
+   *
+   * El gestor abre el resultado de un alumno desde su listado. Tutearle sobre
+   * algo ajeno le hace dudar de qué está viendo, y con 35 alumnos esa duda es
+   * cara: puede creer que está leyendo el de otra persona.
+   */
+  public function testAlGestorNoSeLeDiceQueElDiagnosticoEsSuyo(): void {
+    $resultado = $this->crearResultado('');
+    $this->mirarComo($this->ajeno);
+
+    $this->assertSame(
+      'Resultado del diagnóstico',
+      ResultsController::create($this->container)->title($resultado),
+    );
+  }
+
+  /**
+   * Al dueño sí, que es de quien habla el texto.
+   */
+  public function testAlDuenoSiSeLeDiceQueEsSuyo(): void {
+    $resultado = $this->crearResultado('');
+    $this->mirarComo($this->dueno);
+
+    $this->assertSame(
+      self::POR_DEFECTO,
+      ResultsController::create($this->container)->title($resultado),
+    );
+  }
+
+  /**
+   * Cada uno vuelve a SU pantalla.
+   *
+   * Antes el enlace llevaba siempre al panel del alumno, así que el gestor
+   * acababa en una pantalla que no es suya y sin sus pestañas: desde el
+   * resultado no tenía ninguna salida hacia su propia sección.
+   */
+  public function testCadaCualVuelveDondeLeToca(): void {
+    $resultado = $this->crearResultado('');
+
+    $this->mirarComo($this->dueno);
+    $suyo = ResultsController::create($this->container)->view($resultado);
+
+    $this->mirarComo($this->ajeno);
+    $ajeno = ResultsController::create($this->container)->view($resultado);
+
+    $this->assertSame('/sales-diagnostic', $suyo['#back']['url']);
+    $this->assertSame('/admin/content/sales-diagnostic', $ajeno['#back']['url']);
+  }
+
+  /**
+   * Crea una cuenta y devuelve su identificador.
+   */
+  private function crearCuenta(string $nombre): int {
+    $cuenta = User::create(['name' => $nombre, 'status' => 1]);
+    $cuenta->save();
+
+    return (int) $cuenta->id();
+  }
+
+  /**
+   * Deja identificada la cuenta indicada como quien mira.
+   */
+  private function mirarComo(int $uid): void {
+    $this->container->get('current_user')->setAccount(User::load($uid));
+  }
+
+  /**
    * Título que da el controller para un resultado de ese agente.
    */
   private function tituloDe(string $agentId): string {
@@ -137,7 +229,7 @@ final class ResultTitleTest extends KernelTestBase {
     $resultado = $this->container->get('entity_type.manager')
       ->getStorage('sld_diagnostic_result')
       ->create([
-        'uid' => 5,
+        'uid' => $this->dueno,
         'session_id' => 1,
         'agent' => $agentId,
         'diagnostic_version' => '1.0',

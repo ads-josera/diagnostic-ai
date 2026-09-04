@@ -46,6 +46,32 @@ final class DiagnosticThemeHooks {
   ];
 
   /**
+   * Pantallas del GESTOR, que llevan su propio marco.
+   *
+   * Su rol tiene «ver el tema de administracion» pero NO «acceder a la barra
+   * de herramientas», asi que sus paginas se servian con el tema de
+   * administracion y sin la barra que trae la navegacion y el cerrar sesion.
+   * No habia forma de salir desde ninguna de sus secciones.
+   *
+   * Se enumeran una a una y no por prefijo de URL a proposito: por el prefijo
+   * entrarian tambien las pantallas de solo-administrador —secretos, marca,
+   * portada—, que no son suyas y no deben cambiar de aspecto.
+   *
+   * @var string[]
+   */
+  private const MANAGER_ROUTES = [
+    'sales_leadership_diagnostic.admin_results',
+    'sales_leadership_diagnostic.studio',
+    'sales_leadership_diagnostic.studio_agent',
+    'sales_leadership_diagnostic.knowledge',
+    'sales_leadership_diagnostic.knowledge_agent',
+    'entity.sld_agent.collection',
+    'entity.sld_agent.add_form',
+    'entity.sld_agent.edit_form',
+    'entity.sld_agent.delete_form',
+  ];
+
+  /**
    * Rutas de inicio de sesion que comparten el marco de la portada.
    *
    * Se incluye tambien la peticion de contrasena: son la misma puerta y
@@ -158,6 +184,10 @@ final class DiagnosticThemeHooks {
           'sections' => [],
           'version' => '',
           'created' => '',
+          // A donde vuelve quien mira, con su texto: el alumno a su panel, el
+          // gestor al listado. Antes el enlace era fijo y dejaba al gestor en
+          // una pantalla que no es suya.
+          'back' => ['url' => '', 'label' => ''],
         ],
       ],
       'sld_welcome' => [
@@ -200,6 +230,12 @@ final class DiagnosticThemeHooks {
         'template' => 'page--user-login',
         'base hook' => 'page',
       ],
+      // Marco de las pantallas del gestor: la barra del cliente alrededor del
+      // contenido de administracion, que se deja como esta.
+      'page__sld_manager' => [
+        'template' => 'page--sld-manager',
+        'base hook' => 'page',
+      ],
       // Marco compartido por el panel y el resultado. Una sola plantilla para
       // las dos: su marco es identico y el contenido de la tarjeta lo ponen
       // sus controladores con `sld_dashboard` y `sld_result`.
@@ -231,6 +267,10 @@ final class DiagnosticThemeHooks {
 
     if (in_array($routeName, self::LOGIN_ROUTES, TRUE)) {
       $suggestions[] = 'page__user__login';
+    }
+
+    if (in_array($routeName, self::MANAGER_ROUTES, TRUE)) {
+      $suggestions[] = 'page__sld_manager';
     }
   }
 
@@ -275,7 +315,7 @@ final class DiagnosticThemeHooks {
   private function usesHomeFrame(): bool {
     return in_array(
       $this->routeMatch->getRouteName(),
-      [...self::LOGIN_ROUTES, ...self::INNER_ROUTES],
+      [...self::LOGIN_ROUTES, ...self::INNER_ROUTES, ...self::MANAGER_ROUTES],
       TRUE,
     );
   }

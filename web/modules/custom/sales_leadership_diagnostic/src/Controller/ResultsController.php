@@ -7,6 +7,7 @@ namespace Drupal\sales_leadership_diagnostic\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Render\Markup;
+use Drupal\Core\Url;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
@@ -81,9 +82,43 @@ final class ResultsController extends ControllerBase {
   public function title(DiagnosticResultInterface $sld_diagnostic_result): string {
     $propio = $this->agenteDe($sld_diagnostic_result)?->getResultTitle() ?? '';
 
-    return $propio !== ''
-      ? $propio
-      : (string) $this->t('Resultado de tu diagnóstico');
+    if ($propio !== '') {
+      return $propio;
+    }
+
+    // A quien NO es su dueño no se le puede decir «tu diagnóstico»: el gestor
+    // abre el de un alumno desde su listado, y tutearle sobre algo ajeno hace
+    // dudar de qué está viendo. Lo vio el usuario el 04-09-2026.
+    return $this->esSuyo($sld_diagnostic_result)
+      ? (string) $this->t('Resultado de tu diagnóstico')
+      : (string) $this->t('Resultado del diagnóstico');
+  }
+
+  /**
+   * Si quien mira es el dueño del resultado.
+   */
+  private function esSuyo(DiagnosticResultInterface $result): bool {
+    return (string) $this->currentUser()->id() === (string) $result->getOwnerId();
+  }
+
+  /**
+   * A dónde vuelve quien está mirando, y con qué texto.
+   *
+   * @return array<string, string>
+   *   `url` y `label`.
+   */
+  private function buildBack(DiagnosticResultInterface $result): array {
+    if ($this->esSuyo($result)) {
+      return [
+        'url' => Url::fromRoute('sales_leadership_diagnostic.dashboard')->toString(),
+        'label' => (string) $this->t('← Volver a mi panel'),
+      ];
+    }
+
+    return [
+      'url' => Url::fromRoute('sales_leadership_diagnostic.admin_results')->toString(),
+      'label' => (string) $this->t('← Volver a los resultados'),
+    ];
   }
 
   /**
@@ -128,6 +163,10 @@ final class ResultsController extends ControllerBase {
       '#dimensions' => $result->getDimensions(),
       '#sections' => $this->buildSections($payload),
       '#version' => $result->getDiagnosticVersion(),
+      // A dónde vuelve quien mira. El alumno, a su panel; el gestor, al
+      // listado del que vino. Sin esto se quedaba encerrado: desde aquí no
+      // había ninguna salida hacia su propia sección.
+      '#back' => $this->buildBack($result),
       '#created' => $this->dateFormatter->format((int) $result->get('created')->value, 'long'),
       '#attached' => [
         'library' => ['sales_leadership_diagnostic/result'],

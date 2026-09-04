@@ -520,3 +520,34 @@
   margin: 0 0 1.25rem;
   font-size: 0.875rem;
 }
+
+/**
+ * Marco de las pantallas del gestor.
+ *
+ * Reutiliza la barra del alumno —misma clase, mismo logotipo, mismo botón de
+ * salir— alrededor del contenido del tema de administración, que se deja como
+ * está: son pantallas de trabajo y sus tablas y formularios ya resuelven la
+ * accesibilidad.
+ *
+ * No lleva el fondo azul ni el pie con logotipo grande de las pantallas del
+ * alumno. Aquí el contenido puede ser una tabla larga, y encerrarla en una
+ * tarjeta sobre un fondo de color solo alarga el recorrido hasta lo que se
+ * viene a leer.
+ */
+.sld-manager {
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+/*
+ * La barra no va redondeada ni separada del borde como la del alumno: aquí es
+ * una barra de aplicación, pegada arriba y de lado a lado.
+ */
+.sld-manager__bar {
+  border-radius: 0;
+  margin: 0;
+}
+
+.sld-manager__main {
+  padding: 1.5rem clamp(1rem, 4vw, 2.5rem) 4rem;
+}

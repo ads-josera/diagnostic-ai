@@ -133,8 +133,13 @@
   {% endif %}
 
   <footer class="sld-result__footer">
-    <a class="sld__button sld__button--secondary" href="{{ path('sales_leadership_diagnostic.dashboard') }}">
-      {{ '← Volver al panel'|t }}
+    {#
+      El destino depende de quién mira: el alumno vuelve a su panel y el gestor
+      al listado del que vino. Antes llevaba SIEMPRE al panel del alumno, así
+      que el gestor acababa en una pantalla que no es suya, sin sus pestañas.
+    #}
+    <a class="sld__button sld__button--secondary" href="{{ back.url }}">
+      {{ back.label }}
     </a>
     <p class="sld__muted sld-result__disclaimer">
       {{ 'Este análisis se ha generado a partir de tus respuestas durante la conversación.'|t }}

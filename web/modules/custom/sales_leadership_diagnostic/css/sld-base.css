@@ -10,12 +10,20 @@
  * identidad que todavía no conocemos.
  */
 
-/* Los tokens se declaran en los dos contenedores raíz del módulo: el bloque de
-   contenido (.sld) y el marco de página del chat (.sld-page), que no anida
-   dentro del primero. */
+/* Los tokens se declaran en TODOS los contenedores raíz del módulo, porque
+   ninguno anida dentro de otro: el bloque de contenido (.sld), el marco del
+   chat (.sld-page), el de las pantallas del alumno (.sld-home) y el del gestor
+   (.sld-manager).
+
+   AL AÑADIR UN MARCO NUEVO HAY QUE AÑADIRLO AQUÍ. Si no, sus variables quedan
+   sin definir y las propiedades que las usan se anulan: `background:
+   var(--sld-color-primary)` sin valor no cae al azul de fábrica, se queda
+   TRANSPARENTE. Pasó el 04-09-2026 con el marco del gestor — la barra salió
+   sin fondo y su logotipo, que es blanco, invisible sobre él. */
 .sld,
 .sld-page,
-.sld-home {
+.sld-home,
+.sld-manager {
   /* Marca — pendiente de sustituir por la identidad de Salesbumm. */
   --sld-color-primary: #1f4788;
   --sld-color-primary-hover: #16345f;

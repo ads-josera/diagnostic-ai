@@ -1,0 +1,81 @@
+{#
+/**
+ * @file
+ * Marco de las pantallas del GESTOR.
+ *
+ * Existe porque el gestor se quedaba sin salida. Su rol lleva «ver el tema de
+ * administración» pero NO «acceder a la barra de herramientas», así que sus
+ * páginas se pintaban con el tema de administración y sin la barra que trae la
+ * navegación y el enlace de cerrar sesión: no había forma de salir desde
+ * ninguna de sus cuatro secciones. Lo encontró el usuario el 04-09-2026.
+ *
+ * Darle la barra de Drupal habría resuelto la salida y nada más: seguiría sin
+ * parecerse al producto. Esta plantilla le da la MISMA barra que ve el alumno
+ * —el logotipo del cliente y su color— alrededor del contenido de
+ * administración, que se deja tal cual.
+ *
+ * Ese es el límite, y es deliberado: se enmarca, no se rediseña. Las tablas y
+ * los formularios siguen siendo los del tema de administración, que están
+ * pensados para trabajar y ya resuelven la accesibilidad. Reescribirlos sería
+ * un producto entero y no es lo que falta.
+ *
+ * **Aquí NO se puede recortar como en el marco del alumno.** Ese pinta solo
+ * `page.content`, y el tema de administración coloca sus piezas en varias
+ * regiones: el título y las pestañas van en `header`, las pestañas
+ * secundarias en `pre_content` y los mensajes en `highlighted`. Quedarse con
+ * `content` le habría quitado al gestor las cuatro pestañas, que son
+ * justamente su única navegación.
+ *
+ * Variables añadidas por DiagnosticThemeHooks::preprocessPage():
+ * - sld_header_logo: logotipo claro de la barra, o nulo.
+ * - sld_accent_color: color del botón de salir.
+ *
+ * No lleva el pie con el logotipo grande que sí tienen las pantallas del
+ * alumno: estas son pantallas de trabajo, con tablas que pueden ser largas, y
+ * una banda de marca al final solo alarga el recorrido hasta el contenido.
+ */
+#}
+<div class="sld-manager">
+
+  <header class="sld-home__bar sld-manager__bar">
+    {#
+      La marca lleva al listado del gestor y no a la portada: es su pantalla de
+      inicio, y es donde espera volver al pulsar el logotipo.
+    #}
+    <a class="sld-home__brand" href="{{ path('sales_leadership_diagnostic.admin_results') }}">
+      {% if sld_header_logo %}
+        <img src="{{ sld_header_logo }}" alt="{{ 'Salesbumm'|t }}">
+      {% else %}
+        <span class="sld-home__brand-text">{{ 'Salesbumm'|t }}</span>
+      {% endif %}
+    </a>
+
+    {#
+      Enlace simple y no un formulario: `user.logout` es la ruta pública de
+      Drupal core para cerrar sesión, ya pensada para enlazarse por GET.
+    #}
+    <a class="sld-home__logout"
+       style="background-color: {{ sld_accent_color }}"
+       href="{{ path('user.logout') }}">
+      {{ 'Cerrar sesión'|t }}
+    </a>
+  </header>
+
+  <main class="sld-manager__main" role="main">
+    {#
+      Destino del enlace «Pasar al contenido principal», que el tema imprime
+      siempre. Al sustituir la plantilla de página se perdía el ancla y quien
+      navega con teclado lo pulsaba sin que el foco se moviera.
+    #}
+    <a id="main-content" tabindex="-1"></a>
+
+    {# Título de la página y pestañas principales: su navegación. #}
+    {{ page.header }}
+
+    {{ page.pre_content }}
+    {{ page.help }}
+    {{ page.highlighted }}
+    {{ page.content }}
+  </main>
+
+</div>

@@ -264,6 +264,40 @@ export default async function run(page) {
   anotar(dondeAterrizaGestor.includes('/admin/content/sales-diagnostic'),
     'gestor: aterriza en su listado', `aterrizó en ${dondeAterrizaGestor}`);
 
+  // El gestor tiene que poder SALIR desde todas sus pantallas. Su rol lleva
+  // «ver el tema de administracion» pero NO «acceder a la barra de
+  // herramientas», asi que durante semanas se le sirvieron sus cuatro
+  // secciones sin barra: sin navegacion y sin cerrar sesion. Lo encontro el
+  // usuario el 04-09-2026, y no lo vio ninguna prueba porque todas entraban
+  // como administrador, que si tiene la barra.
+  for (const [ruta, nombre] of [
+    ['/admin/content/sales-diagnostic', 'resultados'],
+    ['/admin/config/salesbumm/diagnostic/agentes', 'agentes'],
+    ['/admin/config/salesbumm/diagnostic/estudio', 'estudio'],
+    ['/admin/config/salesbumm/diagnostic/documentos', 'documentos'],
+  ]) {
+    await page.goto(`${SITIO}${ruta}`, { waitUntil: 'networkidle' });
+
+    const marco = await page.evaluate(() => {
+      const barra = document.querySelector('.sld-home__bar');
+      return {
+        salida: document.querySelectorAll('a[href*="/user/logout"]').length,
+        // El fondo se mide: sin los tokens del modulo la barra sale
+        // TRANSPARENTE, no con el azul de fabrica, y el logotipo blanco
+        // desaparece sobre ella.
+        fondo: barra ? getComputedStyle(barra).backgroundColor : null,
+      };
+    });
+
+    anotar(marco.salida > 0, `gestor: puede cerrar sesion desde ${nombre}`,
+      'no hay ningun enlace de salida en esta pantalla');
+    anotar(marco.fondo !== null && marco.fondo !== 'rgba(0, 0, 0, 0)',
+      `gestor: la barra de ${nombre} lleva su color`,
+      `fondo ${marco.fondo}`);
+  }
+
+  await page.goto(`${SITIO}/admin/content/sales-diagnostic`, { waitUntil: 'networkidle' });
+
   const enlaceEstudio = await page.locator('a[href*="/estudio"]').count();
   anotar(enlaceEstudio > 0, 'gestor: tiene enlace al estudio',
     'ningún enlace lleva al estudio; tener permiso no basta si no hay por dónde llegar');

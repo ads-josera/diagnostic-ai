@@ -46,6 +46,21 @@ final class BrandingHooks {
     'user.login',
     'user.pass',
     'user.reset.form',
+    // Las pantallas del gestor, desde el 04-09-2026. Llevan la misma barra que
+    // el alumno y su botón de salir usa el color de la marca: sin estas
+    // líneas se quedaba con el azul de fábrica del módulo al lado de una barra
+    // que sí llevaba el del cliente. Es la segunda vez que se olvida esta
+    // lista al añadir pantallas — no se ve mirando, porque los dos azules se
+    // parecen.
+    'sales_leadership_diagnostic.admin_results',
+    'sales_leadership_diagnostic.studio',
+    'sales_leadership_diagnostic.studio_agent',
+    'sales_leadership_diagnostic.knowledge',
+    'sales_leadership_diagnostic.knowledge_agent',
+    'entity.sld_agent.collection',
+    'entity.sld_agent.add_form',
+    'entity.sld_agent.edit_form',
+    'entity.sld_agent.delete_form',
   ];
 
   public function __construct(
