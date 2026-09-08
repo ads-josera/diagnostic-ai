@@ -245,6 +245,25 @@ Para probar un agente antes de exponerlo hay el **Estudio del prompt**:
 conversa con el motor y el prompt reales, marcando la sesión como ensayo, de
 modo que no gasta el cupo de nadie ni ensucia el listado del gestor.
 
+#### No copie el prompt a mano
+
+Para los dos agentes de Salesbumm hay un cargador que lee los archivos del
+repositorio y los deja en su sitio:
+
+```
+drush php:script bin/cargar-agentes.php
+```
+
+Pone el prompt de cada agente desde `docs/knowledge-cliente/` y, en el de
+prospección, sus quince documentos de conocimiento en el orden del manifiesto
+del cliente.
+
+Úselo en vez del textarea. Los prompts rondan los 8 000 caracteres y llevan
+guiones largos, flechas y comillas tipográficas; una copia manual los aplana
+sin que se note, y eso ya pasó una vez —«0–39» quedó en «0-39»—. El cargador
+**se niega** a subir un prompt que haya perdido esos caracteres, y no sube la
+versión del agente si el prompt no cambió.
+
 ### La cuenta del gestor
 
 Los roles llegan con la configuración exportada, pero **las cuentas no**. Quien
