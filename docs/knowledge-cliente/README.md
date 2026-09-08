@@ -14,12 +14,38 @@ costaba semanas.
 
 ### Los dos prompts, baseline actual
 
-| Archivo | Qué es |
-|---|---|
-| `GAP_Prospecting_AI_CORE_INSTRUCTIONS_v1.4.3_COMPACT.txt` | Baseline **activo** de GAP, confirmado por Omar el 04-09-2026. Sustituye a la v1.4.1. |
-| `Sales_Leadership_Diagnostic_AI_prompt_final_aprobado.txt` | Baseline del agente de diagnóstico. |
+| Archivo | Qué es | Bytes |
+|---|---|---|
+| `GAP_Prospecting_AI_CORE_INSTRUCTIONS_v1.4.3_COMPACT.txt` | Baseline **activo** de GAP, confirmado por Omar el 04-09-2026. Sustituye a la v1.4.1. | 7 906 |
+| `Sales_Leadership_Diagnostic_AI_prompt_final_aprobado.txt` | Baseline del agente de diagnóstico. Lleva `MULTIMODAL-FIRST`, que la plataforma todavía no soporta. | 7 986 |
 
 **Ninguno de los dos está cargado todavía.** Ver «Por qué no» más abajo.
+
+#### Son copia exacta, y eso hay que cuidarlo
+
+Los dos archivos reproducen **byte a byte** lo que envió el cliente. No llevan
+cabecera, ni nota, ni comentario nuestro: lo que se lee en el archivo es
+exactamente lo que se carga en el agente. Toda anotación va en este README.
+
+No es formalismo. El 07-09-2026, al ir a cargarlos, se descubrió que la copia
+guardada había **aplanado caracteres** del original:
+
+| Original del cliente | Lo que se había guardado |
+|---|---|
+| `Existence = 0–3`, `0–39 CRITICAL` | `0-3`, `0-39` (guion corto) |
+| `symptom → problem → root cause` | `symptom -> problem -> ...` |
+| `PROVISIONAL — REQUIRES VALIDATION` | `PROVISIONAL - REQUIRES VALIDATION` |
+| `“Adelante”`, `“otros candidatos”` | `"Adelante"`, `"otros candidatos"` |
+
+Trece líneas entre los dos archivos. Se repusieron desde el mensaje original.
+Ninguna alteración cambiaba el sentido, pero §15 dice que el prompt del cliente
+no se modifica, y una sustitución silenciosa es precisamente lo que esa regla
+prohíbe: nadie la habría notado nunca.
+
+Al reponer cualquiera de los dos, compruébese que conserva sus caracteres no
+ASCII —`– — → ≠ ≥ “ ” …` y los acentos— y que sigue **por debajo de 8 000
+caracteres**, que es el límite que el cliente respeta a propósito y menciona al
+enviarlos.
 
 ### La especificación de backend
 
