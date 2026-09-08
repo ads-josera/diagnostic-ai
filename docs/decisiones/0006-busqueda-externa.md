@@ -75,6 +75,28 @@ Discovery, que criba diez cuentas y profundiza tres, no cabe ni de lejos.
 Es la prueba que faltaba de por qué la ejecución en segundo plano no es un
 lujo. Queda anotado para la Etapa 2.
 
+**Corrección de una afirmación anterior.** Los 60 segundos son el tope de CADA
+llamada al proveedor, no del turno, y ninguna llamada lo pasó: la más larga
+fueron 44.6. En local nada falló —PHP sin límite y nginx en 10 minutos—.
+Decirlo como si el turno hubiera reventado juntaba dos límites distintos.
+
+Lo que sí son riesgos reales, y lo que se hizo con ellos:
+
+- **La llamada larga iba al 74 % de su tope.** Un día lento del proveedor y
+  revienta el turno entero. **El tope por llamada se subió de 60 a 180 s.**
+- **El servidor de producción es WHM/cPanel.** Ahí PHP-FPM suele traer
+  `request_terminate_timeout` en **75 segundos**, y ese valor manda sobre
+  `max_execution_time`: nuestro turno de 76 habría muerto sin que nadie
+  entendiera por qué. Queda documentado en `DESPLIEGUE.md` con los cuatro
+  límites que hay que revisar y en qué orden.
+- **Setenta y seis segundos de espera siguen siendo mala experiencia**, aguante
+  o no el servidor. Eso no lo arregla ninguna configuración: lo arregla la
+  ejecución en segundo plano.
+
+El techo teórico del módulo es `search.max_tool_rounds × openai.timeout`, hoy
+4 × 180 = 720 segundos. Subir las vueltas obliga a revisar los límites del
+servidor.
+
 ## Estado en que queda
 
 **La búsqueda queda APAGADA**, y no por prudencia genérica: el interruptor es

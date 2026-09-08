@@ -32,6 +32,47 @@ que importa esté versionado.
 | Composer | 2.x |
 | HTTPS | **Obligatorio.** El token de acceso viaja en la URL |
 | Cron | **Debe ejecutarse.** Ver más abajo |
+| Tiempo de espera de PHP | **300 s** si se usa la búsqueda externa. Ver más abajo |
+
+### Los tiempos de espera de PHP, si se va a usar la búsqueda externa
+
+**Solo aplica con la búsqueda encendida.** Sin ella un turno tarda entre 5 y 25
+segundos y ningún límite de fábrica estorba.
+
+Con búsqueda no. Un turno deja de ser una llamada al proveedor y pasa a ser
+varias: el modelo pide una búsqueda, recibe el resultado y con él pide otra.
+**Medido el 08-09-2026 con una cuenta concreta: 3 llamadas, 76 segundos en
+total, y una sola de ellas 44.6.** Una misión que criba diez cuentas tarda
+bastante más.
+
+Este servidor es **WHM/cPanel con acceso de raíz**, así que los cuatro límites
+se pueden poner. Hay que revisarlos **en este orden**, porque el primero es el
+que mata turnos sin que nadie entienda por qué:
+
+| # | Qué | Dónde | Valor |
+|---|---|---|---|
+| 1 | `request_terminate_timeout` de PHP-FPM | WHM → MultiPHP Manager → ajustes de PHP-FPM del dominio | **300** |
+| 2 | `max_execution_time` | WHM → MultiPHP INI Editor | **300** |
+| 3 | `ProxyTimeout` y `Timeout` de Apache | WHM → Apache Configuration → Include Editor | **300** |
+| 4 | Límites de CloudLinux, si está instalado | WHM → CloudLinux LVE Manager | revisar `lveps` bajo carga |
+
+**El número 1 es el que sorprende.** En cPanel, PHP-FPM suele venir con
+`request_terminate_timeout` en **75 segundos**, y ese valor **manda sobre
+`max_execution_time`**: por mucho que se suba el segundo, el proceso muere a los
+75. Nuestro turno medido tardó 76. Se comprueba en el archivo del pool del
+dominio, bajo `/opt/cpanel/ea-phpXX/root/etc/php-fpm.d/`, y se cambia desde
+MultiPHP Manager para que sobreviva a las actualizaciones de cPanel.
+
+**Por qué 300 y no más.** El techo teórico del módulo es
+`search.max_tool_rounds × openai.timeout` — hoy 4 × 180 = 720 segundos—, pero
+ese caso exige que las cuatro vueltas se agoten al máximo, y lo medido son 76.
+Con 300 hay cuatro veces el caso real. **Si se sube el número de vueltas, hay
+que volver aquí**: el techo sube con él.
+
+**Después de tocarlos, compruébelo** con un turno real desde el Estudio del
+prompt y con la búsqueda encendida. Un límite mal puesto no da error de
+configuración: da un turno que muere a mitad, y el alumno solo ve que no pasó
+nada.
 
 ### La IP del servidor tiene que estar autorizada en el WordPress del cliente
 
