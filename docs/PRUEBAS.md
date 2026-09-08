@@ -33,9 +33,15 @@ Sin salida es que está limpio.
 ## 3. La prueba de humo de la interfaz
 
 ```
-node ~/.claude/skills/browser-automation/browser.mjs \
+SLD_ULI="$(ddev drush uli --no-browser | tail -1)" \
+  node ~/.claude/skills/browser-automation/browser.mjs \
   https://diagnostic-ai.ddev.site/ --script bin/humo.mjs
 ```
+
+**`SLD_ULI` tampoco es opcional.** Es un enlace de acceso de un solo uso para
+el administrador. Sin él la prueba corre igual, pero se salta las pantallas de
+solo-administrador y avisa: pasa de 36 comprobaciones a 22 y declara el fallo
+en lugar de callarlo.
 
 Existe porque hay una clase entera de fallos que las dos anteriores no ven —un
 error fatal de PHP se sirve con código 200, un formulario carga y no guarda, un

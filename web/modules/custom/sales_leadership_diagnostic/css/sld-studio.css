@@ -8,11 +8,29 @@
  * incómoda de editar, que es donde se pasa la mayor parte del tiempo.
  */
 
-.sld-studio {
+/*
+ * El selector va DOBLADO —`.sld.sld-studio`— y no es un descuido.
+ *
+ * `.sld` fija un ancho de lectura de 60rem, y con la misma especificidad gana
+ * el que la hoja agregada ponga al final. En estas pantallas la hoja base la
+ * adjunta el marco del gestor en preproceso, o sea DESPUES, asi que `.sld`
+ * ganaba y esta regla no hacia nada. Doblando la clase gana siempre, sin
+ * depender de en que orden acaben las hojas.
+ */
+.sld.sld-studio {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-columns: minmax(0, 3fr) minmax(24rem, 2fr);
   gap: var(--sld-space-lg);
   align-items: start;
+  /*
+   * Se sale del ancho de lectura a proposito. Los 60rem existen para las
+   * pantallas del alumno, que son texto corrido y se leen mejor estrechas.
+   * Esto es una herramienta de dos columnas, y con 60rem la conversacion se
+   * quedaba en 330 px: unos 38 caracteres por linea, con las palabras
+   * partidas a la mitad. Se vio al cargar el agente real, cuyas respuestas
+   * son largas; con el prompt de muestra no se notaba.
+   */
+  max-width: 78rem;
 }
 
 /**
@@ -21,7 +39,7 @@
  * viene a hacer.
  */
 @media (max-width: 1100px) {
-  .sld-studio {
+  .sld.sld-studio {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -118,7 +136,7 @@ h3.sld-knowledge__switch {
  * Va a una columna y acotada: son un par de botones, y estirarlos al ancho de
  * la rejilla de dos columnas dejaría media pantalla vacía al lado.
  */
-.sld-studio--eligiendo {
+.sld.sld-studio--eligiendo {
   grid-template-columns: minmax(0, 1fr);
   max-width: 42rem;
 }

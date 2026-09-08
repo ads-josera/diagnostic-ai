@@ -236,6 +236,17 @@
 
 /* Compositor ---------------------------------------------------------- */
 
+/*
+ * El tema de administracion activa la particion automatica de palabras. En una
+ * columna estrecha eso rompe terminos a la mitad —«se-nal», «mensa-je»— y en
+ * texto tecnico en espanol cuesta mas de lo que ahorra. Se desactiva SOLO
+ * aqui: `overflow-wrap` sigue puesto, asi que un enlace largo sigue partiendo
+ * antes que desbordar.
+ */
+.sld-chat__log {
+  hyphens: manual;
+}
+
 .sld-chat__composer {
   display: flex;
   align-items: flex-end;
