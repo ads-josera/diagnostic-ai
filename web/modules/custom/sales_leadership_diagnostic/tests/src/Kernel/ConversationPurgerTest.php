@@ -54,7 +54,7 @@ final class ConversationPurgerTest extends KernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('sld_diagnostic_session');
     $this->installEntitySchema('sld_diagnostic_result');
-    $this->installSchema('sales_leadership_diagnostic', ['sld_diagnostic_message']);
+    $this->installSchema('sales_leadership_diagnostic', ['sld_diagnostic_message', 'sld_research_entitlement']);
     $this->installConfig(['sales_leadership_diagnostic']);
 
     User::create(['name' => 'uid1_no_usar', 'status' => 1])->save();

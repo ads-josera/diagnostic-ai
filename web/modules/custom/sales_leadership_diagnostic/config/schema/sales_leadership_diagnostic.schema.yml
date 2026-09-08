@@ -85,6 +85,13 @@ sales_leadership_diagnostic.settings:
           type: integer
           label: 'Días que se conservan las conversaciones'
 
+    research:
+      type: mapping
+      label: 'Research Entitlement'
+      mapping:
+        max_rechecks_per_period:
+          type: integer
+          label: 'Comprobaciones puntuales por periodo'
     tools:
       type: mapping
       label: 'Topes de las herramientas'

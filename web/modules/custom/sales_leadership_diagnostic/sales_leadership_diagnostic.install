@@ -83,6 +83,100 @@ function sales_leadership_diagnostic_schema(): array {
     ],
     'sld_ai_usage' => sales_leadership_diagnostic_usage_table(),
     'sld_tool_call' => sales_leadership_diagnostic_tool_call_table(),
+    'sld_research_entitlement' => sales_leadership_diagnostic_entitlement_table(),
+  ];
+}
+
+/**
+ * Definición de la tabla del Research Entitlement.
+ *
+ * Una fila por persona y periodo. El alcance lo fija el §2 de la
+ * especificación del cliente: «user_id + entitlement_period; **compartido
+ * entre conversaciones y Entry Modes**».
+ *
+ * Ese «compartido» es lo que hace que la tabla no cuelgue de la sesión. Si el
+ * estado viviera en la conversación, abrir otra devolvería una misión nueva, y
+ * el §6 nombra ese bypass expresamente.
+ *
+ * @return array<string, mixed>
+ *   La definición de la tabla.
+ */
+function sales_leadership_diagnostic_entitlement_table(): array {
+  return [
+    'description' => 'Capacidad de investigación externa por persona y periodo.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Identificador de la fila.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Persona a la que pertenece.',
+      ],
+      'period' => [
+        'type' => 'varchar',
+        'length' => 16,
+        'not null' => TRUE,
+        'description' => 'Semana ISO en la zona horaria de la persona, por ejemplo 2026-W37. La renovación es semanal y NO depende de abrir un chat nuevo (§2).',
+      ],
+      'mission_state' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => 'AVAILABLE',
+        'description' => 'AVAILABLE, ACTIVE, COMPLETED o LOCKED_UNTIL_RENEWAL.',
+      ],
+      'mission_id' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Identificador opaco de la misión en curso o terminada. Se le enseña al agente; no revela nada interno.',
+      ],
+      'session_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        'description' => 'Conversación donde se abrió la misión. Sirve para saber si un turno la continúa o viene de otra.',
+      ],
+      'rechecks_used' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Comprobaciones puntuales gastadas tras cerrar la misión. Es lo que acota TARGETED_ONLY sin resetear la misión.',
+      ],
+      'started_at' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cuándo se abrió la misión.',
+      ],
+      'completed_at' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cuándo se cerró.',
+      ],
+      'changed' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Última modificación.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      // Una sola fila por persona y semana. Es además la última defensa contra
+      // dos misiones ACTIVE simultáneas: el §14 pide un lock atómico por
+      // usuario y semana, y dos peticiones a la vez fallarían aquí en lugar de
+      // crear dos misiones.
+      'uid_period' => ['uid', 'period'],
+    ],
   ];
 }
 
@@ -959,4 +1053,23 @@ function sales_leadership_diagnostic_update_10015(): string {
   $esquema->createTable('sld_tool_call', sales_leadership_diagnostic_tool_call_table());
 
   return 'Creada la tabla de llamadas a herramientas. Registra las concedidas y las denegadas.';
+}
+
+/**
+ * Crea la tabla del Research Entitlement.
+ *
+ * Nace con la capacidad de investigar: hasta ahora no había nada que gobernar.
+ * Empieza vacía y cada persona recibe su fila la primera vez que se le
+ * pregunta, con la semana en curso y el estado AVAILABLE.
+ */
+function sales_leadership_diagnostic_update_10016(): string {
+  $esquema = \Drupal::database()->schema();
+
+  if ($esquema->tableExists('sld_research_entitlement')) {
+    return 'La tabla del entitlement ya existía; no se ha modificado nada.';
+  }
+
+  $esquema->createTable('sld_research_entitlement', sales_leadership_diagnostic_entitlement_table());
+
+  return 'Creada la tabla del Research Entitlement, una fila por persona y semana.';
 }

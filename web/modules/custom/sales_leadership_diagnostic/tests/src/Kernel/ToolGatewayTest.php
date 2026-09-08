@@ -10,6 +10,7 @@ use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBox;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolGateway;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolInterface;
+use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use PHPUnit\Framework\Attributes\CoversClass;
 
@@ -62,7 +63,7 @@ final class ToolGatewayTest extends KernelTestBase {
   protected function setUp(): void {
     parent::setUp();
 
-    $this->installSchema('sales_leadership_diagnostic', ['sld_ai_usage', 'sld_tool_call']);
+    $this->installSchema('sales_leadership_diagnostic', ['sld_ai_usage', 'sld_tool_call', 'sld_research_entitlement']);
     $this->installConfig(['system', 'sales_leadership_diagnostic']);
 
     $this->espia = new class() implements ToolInterface {
@@ -265,6 +266,7 @@ final class ToolGatewayTest extends KernelTestBase {
       $this->container->get(SpendGuard::class),
       $this->container->get('config.factory'),
       $this->container->get('logger.factory'),
+      $this->container->get(ResearchEntitlementService::class),
     );
   }
 

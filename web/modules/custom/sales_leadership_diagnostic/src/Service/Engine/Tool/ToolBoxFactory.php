@@ -8,6 +8,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Search\SearchProviderInterface;
+use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 
 /**
@@ -30,6 +31,7 @@ final class ToolBoxFactory {
     private readonly CurrentTurn $turn,
     private readonly ToolCallRepository $calls,
     private readonly SpendGuard $spend,
+    private readonly ResearchEntitlementService $entitlements,
   ) {}
 
   /**
@@ -45,6 +47,20 @@ final class ToolBoxFactory {
 
     if (!(bool) $config->get('search.enabled') || !$this->search->isAvailable()) {
       return new ToolBox();
+    }
+
+    // La clasificación ocurre ANTES de exponer herramientas, como exige el §3
+    // de la especificación del cliente. Si el entitlement no permite nada, el
+    // modelo no llega a ver que exista una herramienta de búsqueda: no puede
+    // pedir lo que no sabe que hay, y eso cierra el bypass por prompt
+    // injection —«investiga de nuevo»— sin depender de que el gateway diga que
+    // no una y otra vez.
+    if ($this->turn->isSet()) {
+      $entitlement = $this->entitlements->forUser($this->turn->uid());
+
+      if (!$entitlement->access($this->entitlements->maxRechecks())->allowsAnything()) {
+        return new ToolBox();
+      }
     }
 
     $caja = new ToolBox([
@@ -67,6 +83,7 @@ final class ToolBoxFactory {
       $this->spend,
       $this->configFactory,
       $this->loggerFactory,
+      $this->entitlements,
     );
   }
 

@@ -20,6 +20,7 @@ use Drupal\sales_leadership_diagnostic\MessageRole;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn;
+use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
@@ -79,6 +80,7 @@ final class ConversationService {
     private readonly AiUsageRepository $usageRepository,
     private readonly SpendGuard $spendGuard,
     private readonly CurrentTurn $currentTurn,
+    private readonly ResearchEntitlementService $entitlements,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -223,6 +225,15 @@ final class ConversationService {
     $resultId = $this->createResult($session, $turn);
     $session->setStatus(DiagnosticStatus::Completed);
     $session->save();
+
+    // La misión de investigación se cierra con el diagnóstico, no antes. Es la
+    // transición «misión termina correctamente → COMPLETED» del §4 de la
+    // especificación del cliente, y la hace el backend: el agente no la pide.
+    //
+    // Un ensayo del gestor no cierra la misión de nadie: no la abrió.
+    if (!(bool) $session->get('is_sandbox')->value) {
+      $this->entitlements->completeMission((int) $session->getOwnerId());
+    }
 
     $this->logger->info('Diagnóstico completado: sesión @id, versión @version.', [
       '@id' => $session->id(),

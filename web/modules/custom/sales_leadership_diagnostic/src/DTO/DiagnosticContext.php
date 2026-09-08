@@ -31,6 +31,11 @@ final readonly class DiagnosticContext {
    *   Número del turno que se está generando, empezando en 1.
    * @param int $maxTurns
    *   Tope configurado. El motor puede usarlo para cerrar a tiempo.
+   * @param string $researchRuntime
+   *   Bloque `RESEARCH_RUNTIME` que el backend le inyecta al agente en cada
+   *   turno (§5 de la especificación del cliente). Dice qué puede investigar y
+   *   de qué manera, y NO lleva dinero, topes ni identidad: «el modelo necesita
+   *   conocer permiso/capacidad operativa, no la contabilidad».
    */
   public function __construct(
     public string $systemPrompt,
@@ -38,6 +43,7 @@ final readonly class DiagnosticContext {
     public string $diagnosticVersion,
     public int $turnNumber,
     public int $maxTurns,
+    public string $researchRuntime = '',
   ) {}
 
   /**

@@ -62,7 +62,7 @@ final class SpendLimitTest extends KernelTestBase {
   protected function setUp(): void {
     parent::setUp();
 
-    $this->installSchema('sales_leadership_diagnostic', ['sld_ai_usage']);
+    $this->installSchema('sales_leadership_diagnostic', ['sld_ai_usage', 'sld_research_entitlement']);
     $this->installConfig(['system', 'sales_leadership_diagnostic']);
 
     $this->config('sales_leadership_diagnostic.settings')

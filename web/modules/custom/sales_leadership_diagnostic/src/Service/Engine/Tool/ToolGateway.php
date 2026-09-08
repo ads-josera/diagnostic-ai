@@ -9,6 +9,8 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\Exception\SpendLimitException;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\ResearchAccess;
+use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 
 /**
@@ -50,6 +52,7 @@ final class ToolGateway implements ToolRunnerInterface {
   private const TOPE_MISION = 'tope_llamadas_mision';
   private const TOPE_TEXTO = 'tope_texto_mision';
   private const TOPE_PERIODO = 'tope_llamadas_periodo';
+  private const SIN_ENTITLEMENT = 'sin_entitlement';
 
   /**
    * Canal de log del módulo.
@@ -63,6 +66,7 @@ final class ToolGateway implements ToolRunnerInterface {
     private readonly SpendGuard $spend,
     private readonly ConfigFactoryInterface $configFactory,
     LoggerChannelFactoryInterface $loggerFactory,
+    private readonly ResearchEntitlementService $entitlements,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
   }
@@ -91,6 +95,12 @@ final class ToolGateway implements ToolRunnerInterface {
     if ($motivo !== NULL) {
       return $this->deny($name, $consulta, $motivo);
     }
+
+    // La misión se abre AQUÍ, en la primera búsqueda que se concede, y no al
+    // empezar la conversación. Abrirla al empezar quemaría la misión semanal
+    // de quien entra solo a preguntar algo. Y la abre el backend, como exige
+    // el §4: el modelo no la pide ni la negocia, solo busca.
+    $this->openOrChargeMission();
 
     $inicio = microtime(TRUE);
     $salida = $this->tools->run($name, $arguments);
@@ -133,6 +143,14 @@ final class ToolGateway implements ToolRunnerInterface {
     }
     catch (SpendLimitException) {
       return self::PRESUPUESTO;
+    }
+
+    // El entitlement manda sobre los topes. La fábrica ya evita enseñar la
+    // herramienta cuando no hay capacidad, pero se comprueba también aquí: si
+    // el estado cambia a mitad de turno —porque otra petición cerró la misión—
+    // la herramienta ya estaba declarada y el modelo puede pedirla igual.
+    if (!$this->access()->allowsAnything()) {
+      return self::SIN_ENTITLEMENT;
     }
 
     $usado = $this->calls->usedInMission($this->turn->sessionId());
@@ -204,8 +222,40 @@ final class ToolGateway implements ToolRunnerInterface {
       self::TOPE_MISION => 'Esta misión alcanzó su número máximo de búsquedas.',
       self::TOPE_TEXTO => 'Esta misión alcanzó el máximo de contenido externo que puede incorporar.',
       self::TOPE_PERIODO => 'Se alcanzó el máximo de búsquedas del periodo para este usuario.',
+      self::SIN_ENTITLEMENT => 'La misión de investigación de este periodo ya se completó. No hay investigación externa disponible hasta la renovación.',
       default => 'No autorizada.',
     };
+  }
+
+  /**
+   * Abre la misión si aún no lo estaba, o gasta una comprobación puntual.
+   *
+   * Las dos son transiciones de la máquina de estados del §4, y las dos las
+   * hace el backend. La segunda cumple su «permitir alcance estrecho; NO
+   * resetear misión»: una comprobación no devuelve la capacidad de investigar,
+   * solo consume una de las pocas que quedaban.
+   */
+  private function openOrChargeMission(): void {
+    $entitlement = $this->entitlements->forUser($this->turn->uid());
+
+    if ($entitlement->state->canStartMission()) {
+      $this->entitlements->startMission($this->turn->uid(), $this->turn->sessionId());
+
+      return;
+    }
+
+    if (!$entitlement->state->isActive()) {
+      $this->entitlements->useRecheck($this->turn->uid());
+    }
+  }
+
+  /**
+   * Qué investigación permite el entitlement de quien tiene el turno.
+   */
+  private function access(): ResearchAccess {
+    return $this->entitlements
+      ->forUser($this->turn->uid())
+      ->access($this->entitlements->maxRechecks());
   }
 
   /**

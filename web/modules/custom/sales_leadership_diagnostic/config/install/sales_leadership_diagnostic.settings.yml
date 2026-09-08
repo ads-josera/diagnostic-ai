@@ -110,3 +110,12 @@ search:
   # 'basic' o 'advanced'. La avanzada consume mas creditos por consulta.
   depth: basic
   timeout: 20
+
+# Research Entitlement: quien puede investigar y cuando. La renovacion es
+# semanal y se calcula con la zona horaria de cada persona, no con la del
+# servidor (§2 de la especificacion del cliente).
+research:
+  # Comprobaciones puntuales que quedan tras cerrar la mision de la semana.
+  # Es lo que hace util el estado TARGETED_ONLY: permite resolver un bloqueo
+  # concreto sin resetear la mision.
+  max_rechecks_per_period: 3

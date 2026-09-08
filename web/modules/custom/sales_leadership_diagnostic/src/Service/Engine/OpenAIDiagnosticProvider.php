@@ -144,6 +144,18 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
       ['role' => 'system', 'content' => $context->systemPrompt],
     ];
 
+    // El bloque de capacidad va DETRÁS del prompt y no al final de la
+    // conversación: el prompt del cliente razona con él desde su primera
+    // decisión, y verlo al final llegaría tarde.
+    //
+    // Cuesta algo: cuando el estado cambia a mitad de misión —de AVAILABLE a
+    // ACTIVE en la primera búsqueda— cambia el prefijo y se pierde la caché de
+    // ese turno. Una vez por misión, unos veinte centavos de dólar. Se paga a
+    // gusto: la alternativa es que el agente decida sin saber qué puede hacer.
+    if ($context->researchRuntime !== '') {
+      $messages[] = ['role' => 'system', 'content' => $context->researchRuntime];
+    }
+
     foreach ($context->historyAsPayload() as $message) {
       $messages[] = $message;
     }

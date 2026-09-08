@@ -8,6 +8,9 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticContext;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
+use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
+use Drupal\sales_leadership_diagnostic\Service\Research\ResearchRuntime;
+use Drupal\sales_leadership_diagnostic\Service\Research\TurnClassifier;
 
 /**
  * Prepara lo que se envía al motor de diagnóstico (§31).
@@ -21,6 +24,9 @@ final class DiagnosticContextBuilder {
   public function __construct(
     private readonly DiagnosticMessageRepository $messages,
     private readonly ConfigFactoryInterface $configFactory,
+    private readonly ResearchEntitlementService $entitlements,
+    private readonly TurnClassifier $classifier,
+    private readonly ResearchRuntime $runtime,
   ) {}
 
   /**
@@ -41,6 +47,33 @@ final class DiagnosticContextBuilder {
       diagnosticVersion: $session->getDiagnosticVersion(),
       turnNumber: $session->getTurnCount() + 1,
       maxTurns: $maxTurns,
+      // Qué puede investigar quien está al otro lado, en las palabras del
+      // cliente. El bloque no lleva identidad ni dinero, así que puede viajar
+      // en lo que se manda al proveedor sin romper §31 ni §43.
+      researchRuntime: $this->researchRuntimeFor($session),
+    );
+  }
+
+  /**
+   * El bloque de capacidad de investigación para esta sesión.
+   *
+   * Devuelve cadena vacía cuando no hay búsqueda encendida: sin herramientas
+   * que gobernar, el bloque solo añadiría ruido al prompt y le costaría la
+   * caché a los agentes que no investigan.
+   */
+  private function researchRuntimeFor(DiagnosticSessionInterface $session): string {
+    if (!(bool) $this->configFactory->get('sales_leadership_diagnostic.settings')->get('search.enabled')) {
+      return '';
+    }
+
+    $uid = (int) $session->getOwnerId();
+    $entitlement = $this->entitlements->forUser($uid);
+    $rechecks = $this->entitlements->maxRechecks();
+
+    return $this->runtime->compose(
+      $entitlement,
+      $this->classifier->classify($entitlement, $rechecks),
+      $rechecks,
     );
   }
 
