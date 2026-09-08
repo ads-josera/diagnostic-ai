@@ -19,6 +19,8 @@ use Drupal\sales_leadership_diagnostic\Exception\SessionBusyException;
 use Drupal\sales_leadership_diagnostic\MessageRole;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticContextBuilder;
 use Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineInterface;
 use Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter;
@@ -71,6 +73,8 @@ final class ConversationService {
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly QueueFactory $queueFactory,
     private readonly TimeInterface $time,
+    private readonly AiUsageCollector $usageCollector,
+    private readonly AiUsageRepository $usageRepository,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -150,6 +154,23 @@ final class ConversationService {
       // Se libera siempre, también si algo falló: un bloqueo huérfano dejaría
       // la sesión inutilizable hasta que expirase.
       $this->lock->release($lockName);
+
+      // Y se anota lo gastado, también si falló, por el mismo motivo que el
+      // limitador se registra antes de llamar: lo que cuesta dinero es el
+      // intento. Va en el `finally` a propósito; detrás de un `return` se
+      // perdería justo el consumo de los turnos que se rompieron, que son de
+      // los más caros.
+      //
+      // Aquí es donde el gasto recibe nombre: el cliente de IA mide los
+      // tokens pero no sabe de quién son, porque lo que se le envía al
+      // proveedor está deliberadamente libre de identidad (§31, §43).
+      $this->usageRepository->recordAll(
+        $this->usageCollector->drain(),
+        $uid,
+        $session->getAgentId(),
+        $sessionId,
+        (bool) $session->get('is_sandbox')->value,
+      );
     }
   }
 

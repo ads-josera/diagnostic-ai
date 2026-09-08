@@ -11,6 +11,7 @@ use Drupal\sales_leadership_diagnostic\Exception\EngineException;
 use Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException;
 use Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIClient;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
 use Drupal\Tests\UnitTestCase;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -187,6 +188,7 @@ final class OpenAIClientTest extends UnitTestCase {
         ],
       ]),
       $loggerFactory,
+      new AiUsageCollector(),
     );
   }
 

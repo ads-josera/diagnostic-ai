@@ -61,6 +61,7 @@ final class DiagnosticThemeHooks {
    */
   private const MANAGER_ROUTES = [
     'sales_leadership_diagnostic.admin_results',
+    'sales_leadership_diagnostic.usage',
     'sales_leadership_diagnostic.studio',
     'sales_leadership_diagnostic.studio_agent',
     'sales_leadership_diagnostic.knowledge',

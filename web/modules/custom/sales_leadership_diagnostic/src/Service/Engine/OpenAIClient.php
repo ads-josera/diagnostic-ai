@@ -10,7 +10,9 @@ use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\Exception\EngineException;
 use Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\DTO\AiCall;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 
@@ -68,6 +70,7 @@ final class OpenAIClient {
     private readonly SecretsProvider $secrets,
     private readonly ConfigFactoryInterface $configFactory,
     LoggerChannelFactoryInterface $loggerFactory,
+    private readonly AiUsageCollector $usage,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
   }
@@ -133,16 +136,27 @@ final class OpenAIClient {
   private function requestWithRetries(array $payload, string $purpose): array {
     $attempts = $this->getMaxRetries() + 1;
     $lastError = NULL;
+    $inicio = microtime(TRUE);
 
     for ($attempt = 1; $attempt <= $attempts; $attempt++) {
       try {
-        return $this->requestOnce($payload, $purpose);
+        $decoded = $this->requestOnce($payload);
+
+        // Se anota ANTES de mirar si el contenido sirve. Una respuesta 200 con
+        // el JSON cortado ya se pagó —y es de las caras, porque agotó el
+        // presupuesto de salida—; registrarla solo cuando es aprovechable
+        // dejaría ese gasto fuera de la cuenta.
+        $this->registrar($payload, $purpose, $decoded, $inicio, $attempt, '');
+
+        return $this->extractObject($decoded, $purpose);
       }
       catch (EngineException $e) {
         $lastError = $e;
 
         // El código del error indica si tiene sentido repetir.
         if (!in_array($e->getCode(), self::RETRYABLE_STATUSES, TRUE) || $attempt === $attempts) {
+          $this->registrar($payload, $purpose, [], $inicio, $attempt, $e->getMessage());
+
           throw $e;
         }
 
@@ -169,16 +183,16 @@ final class OpenAIClient {
    *
    * @param array<string, mixed> $payload
    *   Cuerpo de la petición.
-   * @param string $purpose
-   *   Para qué era la llamada, para el registro.
    *
    * @return array<string, mixed>
-   *   Respuesta del proveedor, ya decodificada.
+   *   Respuesta del proveedor, ya decodificada. Sin comprobar todavía si su
+   *   contenido sirve: eso lo mira extractObject(), y en medio hay que anotar
+   *   el consumo, porque una respuesta inservible ya se pagó.
    *
    * @throws \Drupal\sales_leadership_diagnostic\Exception\EngineException
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
    */
-  private function requestOnce(array $payload, string $purpose): array {
+  private function requestOnce(array $payload): array {
     try {
       $response = $this->httpClient->request('POST', self::ENDPOINT, [
         'headers' => [
@@ -203,26 +217,30 @@ final class OpenAIClient {
       throw new EngineException($this->describeError($status, $body), $status);
     }
 
-    return $this->extractObject($body, $purpose);
+    $decoded = json_decode($body, TRUE);
+
+    if (!is_array($decoded)) {
+      throw new InvalidEngineResponseException('La respuesta del proveedor no tiene la forma esperada.');
+    }
+
+    return $decoded;
   }
 
   /**
    * Extrae el objeto estructurado de la respuesta del proveedor.
    *
-   * @param string $body
-   *   Cuerpo de la respuesta.
+   * @param array<string, mixed> $decoded
+   *   Respuesta del proveedor, ya decodificada.
    * @param string $purpose
-   *   Para qué era la llamada, para el registro.
+   *   Para qué era la llamada; solo se usa al explicar un fallo.
    *
    * @return array<string, mixed>
    *   El objeto que devolvió el modelo.
    *
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
    */
-  private function extractObject(string $body, string $purpose): array {
-    $decoded = json_decode($body, TRUE);
-
-    if (!is_array($decoded) || !isset($decoded['choices'][0])) {
+  private function extractObject(array $decoded, string $purpose): array {
+    if (!isset($decoded['choices'][0])) {
       throw new InvalidEngineResponseException('La respuesta del proveedor no tiene la forma esperada.');
     }
 
@@ -244,8 +262,6 @@ final class OpenAIClient {
     if (!is_array($objeto)) {
       throw new InvalidEngineResponseException('El proveedor no devolvió un objeto JSON válido.');
     }
-
-    $this->logUsage($decoded['usage'] ?? [], $purpose);
 
     return $objeto;
   }
@@ -280,26 +296,60 @@ final class OpenAIClient {
   }
 
   /**
-   * Registra el consumo de tokens.
+   * Anota el consumo de una llamada.
    *
-   * Son cifras, no contenido: permiten vigilar el coste sin guardar nada de
-   * la conversación (§43).
+   * Son cifras, no contenido: permiten vigilar el coste sin guardar nada de la
+   * conversación (§43).
    *
-   * @param array<string, mixed> $usage
-   *   Cifras de consumo que devuelve el proveedor.
+   * Deposita en el colector, que NO sabe de qué alumno se trata. Esta clase
+   * tampoco lo sabe, y no debe: quien conduce la conversación recogerá esto y
+   * le pondrá nombre. Si nadie lo recoge, se pierde sin más.
+   *
+   * Los tokens cacheados se separan a propósito. El proveedor los cobra al
+   * 10 %, y en una conversación larga son la mayor parte de la entrada:
+   * sumarlos al precio completo multiplica el coste por varias veces. El
+   * 07-09-2026, nueve llamadas figuraban como $26 MXN y costaron unos $16.
+   *
+   * @param array<string, mixed> $payload
+   *   Lo que se envió; de aquí sale el modelo.
    * @param string $purpose
    *   Para qué era la llamada, de modo que se distinga qué gastó qué.
+   * @param array<string, mixed> $decoded
+   *   Respuesta del proveedor. Vacía si no llegó a haberla.
+   * @param float $inicio
+   *   Marca de microtime al empezar, reintentos incluidos.
+   * @param int $intentos
+   *   Intentos facturados hasta aquí. El reintento se paga.
+   * @param string $error
+   *   Vacío si terminó bien.
    */
-  private function logUsage(array $usage, string $purpose): void {
+  private function registrar(array $payload, string $purpose, array $decoded, float $inicio, int $intentos, string $error): void {
+    $usage = is_array($decoded['usage'] ?? NULL) ? $decoded['usage'] : [];
+
+    $llamada = new AiCall(
+      model: (string) ($payload['model'] ?? ''),
+      purpose: $purpose,
+      inputTokens: (int) ($usage['prompt_tokens'] ?? 0),
+      cachedInputTokens: (int) ($usage['prompt_tokens_details']['cached_tokens'] ?? 0),
+      outputTokens: (int) ($usage['completion_tokens'] ?? 0),
+      reasoningTokens: (int) ($usage['completion_tokens_details']['reasoning_tokens'] ?? 0),
+      latencyMs: (int) round((microtime(TRUE) - $inicio) * 1000),
+      attempts: $intentos,
+      error: $error,
+    );
+
+    $this->usage->record($llamada);
+
     if ($usage === []) {
       return;
     }
 
-    $this->logger->info('@purpose. Tokens: entrada @in, salida @out (razonamiento @reasoning).', [
+    $this->logger->info('@purpose. Tokens: entrada @in (@cached cacheados), salida @out (razonamiento @reasoning).', [
       '@purpose' => $purpose,
-      '@in' => (int) ($usage['prompt_tokens'] ?? 0),
-      '@out' => (int) ($usage['completion_tokens'] ?? 0),
-      '@reasoning' => (int) ($usage['completion_tokens_details']['reasoning_tokens'] ?? 0),
+      '@in' => $llamada->inputTokens,
+      '@cached' => $llamada->cachedInputTokens,
+      '@out' => $llamada->outputTokens,
+      '@reasoning' => $llamada->reasoningTokens,
     ]);
   }
 

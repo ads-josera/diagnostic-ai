@@ -153,6 +153,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
       - '@config.factory'
       - '@logger.factory'
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector'
 
   Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIDiagnosticProvider:
     arguments:
@@ -195,6 +196,8 @@ services:
       - '@entity_type.manager'
       - '@queue'
       - '@datetime.time'
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector'
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository'
       - '@logger.factory'
 
   # --- Repositorios --------------------------------------------------------
@@ -360,3 +363,19 @@ services:
       - '@current_user'
     tags:
       - { name: event_subscriber }
+
+  # --- Telemetría de consumo -------------------------------------------------
+
+  # Vive lo que dura la petición: el cliente de IA deposita aquí lo que gastó y
+  # quien conduce la conversación lo recoge para ponerle nombre.
+  Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector: {}
+
+  Drupal\sales_leadership_diagnostic\Service\Telemetry\PriceList:
+    arguments:
+      - '@config.factory'
+
+  Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository:
+    arguments:
+      - '@database'
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\PriceList'
+      - '@datetime.time'

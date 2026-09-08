@@ -318,3 +318,14 @@ sales_leadership_diagnostic.knowledge_agent:
     _title: 'Documentos de conocimiento'
   requirements:
     _permission: 'edit diagnostic prompt+administer sales leadership diagnostic'
+
+# Pantalla de consumo del proveedor de IA. Es del gestor, no solo del
+# administrador: quien vigila el gasto es quien opera el producto.
+sales_leadership_diagnostic.usage:
+  path: '/admin/config/salesbumm/diagnostic/consumo'
+  methods: [GET]
+  defaults:
+    _controller: 'Drupal\sales_leadership_diagnostic\Controller\UsageController::view'
+    _title: 'Consumo de IA'
+  requirements:
+    _permission: 'view all diagnostic results+administer sales leadership diagnostic'

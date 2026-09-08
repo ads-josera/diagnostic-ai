@@ -37,6 +37,28 @@ sales_leadership_diagnostic.settings:
           sequence:
             type: string
             label: 'Identificador del modelo'
+        prices:
+          type: sequence
+          label: 'Tarifas del proveedor'
+          sequence:
+            type: mapping
+            label: 'Tarifa de un modelo'
+            mapping:
+              model:
+                type: string
+                label: 'Identificador del modelo'
+              input:
+                type: float
+                label: 'Dólares por millón de tokens de entrada'
+              cached_input:
+                type: float
+                label: 'Dólares por millón de tokens de entrada ya cacheados'
+              output:
+                type: float
+                label: 'Dólares por millón de tokens de salida'
+        exchange_rate:
+          type: float
+          label: 'Pesos por dólar, solo para mostrar'
         timeout:
           type: integer
           label: 'Timeout de las peticiones al proveedor (segundos)'

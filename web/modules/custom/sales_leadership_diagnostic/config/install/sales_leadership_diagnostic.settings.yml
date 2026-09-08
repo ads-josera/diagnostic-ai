@@ -16,7 +16,29 @@ openai:
   # requiera un despliegue.
   model: ''
   available_models: {  }
+  # Pesos por dolar, SOLO para enseñar la cifra al lado. No se usa para
+  # calcular nada ni para los topes: el proveedor cobra en dolares y ese es el
+  # numero que se guarda. Esta aqui porque el cliente razona en pesos y hacer
+  # la cuenta a mano cada vez invita a equivocarse. Hay que actualizarlo a
+  # mano; una conversion desactualizada se nota, una inventada no.
+  exchange_rate: 17.0
   timeout: 60
+  # Tarifas del proveedor, en DOLARES por millon de tokens. Viven aqui y no en
+  # el codigo por el mismo motivo que el catalogo de modelos (§30): un cambio
+  # de precios no puede exigir un despliegue, porque entonces los topes de
+  # gasto quedarian calculados sobre tarifas viejas.
+  #
+  # Los tres precios son distintos y el del medio decide la cuenta: la entrada
+  # que el proveedor ya tenia calculada se cobra al 10 %. Con una conversacion
+  # larga eso es la mayor parte del recibo.
+  #
+  # Va como lista y no como mapa «modelo => tarifa» porque la configuracion de
+  # Drupal no admite puntos en las claves, y todos los modelos los llevan.
+  prices:
+    - model: 'gpt-5.6-terra'
+      input: 2.0
+      cached_input: 0.2
+      output: 12.0
   max_retries: 2
   max_completion_tokens: 2000
 security:

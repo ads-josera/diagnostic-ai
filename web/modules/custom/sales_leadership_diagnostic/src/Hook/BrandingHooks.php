@@ -53,6 +53,7 @@ final class BrandingHooks {
     // lista al añadir pantallas — no se ve mirando, porque los dos azules se
     // parecen.
     'sales_leadership_diagnostic.admin_results',
+    'sales_leadership_diagnostic.usage',
     'sales_leadership_diagnostic.studio',
     'sales_leadership_diagnostic.studio_agent',
     'sales_leadership_diagnostic.knowledge',

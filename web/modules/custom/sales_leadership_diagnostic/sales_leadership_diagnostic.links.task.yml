@@ -66,3 +66,9 @@ sales_leadership_diagnostic.results_agents_tab:
   route_name: entity.sld_agent.collection
   base_route: sales_leadership_diagnostic.admin_results
   weight: 5
+
+sales_leadership_diagnostic.usage_tab:
+  title: 'Consumo'
+  route_name: sales_leadership_diagnostic.usage
+  base_route: sales_leadership_diagnostic.admin_results
+  weight: 40

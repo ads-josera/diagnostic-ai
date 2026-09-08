@@ -81,6 +81,149 @@ function sales_leadership_diagnostic_schema(): array {
         'session_sequence' => ['session_id', 'sequence'],
       ],
     ],
+    'sld_ai_usage' => sales_leadership_diagnostic_usage_table(),
+  ];
+}
+
+/**
+ * Definición de la tabla de consumo de IA.
+ *
+ * Vive en su propia función porque la usan dos sitios: el esquema de
+ * instalación y la actualización que la crea en los sitios que ya existían.
+ * Duplicarla es cómo se acaba con una tabla distinta según cuándo se instaló.
+ *
+ * No es entidad de contenido, por el mismo criterio que los mensajes: son
+ * cifras que se escriben una vez y no se editan jamás, se consultan sumadas y
+ * crecen sin techo. Como entidad quedarían expuestas a Views y a cualquier
+ * módulo que recorra entidades, y cada suma cargaría miles de objetos para
+ * sumar enteros.
+ *
+ * @return array<string, mixed>
+ *   La definición de la tabla.
+ */
+function sales_leadership_diagnostic_usage_table(): array {
+  return [
+    'description' => 'Consumo del proveedor de IA, llamada a llamada.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Identificador del apunte.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Alumno por cuya cuenta se hizo la llamada.',
+      ],
+      'agent' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Agente que la motivó.',
+      ],
+      'session_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        'description' => 'Conversación a la que pertenece, si la hubo.',
+      ],
+      'purpose' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Para qué era: conducir un turno, extraer memoria.',
+      ],
+      'model' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Modelo que la atendió.',
+      ],
+      'input_tokens' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Tokens de entrada facturados, cacheados incluidos.',
+      ],
+      'cached_input_tokens' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Los que el proveedor ya tenía calculados y cobra al 10 %. Sin este dato el coste sale multiplicado por varias veces.',
+      ],
+      'output_tokens' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Tokens generados, razonamiento incluido.',
+      ],
+      'reasoning_tokens' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'La parte de los anteriores que el modelo gastó pensando.',
+      ],
+      'cost_usd' => [
+        'type' => 'numeric',
+        'precision' => 14,
+        'scale' => 6,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Coste con la tarifa vigente EN EL MOMENTO de la llamada. Se congela a propósito: recalcularlo después reescribiría el pasado cada vez que el proveedor cambie de precios.',
+      ],
+      'latency_ms' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Lo que tardó, reintentos incluidos.',
+      ],
+      'attempts' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => 'Intentos facturados. El reintento se paga.',
+      ],
+      'failed' => [
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cierto si acabó en error. Se guarda igual: el intento se cobró.',
+      ],
+      'is_sandbox' => [
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cierto si vino del estudio del prompt. Cuesta dinero real, así que se registra, pero no debe contar contra el tope de ningún alumno.',
+      ],
+      'created' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Marca temporal.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'indexes' => [
+      // Las tres consultas que va a haber: lo que lleva un alumno en el
+      // periodo, lo que lleva un agente, y el desglose de una conversación.
+      'uid_created' => ['uid', 'created'],
+      'agent_created' => ['agent', 'created'],
+      'session' => ['session_id'],
+    ],
   ];
 }
 
@@ -660,4 +803,26 @@ function sales_leadership_diagnostic_update_10013(): string {
   $config->set('diagnostic.conversation_retention_days', 0)->save();
 
   return 'Creado el plazo de conservación de las conversaciones, en 0 (no se purga nada). Se fija en Configuración → Salesbumm → Diagnostic AI → Reglas de uso.';
+}
+
+/**
+ * Crea la tabla del consumo de IA.
+ *
+ * Hasta ahora el consumo solo quedaba en el registro del sistema, en una línea
+ * de texto por llamada: imposible de sumar, imposible de acotar por periodo y,
+ * sobre todo, sin los tokens cacheados. Sin ese dato el coste sale varias
+ * veces inflado —el 07-09-2026, nueve llamadas figuraban como $26 MXN y
+ * costaron unos $16— y un tope calculado sobre esa cifra cortaría el servicio
+ * a alumnos que no han gastado lo que parece.
+ */
+function sales_leadership_diagnostic_update_10014(): string {
+  $esquema = \Drupal::database()->schema();
+
+  if ($esquema->tableExists('sld_ai_usage')) {
+    return 'La tabla del consumo ya existía; no se ha modificado nada.';
+  }
+
+  $esquema->createTable('sld_ai_usage', sales_leadership_diagnostic_usage_table());
+
+  return 'Creada la tabla del consumo de IA. Empieza vacía: lo anterior no se puede reconstruir porque los tokens cacheados nunca se guardaron.';
 }

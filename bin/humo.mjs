@@ -275,6 +275,7 @@ export default async function run(page) {
     ['/admin/config/salesbumm/diagnostic/agentes', 'agentes'],
     ['/admin/config/salesbumm/diagnostic/estudio', 'estudio'],
     ['/admin/config/salesbumm/diagnostic/documentos', 'documentos'],
+    ['/admin/config/salesbumm/diagnostic/consumo', 'consumo'],
   ]) {
     await page.goto(`${SITIO}${ruta}`, { waitUntil: 'networkidle' });
 
