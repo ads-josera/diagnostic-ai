@@ -19,6 +19,7 @@ use Drupal\sales_leadership_diagnostic\Exception\SessionBusyException;
 use Drupal\sales_leadership_diagnostic\MessageRole;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
@@ -77,6 +78,7 @@ final class ConversationService {
     private readonly AiUsageCollector $usageCollector,
     private readonly AiUsageRepository $usageRepository,
     private readonly SpendGuard $spendGuard,
+    private readonly CurrentTurn $currentTurn,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -131,6 +133,14 @@ final class ConversationService {
 
       $context = $this->contextBuilder->build($session);
 
+      // De quién es este turno. El gateway lo necesita DURANTE la llamada para
+      // poder validar «user_id, mission_id» antes de cada herramienta, como
+      // exige el §6 de la especificación del cliente, y esa identidad no puede
+      // viajar en lo que se le manda al proveedor (§31, §43).
+      //
+      // Sin esto, el gateway ve un turno sin dueño y deniega toda búsqueda.
+      $this->currentTurn->begin($uid, $sessionId, (bool) $session->get('is_sandbox')->value);
+
       // El consumo se registra ANTES de llamar al proveedor, no después de que
       // el turno salga bien. Lo que cuesta dinero es el intento: la llamada se
       // paga entera aunque la respuesta llegue mal, y de hecho las que fallan
@@ -169,6 +179,11 @@ final class ConversationService {
       // Se libera siempre, también si algo falló: un bloqueo huérfano dejaría
       // la sesión inutilizable hasta que expirase.
       $this->lock->release($lockName);
+
+      // Se retira la identidad del turno. Sin esto, un turno que falla dejaría
+      // la suya puesta y la siguiente llamada de la misma petición se
+      // atribuiría a quien no fue.
+      $this->currentTurn->end();
 
       // Y se anota lo gastado, también si falló, por el mismo motivo que el
       // limitador se registra antes de llamar: lo que cuesta dinero es el

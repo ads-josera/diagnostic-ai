@@ -11,7 +11,7 @@ use Drupal\sales_leadership_diagnostic\Exception\EngineException;
 use Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\DTO\AiCall;
-use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBox;
+use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolRunnerInterface;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
@@ -101,7 +101,7 @@ final class OpenAIClient {
    *   que en el log se distinga qué gastó qué.
    * @param int|null $maxTokens
    *   Presupuesto de la respuesta. Sin valor, el de la configuración.
-   * @param \Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBox|null $tools
+   * @param \Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolRunnerInterface|null $tools
    *   Herramientas que el modelo puede pedir en este turno. Sin ellas no se
    *   declara ninguna, ni siquiera una lista vacía: declararlas cambia el
    *   prefijo del prompt y con él se pierde la caché.
@@ -112,7 +112,7 @@ final class OpenAIClient {
    * @throws \Drupal\sales_leadership_diagnostic\Exception\EngineException
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
    */
-  public function completeJson(array $messages, string $schemaName, array $schema, string $purpose, ?int $maxTokens = NULL, ?ToolBox $tools = NULL): array {
+  public function completeJson(array $messages, string $schemaName, array $schema, string $purpose, ?int $maxTokens = NULL, ?ToolRunnerInterface $tools = NULL): array {
     $model = $this->getModel();
 
     if ($model === '') {
@@ -157,7 +157,7 @@ final class OpenAIClient {
    *   Cuerpo de la primera petición.
    * @param string $purpose
    *   Para qué era, para el registro de consumo.
-   * @param \Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBox|null $tools
+   * @param \Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolRunnerInterface|null $tools
    *   Herramientas del turno. Sin ellas no se declara nada, ni siquiera una
    *   lista vacía: declararlas cambia el prefijo del prompt y con él se
    *   perdería la caché de los turnos que no las necesitan.
@@ -168,7 +168,7 @@ final class OpenAIClient {
    * @throws \Drupal\sales_leadership_diagnostic\Exception\EngineException
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
    */
-  private function converse(array $payload, string $purpose, ?ToolBox $tools): array {
+  private function converse(array $payload, string $purpose, ?ToolRunnerInterface $tools): array {
     $usaHerramientas = $tools !== NULL && !$tools->isEmpty();
 
     if ($usaHerramientas) {

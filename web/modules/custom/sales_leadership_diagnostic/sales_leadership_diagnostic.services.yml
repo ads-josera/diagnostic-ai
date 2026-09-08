@@ -201,6 +201,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector'
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository'
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn'
       - '@logger.factory'
 
   # --- Repositorios --------------------------------------------------------
@@ -414,3 +415,16 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Search\SearchProviderInterface'
       - '@config.factory'
       - '@logger.factory'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository'
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard'
+
+  # De quien es el turno en curso. El gateway lo necesita DURANTE la llamada,
+  # no al terminarla, y esa identidad no puede viajar en lo que se manda al
+  # proveedor.
+  Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn: {}
+
+  Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository:
+    arguments:
+      - '@database'
+      - '@datetime.time'

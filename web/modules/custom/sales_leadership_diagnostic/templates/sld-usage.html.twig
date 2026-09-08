@@ -136,6 +136,29 @@
       </ul>
     </section>
 
+    {% if searches %}
+      <section class="sld-usage__panel">
+        <h2 class="sld-usage__panel-title">{{ 'Búsquedas externas'|t }}</h2>
+        <ul class="sld-usage__legend">
+          <li>{{ 'Concedidas'|t }} <b>{{ searches.allowed }}</b></li>
+          <li>
+            <span class="sld-usage__dot sld-usage__dot--denied"></span>
+            {{ 'Denegadas'|t }} <b>{{ searches.denied }}</b>
+          </li>
+          <li>{{ 'Resultados traídos'|t }} <b>{{ searches.results }}</b></li>
+          <li>{{ 'Texto incorporado'|t }} <b>{{ searches.chars }}</b> {{ 'caracteres'|t }}</li>
+        </ul>
+        {% if searches.reasons %}
+          <p class="sld-usage__aside">
+            {{ 'Por qué se denegaron:'|t }}
+            {% for reason in searches.reasons %}
+              <span class="sld-usage__chip sld-usage__chip--warning">{{ reason.label }} · {{ reason.count }}</span>
+            {% endfor %}
+          </p>
+        {% endif %}
+      </section>
+    {% endif %}
+
     <div class="sld-usage__split">
       <section class="sld-usage__panel">
         <h2 class="sld-usage__panel-title">{{ 'Por agente'|t }}</h2>

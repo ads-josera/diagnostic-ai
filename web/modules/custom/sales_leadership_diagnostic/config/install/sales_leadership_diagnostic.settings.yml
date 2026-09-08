@@ -76,6 +76,23 @@ diagnostic:
   # alguien tiene que tomar a sabiendas.
   conversation_retention_days: 0
 
+# Topes de las herramientas. A diferencia de los de gasto, estos SI nacen con
+# valores: la herramienta solo existe si alguien enciende la busqueda a
+# proposito, asi que un tope de fabrica no puede sorprender a nadie, y el §6 de
+# la especificacion del cliente pide denegar «de forma determinista».
+#
+# Los numeros son de partida y hay que calibrarlos con el benchmark, como pide
+# su §9. Cero significa sin tope.
+tools:
+  # Por mision. Acota lo que puede costar una conversacion.
+  max_calls_per_mission: 12
+  # Caracteres de contenido externo que pueden entrar al modelo en una mision.
+  # Es donde esta la mayor parte de lo que cuesta buscar.
+  max_retrieved_chars_per_mission: 40000
+  # Por persona y mes. NO es redundante con el de la mision: sin este, el tope
+  # se salta abriendo otra conversacion, que es el bypass que nombra su §6.
+  max_calls_per_user_period: 60
+
 # Busqueda externa. El agente solo busca si hay clave del buscador en el
 # entorno del servidor; sin ella lo declara y sigue con lo que no dependa de
 # ello, que es lo que manda su metodologia.

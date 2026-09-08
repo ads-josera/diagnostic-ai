@@ -177,6 +177,9 @@ final class DiagnosticThemeHooks {
           // es lo mismo que estar al 0 %.
           'budget' => NULL,
           'periods' => [],
+          // Búsquedas externas. Nulo si no ha habido ninguna: un panel a cero
+          // ocupa sitio y no dice nada.
+          'searches' => NULL,
           'has_data' => FALSE,
           'totals' => [],
           'agents' => [],

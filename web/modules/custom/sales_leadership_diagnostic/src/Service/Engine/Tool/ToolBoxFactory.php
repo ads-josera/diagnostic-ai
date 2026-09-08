@@ -8,6 +8,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Search\SearchProviderInterface;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 
 /**
  * Decide qué herramientas hay en un turno.
@@ -26,6 +27,9 @@ final class ToolBoxFactory {
     private readonly SearchProviderInterface $search,
     private readonly ConfigFactoryInterface $configFactory,
     private readonly LoggerChannelFactoryInterface $loggerFactory,
+    private readonly CurrentTurn $turn,
+    private readonly ToolCallRepository $calls,
+    private readonly SpendGuard $spend,
   ) {}
 
   /**
@@ -36,20 +40,34 @@ final class ToolBoxFactory {
    * una lista vacía. Declararlas cambia el prefijo del prompt, y con él se
    * perdería la caché de todos los turnos que no las necesitan.
    */
-  public function forTurn(): ToolBox {
+  public function forTurn(): ToolRunnerInterface {
     $config = $this->configFactory->get('sales_leadership_diagnostic.settings');
 
     if (!(bool) $config->get('search.enabled') || !$this->search->isAvailable()) {
       return new ToolBox();
     }
 
-    return new ToolBox([
+    $caja = new ToolBox([
       new WebSearchTool(
         $this->search,
         $this->loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL),
         max(1, (int) $config->get('search.max_results')),
       ),
     ]);
+
+    // La caja NUNCA se devuelve desnuda. El §6 de la especificación del
+    // cliente exige que toda búsqueda externa pase por el gateway: «nunca dar
+    // acceso directo no medido». Envolverla aquí, en el único sitio que
+    // construye herramientas, es lo que hace que una herramienta nueva nazca
+    // controlada sin que nadie tenga que acordarse.
+    return new ToolGateway(
+      $caja,
+      $this->turn,
+      $this->calls,
+      $this->spend,
+      $this->configFactory,
+      $this->loggerFactory,
+    );
   }
 
 }

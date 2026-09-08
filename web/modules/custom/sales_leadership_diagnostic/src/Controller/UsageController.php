@@ -9,6 +9,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Url;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
+use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -47,6 +48,7 @@ final class UsageController extends ControllerBase {
   public function __construct(
     private readonly AiUsageRepository $usage,
     private readonly SpendGuard $spend,
+    private readonly ToolCallRepository $toolCalls,
     private readonly AgentRegistry $agents,
     private readonly DateFormatterInterface $dates,
     private readonly TimeInterface $time,
@@ -60,6 +62,7 @@ final class UsageController extends ControllerBase {
     return new static(
       $container->get(AiUsageRepository::class),
       $container->get(SpendGuard::class),
+      $container->get(ToolCallRepository::class),
       $container->get(AgentRegistry::class),
       $container->get('date.formatter'),
       $container->get('datetime.time'),
@@ -89,6 +92,7 @@ final class UsageController extends ControllerBase {
       '#periods' => $this->periodos($dias),
       '#has_data' => $total['calls'] > 0,
       '#totals' => $this->totales($total, $sinCache),
+      '#searches' => $this->busquedas($desde),
       '#agents' => $this->porAgente($desde),
       '#people' => $this->porAlumno($desde),
       '#calls' => $this->ultimas(),
@@ -190,6 +194,57 @@ final class UsageController extends ControllerBase {
       'sandbox' => $this->dinero((float) $total['sandbox']),
       'sandbox_pct' => $coste > 0 ? (int) round((float) $total['sandbox'] / $coste * 100) : 0,
     ];
+  }
+
+  /**
+   * Búsquedas externas del periodo.
+   *
+   * Se enseñan las DENEGADAS junto a las concedidas, y con el mismo peso. Son
+   * la única forma de ver que el gateway está haciendo algo, y de distinguir
+   * un agente que no quiso buscar de uno al que no se le dejó. Sin esto, la
+   * frase «bloquea físicamente» del §15 de la especificación del cliente sería
+   * algo que solo se puede comprobar leyendo el registro del sistema.
+   *
+   * Devuelve NULL cuando no ha habido ninguna: un panel a cero ocupa sitio y
+   * no dice nada.
+   *
+   * @return array<string, mixed>|null
+   *   Las cifras, o NULL si no hubo búsquedas.
+   */
+  private function busquedas(int $desde): ?array {
+    $resumen = $this->toolCalls->summarySince($desde);
+
+    if ($resumen['allowed'] === 0 && $resumen['denied'] === 0) {
+      return NULL;
+    }
+
+    $motivos = [];
+
+    foreach ($this->toolCalls->denialsSince($desde) as $motivo => $veces) {
+      $motivos[] = ['label' => $this->explicarMotivo($motivo), 'count' => $veces];
+    }
+
+    return [
+      'allowed' => number_format($resumen['allowed']),
+      'denied' => number_format($resumen['denied']),
+      'results' => number_format($resumen['results']),
+      'chars' => number_format($resumen['chars']),
+      'reasons' => $motivos,
+    ];
+  }
+
+  /**
+   * El motivo de una denegación, en algo que se pueda leer.
+   */
+  private function explicarMotivo(string $motivo): string {
+    return match ($motivo) {
+      'sin_turno' => (string) $this->t('Sin misión identificada'),
+      'presupuesto' => (string) $this->t('Presupuesto agotado'),
+      'tope_llamadas_mision' => (string) $this->t('Tope de la misión'),
+      'tope_texto_mision' => (string) $this->t('Tope de contenido externo'),
+      'tope_llamadas_periodo' => (string) $this->t('Tope del periodo'),
+      default => $motivo,
+    };
   }
 
   /**

@@ -82,6 +82,121 @@ function sales_leadership_diagnostic_schema(): array {
       ],
     ],
     'sld_ai_usage' => sales_leadership_diagnostic_usage_table(),
+    'sld_tool_call' => sales_leadership_diagnostic_tool_call_table(),
+  ];
+}
+
+/**
+ * Definición de la tabla de llamadas a herramientas.
+ *
+ * Guarda TODAS, las que se hicieron y las que se denegaron. Las denegadas son
+ * la mitad que importa: son la prueba de que el gateway existe, y sin ellas la
+ * frase «bloquea físicamente research no autorizado» del §15 de la
+ * especificación del cliente no se puede demostrar, solo afirmar.
+ *
+ * Aquí SÍ se guarda la consulta, aunque la haya escrito el modelo a partir de
+ * la conversación. Es el mismo criterio que ya sigue el prompt congelado: la
+ * base de datos guarda el registro de lo que se hizo, y el log se queda con
+ * las cifras. Sin la consulta no hay Evidence Ledger que reutilizar ni forma
+ * de auditar qué se buscó a cuenta de quién.
+ *
+ * @return array<string, mixed>
+ *   La definición de la tabla.
+ */
+function sales_leadership_diagnostic_tool_call_table(): array {
+  return [
+    'description' => 'Llamadas a herramientas, concedidas y denegadas.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Identificador de la llamada.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Alumno a cuenta de quien se pidió.',
+      ],
+      'session_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Misión en la que se pidió.',
+      ],
+      'tool' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Herramienta que pidió el modelo.',
+      ],
+      'query' => [
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'description' => 'Lo que pidió buscar. Necesario para reutilizar evidencia y para auditar.',
+      ],
+      'allowed' => [
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cierto si el gateway la dejó pasar.',
+      ],
+      'denial_reason' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Por qué se denegó. Vacío si se concedió.',
+      ],
+      'results' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cuántos resultados devolvió.',
+      ],
+      'retrieved_chars' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cuánto texto entró al modelo. Es lo que el §9 de la especificación pide acotar, porque es donde está la mayor parte del gasto de buscar.',
+      ],
+      'latency_ms' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Lo que tardó.',
+      ],
+      'is_sandbox' => [
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cierto si vino del estudio del prompt.',
+      ],
+      'created' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Marca temporal.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'indexes' => [
+      // El tope por misión y el tope por persona y periodo. El segundo no es
+      // redundante: sin él, el tope se salta abriendo otra conversación, que
+      // es exactamente el bypass que nombra el §6 de la especificación.
+      'session' => ['session_id'],
+      'uid_created' => ['uid', 'created'],
+    ],
   ];
 }
 
@@ -825,4 +940,23 @@ function sales_leadership_diagnostic_update_10014(): string {
   $esquema->createTable('sld_ai_usage', sales_leadership_diagnostic_usage_table());
 
   return 'Creada la tabla del consumo de IA. Empieza vacía: lo anterior no se puede reconstruir porque los tokens cacheados nunca se guardaron.';
+}
+
+/**
+ * Crea la tabla de llamadas a herramientas.
+ *
+ * Nace con la búsqueda externa: hasta ahora no había ninguna herramienta que
+ * registrar. Guarda también las denegadas, que son la prueba de que el gateway
+ * hace algo.
+ */
+function sales_leadership_diagnostic_update_10015(): string {
+  $esquema = \Drupal::database()->schema();
+
+  if ($esquema->tableExists('sld_tool_call')) {
+    return 'La tabla de llamadas a herramientas ya existía; no se ha modificado nada.';
+  }
+
+  $esquema->createTable('sld_tool_call', sales_leadership_diagnostic_tool_call_table());
+
+  return 'Creada la tabla de llamadas a herramientas. Registra las concedidas y las denegadas.';
 }

@@ -14,7 +14,7 @@ namespace Drupal\sales_leadership_diagnostic\Service\Engine\Tool;
  * El cliente de IA solo sabe pedirle dos cosas: qué declarar y qué hacer
  * cuando el modelo pide algo. No sabe qué herramientas son ni por qué están.
  */
-final class ToolBox {
+final class ToolBox implements ToolRunnerInterface {
 
   /**
    * Herramientas por nombre.
@@ -36,7 +36,7 @@ final class ToolBox {
   }
 
   /**
-   * Si no hay ninguna.
+   * {@inheritdoc}
    *
    * Con la caja vacía no se declara nada al proveedor, ni siquiera una lista
    * vacía: una declaración de herramientas cambia el prefijo del prompt, y con
@@ -47,10 +47,7 @@ final class ToolBox {
   }
 
   /**
-   * Declaraciones para el proveedor.
-   *
-   * @return array<int, array<string, mixed>>
-   *   Una por herramienta.
+   * {@inheritdoc}
    */
   public function declarations(): array {
     return array_values(array_map(
@@ -60,16 +57,11 @@ final class ToolBox {
   }
 
   /**
-   * Ejecuta la que pidió el modelo.
+   * {@inheritdoc}
    *
    * Una herramienta desconocida NO revienta el turno: se le contesta al modelo
    * que no existe. Puede pedir cualquier cosa —lo hace—, y tratar eso como un
    * error del sistema convertiría una alucinación suya en una caída nuestra.
-   *
-   * @param string $name
-   *   Nombre que pidió.
-   * @param array<string, mixed> $arguments
-   *   Argumentos que pidió, ya decodificados.
    */
   public function run(string $name, array $arguments): string {
     if (!isset($this->tools[$name])) {

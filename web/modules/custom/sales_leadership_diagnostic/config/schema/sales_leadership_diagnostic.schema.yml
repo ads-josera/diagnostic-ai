@@ -85,6 +85,19 @@ sales_leadership_diagnostic.settings:
           type: integer
           label: 'Días que se conservan las conversaciones'
 
+    tools:
+      type: mapping
+      label: 'Topes de las herramientas'
+      mapping:
+        max_calls_per_mission:
+          type: integer
+          label: 'Llamadas por misión'
+        max_retrieved_chars_per_mission:
+          type: integer
+          label: 'Caracteres de contenido externo por misión'
+        max_calls_per_user_period:
+          type: integer
+          label: 'Llamadas por persona y mes'
     search:
       type: mapping
       label: 'Búsqueda externa'

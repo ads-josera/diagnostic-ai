@@ -374,3 +374,9 @@
   font-size: 0.85rem;
   font-weight: 500;
 }
+
+/* El punto de las denegadas va en el color de aviso, no en el de peligro: una
+   denegación es el control funcionando, no un fallo. */
+.sld-usage__dot--denied {
+  background: var(--sld-color-warning);
+}
