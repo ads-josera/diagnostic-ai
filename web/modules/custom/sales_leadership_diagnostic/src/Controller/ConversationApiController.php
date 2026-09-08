@@ -11,6 +11,7 @@ use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 use Drupal\sales_leadership_diagnostic\Exception\DiagnosticException;
 use Drupal\sales_leadership_diagnostic\Exception\RateLimitException;
+use Drupal\sales_leadership_diagnostic\Exception\SpendLimitException;
 use Drupal\sales_leadership_diagnostic\Exception\SessionBusyException;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\ConversationService;
@@ -95,6 +96,17 @@ final class ConversationApiController extends ControllerBase {
 
       return $this->error(
         $this->t('Has enviado demasiados mensajes en poco tiempo. Espera unos minutos antes de continuar.'),
+        Response::HTTP_TOO_MANY_REQUESTS,
+      );
+    }
+    catch (SpendLimitException $e) {
+      // Es una decisión de quien administra, no un fallo. Al alumno se le dice
+      // lo que necesita saber —que no ha perdido nada y a quién avisar— y no
+      // que existe un presupuesto ni por dónde va (§43, §58).
+      $this->logger->warning('Turno rechazado por tope de gasto: @message', ['@message' => ExceptionRedactor::redact($e)]);
+
+      return $this->error(
+        $this->t('Esta conversación no puede continuar en este momento. No se ha perdido nada: lo que ya generaste sigue disponible. Avisa a tu instructor para reanudarla.'),
         Response::HTTP_TOO_MANY_REQUESTS,
       );
     }

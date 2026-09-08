@@ -13,6 +13,7 @@ use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\DTO\AiCall;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 
@@ -71,6 +72,7 @@ final class OpenAIClient {
     private readonly ConfigFactoryInterface $configFactory,
     LoggerChannelFactoryInterface $loggerFactory,
     private readonly AiUsageCollector $usage,
+    private readonly SpendGuard $spend,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
   }
@@ -134,6 +136,16 @@ final class OpenAIClient {
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
    */
   private function requestWithRetries(array $payload, string $purpose): array {
+    // El tope GLOBAL se comprueba aquí, en el único punto por donde pasan
+    // TODAS las llamadas del módulo, incluidas las que no pertenecen a ningún
+    // alumno. No necesita saber de quién es la llamada, así que puede vivir en
+    // una clase que deliberadamente no lo sabe (§31, §43).
+    //
+    // Es la red que sigue puesta aunque un camino nuevo se olvide de comprobar
+    // el tope individual: lo peor que puede pasar con un presupuesto no es que
+    // un alumno lo agote, es que nadie lo esté mirando de madrugada.
+    $this->spend->assertGlobalHeadroom();
+
     $attempts = $this->getMaxRetries() + 1;
     $lastError = NULL;
     $inicio = microtime(TRUE);

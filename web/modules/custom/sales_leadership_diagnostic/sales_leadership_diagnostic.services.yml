@@ -154,6 +154,7 @@ services:
       - '@config.factory'
       - '@logger.factory'
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector'
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard'
 
   Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIDiagnosticProvider:
     arguments:
@@ -198,6 +199,7 @@ services:
       - '@datetime.time'
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector'
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository'
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard'
       - '@logger.factory'
 
   # --- Repositorios --------------------------------------------------------
@@ -246,6 +248,7 @@ services:
       - '@config.factory'
       - '@lock'
       - '@datetime.time'
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard'
       - '@logger.factory'
 
   # Recuerda qué versión del plugin de WordPress respondió por última vez, para
@@ -379,3 +382,13 @@ services:
       - '@database'
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\PriceList'
       - '@datetime.time'
+
+  # Impide la llamada cuando el presupuesto se agoto. Va ANTES de llamar al
+  # proveedor: registrar el exceso despues no es un tope, es un informe.
+  Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository'
+      - '@config.factory'
+      - '@datetime.time'
+      - '@state'
+      - '@logger.factory'

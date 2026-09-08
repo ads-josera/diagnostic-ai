@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\sales_leadership_diagnostic\Unit;
 
+use Drupal\Component\Datetime\TimeInterface;
+use Drupal\Core\Database\Connection;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\Core\Site\Settings;
@@ -11,7 +13,11 @@ use Drupal\sales_leadership_diagnostic\Exception\EngineException;
 use Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException;
 use Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIClient;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
+use Drupal\Core\State\StateInterface;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\PriceList;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use Drupal\Tests\UnitTestCase;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -171,24 +177,41 @@ final class OpenAIClientTest extends UnitTestCase {
     $loggerFactory = $this->createMock(LoggerChannelFactoryInterface::class);
     $loggerFactory->method('get')->willReturn($logger);
 
+    $configFactory = $this->getConfigFactoryStub([
+      'sales_leadership_diagnostic.settings' => [
+        'openai' => [
+          'model' => $modelo,
+          'timeout' => 30,
+          'max_retries' => $reintentos,
+          'max_completion_tokens' => 2000,
+        ],
+      ],
+    ]);
+
     return new OpenAIClient(
       new Client(['handler' => HandlerStack::create(new MockHandler($respuestas))]),
       // No se puede sustituir por un doble: es final a propósito, para que no
       // haya más de una forma de leer un secreto. Se construye de verdad con
       // unos ajustes de prueba.
       new SecretsProvider(new Settings([SecretsProvider::OPENAI_API_KEY => 'sk-de-prueba'])),
-      $this->getConfigFactoryStub([
-        'sales_leadership_diagnostic.settings' => [
-          'openai' => [
-            'model' => $modelo,
-            'timeout' => 30,
-            'max_retries' => $reintentos,
-            'max_completion_tokens' => 2000,
-          ],
-        ],
-      ]),
+      $configFactory,
       $loggerFactory,
       new AiUsageCollector(),
+      // Sin topes configurados el guardián sale antes de consultar nada, así
+      // que sus dependencias no llegan a usarse. Se construye de verdad y no
+      // como doble porque es final a propósito: que no haya dos formas de
+      // decidir si una llamada puede ocurrir.
+      new SpendGuard(
+        new AiUsageRepository(
+          $this->createMock(Connection::class),
+          new PriceList($configFactory),
+          $this->createMock(TimeInterface::class),
+        ),
+        $configFactory,
+        $this->createMock(TimeInterface::class),
+        $this->createMock(StateInterface::class),
+        $loggerFactory,
+      ),
     );
   }
 

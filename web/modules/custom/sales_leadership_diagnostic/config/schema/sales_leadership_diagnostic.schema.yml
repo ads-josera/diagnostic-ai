@@ -85,6 +85,19 @@ sales_leadership_diagnostic.settings:
           type: integer
           label: 'Días que se conservan las conversaciones'
 
+    spending:
+      type: mapping
+      label: 'Topes de gasto del proveedor de IA'
+      mapping:
+        per_user_limit:
+          type: float
+          label: 'Tope por alumno y mes, en dólares. Cero es sin tope'
+        global_limit:
+          type: float
+          label: 'Tope de la instalación por mes, en dólares. Cero es sin tope'
+        warn_at_percent:
+          type: integer
+          label: 'Porcentaje a partir del cual se avisa a quien administra'
     security:
       type: mapping
       label: 'Seguridad y límites de uso'

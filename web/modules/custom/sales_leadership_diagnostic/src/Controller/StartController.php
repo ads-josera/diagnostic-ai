@@ -87,6 +87,10 @@ final class StartController extends ControllerBase {
       CannotStartDiagnosticException::REASON_ALREADY_DONE => $this->t('Ya has realizado el diagnóstico que incluye tu acceso actual. Podrás hacer uno nuevo cuando renueves.'),
       CannotStartDiagnosticException::REASON_NOT_AUTHORIZED => $this->t('Tu acceso al diagnóstico no está vigente. Comprueba tu cuenta del programa.'),
       CannotStartDiagnosticException::REASON_IN_FLIGHT => $this->t('Ya se está iniciando tu diagnóstico. Espera unos segundos y vuelve a intentarlo.'),
+      // No se le cuenta que hay un presupuesto ni cuánto queda: no es asunto
+      // suyo y no puede hacer nada al respecto (§43, §58). Lo que sí se le
+      // dice es que no ha perdido nada, que es lo que de verdad le preocupa.
+      CannotStartDiagnosticException::REASON_NO_BUDGET => $this->t('El diagnóstico no puede iniciarse en este momento. No has perdido nada: lo que ya hayas hecho sigue disponible. Avisa a tu instructor.'),
       // Incluye REASON_NOT_READY: al alumno no se le cuenta que falta
       // configurar el módulo, porque no es asunto suyo ni puede hacer nada.
       default => $this->t('El diagnóstico no está disponible en este momento. Inténtalo más tarde.'),

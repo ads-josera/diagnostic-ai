@@ -18,6 +18,37 @@
 #}
 <div class="sld-usage">
 
+  {% if budget %}
+    <div class="sld-usage__budget{{ budget.blocked ? ' sld-usage__budget--blocked' : (budget.warn ? ' sld-usage__budget--warn') }}">
+      <div class="sld-usage__budget-head">
+        <strong>
+          {% if budget.blocked %}
+            {{ 'Presupuesto del mes agotado'|t }}
+          {% elseif budget.warn %}
+            {{ 'Queda poco presupuesto este mes'|t }}
+          {% else %}
+            {{ 'Presupuesto del mes'|t }}
+          {% endif %}
+        </strong>
+        <span class="sld-usage__aside">
+          {{ '@gastado de @tope · quedan @resto'|t({
+            '@gastado': budget.spent,
+            '@tope': budget.limit,
+            '@resto': budget.left,
+          }) }}
+        </span>
+      </div>
+      <div class="sld-usage__bar">
+        <div class="sld-usage__bar-fill sld-usage__bar-fill--budget" style="width: {{ budget.percent }}%"></div>
+      </div>
+      {% if budget.blocked %}
+        <p class="sld-usage__budget-note">
+          {{ 'No se inician turnos nuevos para nadie. Lo ya generado se sigue consultando.'|t }}
+        </p>
+      {% endif %}
+    </div>
+  {% endif %}
+
   <div class="sld-usage__periods" role="group" aria-label="{{ 'Periodo'|t }}">
     {% for period in periods %}
       {% if period.active %}

@@ -38,6 +38,15 @@ final class CannotStartDiagnosticException extends DiagnosticException {
   public const REASON_IN_FLIGHT = 'in_flight';
 
   /**
+   * Se agotó el presupuesto del periodo, suyo o de la instalación.
+   *
+   * Se comprueba también al empezar y no solo al enviar cada mensaje, aunque
+   * empezar no cueste dinero: dejar que alguien abra la conversación, escriba
+   * su primer mensaje y se lo rechacen es peor que decírselo antes de entrar.
+   */
+  public const REASON_NO_BUDGET = 'no_budget';
+
+  /**
    * Motivo legible por máquina.
    *
    * @var string

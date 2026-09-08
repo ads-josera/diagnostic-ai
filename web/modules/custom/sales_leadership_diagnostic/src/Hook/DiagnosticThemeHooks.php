@@ -173,6 +173,9 @@ final class DiagnosticThemeHooks {
       // plantilla, no en el orden en que el controlador arme unas tablas.
       'sld_usage' => [
         'variables' => [
+          // Cómo va el tope de gasto. Nulo cuando nadie ha fijado uno, que no
+          // es lo mismo que estar al 0 %.
+          'budget' => NULL,
           'periods' => [],
           'has_data' => FALSE,
           'totals' => [],

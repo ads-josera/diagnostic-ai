@@ -318,3 +318,59 @@
 .sld-usage__empty p {
   margin: 0;
 }
+
+/* Presupuesto ---------------------------------------------------------- */
+
+/*
+ * Va arriba del todo y solo aparece cuando hay un tope puesto. El guardián
+ * avisa en el registro, pero quien opera no vive en el registro: si el aviso
+ * no está en la pantalla que mira, no existe.
+ */
+.sld-usage__budget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-sm);
+  padding: var(--sld-space-md) var(--sld-space-lg);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-bg);
+}
+
+.sld-usage__budget-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem var(--sld-space-md);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sld-usage__bar-fill--budget {
+  background: var(--sld-color-primary);
+}
+
+/* Dos estados, y solo dos: se acerca, o ya no se puede gastar. Un semáforo de
+   cinco colores en una barra de presupuesto no dice nada más y se ignora. */
+.sld-usage__budget--warn {
+  border-color: color-mix(in srgb, var(--sld-color-warning) 45%, var(--sld-color-border));
+  box-shadow: inset 3px 0 0 var(--sld-color-warning);
+}
+
+.sld-usage__budget--warn .sld-usage__bar-fill--budget {
+  background: var(--sld-color-warning);
+}
+
+.sld-usage__budget--blocked {
+  border-color: color-mix(in srgb, var(--sld-color-danger) 45%, var(--sld-color-border));
+  box-shadow: inset 3px 0 0 var(--sld-color-danger);
+}
+
+.sld-usage__budget--blocked .sld-usage__bar-fill--budget {
+  background: var(--sld-color-danger);
+}
+
+.sld-usage__budget-note {
+  margin: 0;
+  color: var(--sld-color-danger);
+  font-size: 0.85rem;
+  font-weight: 500;
+}

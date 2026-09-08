@@ -10,6 +10,7 @@ use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Url;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -45,6 +46,7 @@ final class UsageController extends ControllerBase {
 
   public function __construct(
     private readonly AiUsageRepository $usage,
+    private readonly SpendGuard $spend,
     private readonly AgentRegistry $agents,
     private readonly DateFormatterInterface $dates,
     private readonly TimeInterface $time,
@@ -57,6 +59,7 @@ final class UsageController extends ControllerBase {
   public static function create(ContainerInterface $container): static {
     return new static(
       $container->get(AiUsageRepository::class),
+      $container->get(SpendGuard::class),
       $container->get(AgentRegistry::class),
       $container->get('date.formatter'),
       $container->get('datetime.time'),
@@ -82,12 +85,47 @@ final class UsageController extends ControllerBase {
       '#theme' => 'sld_usage',
       '#attached' => ['library' => ['sales_leadership_diagnostic/usage']],
       '#cache' => ['max-age' => 0],
+      '#budget' => $this->presupuesto(),
       '#periods' => $this->periodos($dias),
       '#has_data' => $total['calls'] > 0,
       '#totals' => $this->totales($total, $sinCache),
       '#agents' => $this->porAgente($desde),
       '#people' => $this->porAlumno($desde),
       '#calls' => $this->ultimas(),
+    ];
+  }
+
+  /**
+   * Cómo va el presupuesto de la instalación.
+   *
+   * El guardián avisa en el registro al cruzar el umbral, pero quien opera no
+   * vive en el registro. Aquí es donde lo va a ver, y por eso este bloque va
+   * arriba del todo cuando hay algo que decir.
+   *
+   * Devuelve NULL cuando no hay tope configurado, que **no** es lo mismo que
+   * estar al 0 %: confundirlos en una pantalla lleva a creer que hay un
+   * control puesto cuando no lo hay.
+   *
+   * @return array<string, mixed>|null
+   *   Estado del presupuesto, o NULL si nadie ha fijado un tope.
+   */
+  private function presupuesto(): ?array {
+    $estado = $this->spend->statusGlobal();
+
+    if ($estado === NULL) {
+      return NULL;
+    }
+
+    return [
+      'percent' => min(100, $estado['percent']),
+      'spent' => $this->dinero($estado['spent']),
+      'limit' => $this->dinero($estado['limit']),
+      'left' => $this->dinero(max(0.0, $estado['limit'] - $estado['spent'])),
+      'blocked' => $estado['blocked'],
+      // Se destaca a partir del 80 %, el mismo umbral con el que avisa el
+      // guardián. Si la pantalla marcara antes o después que el registro,
+      // habría dos verdades sobre lo mismo.
+      'warn' => !$estado['blocked'] && $estado['percent'] >= 80,
     ];
   }
 

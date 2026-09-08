@@ -21,6 +21,7 @@ use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticContextBuilder;
 use Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineInterface;
 use Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter;
@@ -75,6 +76,7 @@ final class ConversationService {
     private readonly TimeInterface $time,
     private readonly AiUsageCollector $usageCollector,
     private readonly AiUsageRepository $usageRepository,
+    private readonly SpendGuard $spendGuard,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -111,6 +113,19 @@ final class ConversationService {
       }
 
       $this->rateLimiter->assertCanSendMessage($uid);
+
+      // El presupuesto se comprueba ANTES de escribir nada y antes de llamar
+      // al proveedor. Si no hay margen, el turno no llega a existir: ni se
+      // guarda el mensaje del alumno ni se paga una llamada que no debía
+      // ocurrir.
+      //
+      // Los ensayos del estudio se saltan el tope INDIVIDUAL: los hace quien
+      // administra para probar un prompt, y cargárselos a quien figure como
+      // dueño de la sesión le comería su cupo sin haber hecho nada. El tope
+      // global sí les aplica, porque la factura no distingue.
+      if (!(bool) $session->get('is_sandbox')->value) {
+        $this->spendGuard->assertCanSpend($uid);
+      }
 
       $this->messages->append($sessionId, MessageRole::User, $text);
 

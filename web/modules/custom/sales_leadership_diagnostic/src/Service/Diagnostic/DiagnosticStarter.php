@@ -14,6 +14,8 @@ use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 use Drupal\sales_leadership_diagnostic\Exception\CannotStartDiagnosticException;
+use Drupal\sales_leadership_diagnostic\Exception\SpendLimitException;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use Drupal\sales_leadership_diagnostic\RepeatPolicy;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
@@ -66,6 +68,7 @@ final class DiagnosticStarter {
     private readonly ConfigFactoryInterface $configFactory,
     private readonly LockBackendInterface $lock,
     private readonly TimeInterface $time,
+    private readonly SpendGuard $spendGuard,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -161,6 +164,19 @@ final class DiagnosticStarter {
       // y no tiene sentido consultarlo para alguien a quien ya se va a
       // rechazar por otro motivo.
       $this->rateLimiter->assertCanStartDiagnostic($uid);
+
+      // Empezar no cuesta dinero, pero el primer mensaje sí, y sin esto el
+      // alumno abriría la conversación, escribiría y se lo rechazarían con el
+      // mensaje ya enviado. Se le dice antes de entrar.
+      try {
+        $this->spendGuard->assertCanSpend($uid);
+      }
+      catch (SpendLimitException $e) {
+        throw new CannotStartDiagnosticException(
+          $e->getMessage(),
+          CannotStartDiagnosticException::REASON_NO_BUDGET,
+        );
+      }
 
       $session = $this->createSession($account, $agent, $externalUserId, $decision->courseId);
 

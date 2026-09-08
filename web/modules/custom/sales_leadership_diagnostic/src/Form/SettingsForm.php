@@ -85,6 +85,7 @@ final class SettingsForm extends ConfigFormBase {
     $form['wordpress'] = $this->buildWordPressSection();
     $form['openai'] = $this->buildEngineSection();
     $form['diagnostic'] = $this->buildDiagnosticSection();
+    $form['spending'] = $this->buildSpendingSection();
     $form['security'] = $this->buildSecuritySection();
 
     return parent::buildForm($form, $form_state);
@@ -310,6 +311,54 @@ final class SettingsForm extends ConfigFormBase {
         '#step' => 1,
         '#description' => $this->t('Pasado ese plazo se borra lo que el alumno ESCRIBIÓ en los diagnósticos ya terminados. Sus resultados no se tocan nunca: son su entregable, y desde que guardan la puntuación por dimensión siguen siendo legibles sin la conversación detrás. Tampoco se toca la copia del prompt, que es lo que permite saber años después con qué instrucciones se produjo cada diagnóstico. Las conversaciones a medias se conservan siempre, lleven lo que lleven paradas: el alumno puede volver a ellas. <strong>Cero conserva todo indefinidamente</strong>, que es como viene de fábrica.'),
         '#config_target' => self::CONFIG_NAME . ':diagnostic.conversation_retention_days',
+      ],
+    ];
+  }
+
+  /**
+   * Topes de gasto del proveedor de IA.
+   *
+   * Van en su propia sección y no dentro de «Seguridad» porque no protegen de
+   * un abuso: protegen una factura. Quien viene a fijar un presupuesto no
+   * piensa en «límites de uso», y enterrarlos ahí es cómo se quedan sin poner.
+   *
+   * @return array<string, mixed>
+   *   Render array de la sección.
+   */
+  private function buildSpendingSection(): array {
+    return [
+      '#type' => 'details',
+      '#title' => $this->t('Topes de gasto de la IA'),
+      '#open' => TRUE,
+      '#tree' => TRUE,
+      '#description' => $this->t('En <strong>dólares</strong>, que es lo que cobra el proveedor, y por <strong>mes natural</strong>. Cero significa sin tope. Cuando un tope se alcanza, no se inician turnos nuevos; lo ya generado se sigue consultando siempre.'),
+
+      'per_user_limit' => [
+        '#type' => 'number',
+        '#title' => $this->t('Tope por alumno y mes (USD)'),
+        '#description' => $this->t('Al alcanzarlo, ese alumno deja de poder iniciar turnos. No afecta a nadie más. Los ensayos del estudio del prompt no consumen el cupo de ningún alumno.'),
+        '#min' => 0,
+        '#step' => 0.01,
+        '#config_target' => self::CONFIG_NAME . ':spending.per_user_limit',
+      ],
+
+      'global_limit' => [
+        '#type' => 'number',
+        '#title' => $this->t('Tope de toda la instalación y mes (USD)'),
+        '#description' => $this->t('Es la única defensa frente a un caso raro que se dispare de madrugada. Al alcanzarlo no se inician turnos nuevos para nadie, ensayos incluidos.'),
+        '#min' => 0,
+        '#step' => 0.01,
+        '#config_target' => self::CONFIG_NAME . ':spending.global_limit',
+      ],
+
+      'warn_at_percent' => [
+        '#type' => 'number',
+        '#title' => $this->t('Avisar al llegar a este porcentaje'),
+        '#description' => $this->t('Queda anotado en el registro una vez por alumno y mes, no en cada turno: un aviso que se repite treinta veces se deja de leer. El alumno no nota nada hasta el 100 %.'),
+        '#min' => 1,
+        '#max' => 99,
+        '#field_suffix' => '%',
+        '#config_target' => self::CONFIG_NAME . ':spending.warn_at_percent',
       ],
     ];
   }
