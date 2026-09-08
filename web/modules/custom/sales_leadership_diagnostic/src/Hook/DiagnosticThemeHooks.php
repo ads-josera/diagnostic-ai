@@ -168,6 +168,19 @@ final class DiagnosticThemeHooks {
           'reset_url' => '',
         ],
       ],
+      // Pantalla de consumo del gestor. Se mira de un vistazo, así que el
+      // orden de lectura es parte de lo que hay que diseñar y vive en su
+      // plantilla, no en el orden en que el controlador arme unas tablas.
+      'sld_usage' => [
+        'variables' => [
+          'periods' => [],
+          'has_data' => FALSE,
+          'totals' => [],
+          'agents' => [],
+          'people' => [],
+          'calls' => [],
+        ],
+      ],
       'sld_result' => [
         'variables' => [
           // El titulo lo imprime la plantilla y no el bloque del tema: ese

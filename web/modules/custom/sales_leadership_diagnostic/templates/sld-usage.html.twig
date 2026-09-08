@@ -1,0 +1,204 @@
+{#
+/**
+ * @file
+ * Pantalla de consumo del proveedor de IA.
+ *
+ * Se mira de un vistazo, así que el orden importa: primero lo que se gastó,
+ * al lado lo que NO se gastó gracias a la reutilización, y solo después el
+ * detalle. Si alguien deja de leer en el primer bloque, ya tiene la respuesta
+ * a la pregunta por la que entró.
+ *
+ * Variables:
+ * - periods: selector de periodo.
+ * - has_data: si hay algo que enseñar.
+ * - totals: cifras de cabecera, ya formateadas.
+ * - agents, people: consumo agrupado.
+ * - calls: las últimas llamadas, una a una.
+ */
+#}
+<div class="sld-usage">
+
+  <div class="sld-usage__periods" role="group" aria-label="{{ 'Periodo'|t }}">
+    {% for period in periods %}
+      {% if period.active %}
+        <span class="sld-usage__period sld-usage__period--on" aria-current="true">{{ period.label }}</span>
+      {% else %}
+        <a class="sld-usage__period" href="{{ period.url }}">{{ period.label }}</a>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  {% if not has_data %}
+    <div class="sld-usage__empty">
+      <p class="sld-usage__empty-title">{{ 'Todavía no hay consumo en este periodo.'|t }}</p>
+      <p>{{ 'Aparecerá en cuanto alguien converse con un agente, incluidos los ensayos del estudio del prompt.'|t }}</p>
+    </div>
+  {% else %}
+
+    <div class="sld-usage__figures">
+      <div class="sld-usage__figure">
+        <span class="sld-usage__label">{{ 'Gasto del periodo'|t }}</span>
+        <strong class="sld-usage__number">{{ totals.cost }}</strong>
+        {% if totals.cost_mxn %}
+          <span class="sld-usage__aside">{{ totals.cost_mxn }}</span>
+        {% endif %}
+      </div>
+
+      <div class="sld-usage__figure sld-usage__figure--good">
+        <span class="sld-usage__label">{{ 'Ahorrado por reutilización'|t }}</span>
+        <strong class="sld-usage__number">{{ totals.saved }}</strong>
+        <span class="sld-usage__aside">
+          {% if totals.saved_mxn %}{{ totals.saved_mxn }} · {% endif %}
+          {{ '@pct % menos que sin reutilizar'|t({'@pct': totals.saved_pct}) }}
+        </span>
+      </div>
+
+      <div class="sld-usage__figure">
+        <span class="sld-usage__label">{{ 'Llamadas'|t }}</span>
+        <strong class="sld-usage__number">{{ totals.calls }}</strong>
+        <span class="sld-usage__aside">
+          {% if totals.failed > 0 %}
+            <span class="sld-usage__chip sld-usage__chip--danger">{{ '@n fallidas'|t({'@n': totals.failed}) }}</span>
+            {{ 'y se pagaron igual'|t }}
+          {% else %}
+            {{ 'ninguna falló'|t }}
+          {% endif %}
+        </span>
+      </div>
+
+      <div class="sld-usage__figure">
+        <span class="sld-usage__label">{{ 'Ensayos del estudio'|t }}</span>
+        <strong class="sld-usage__number">{{ totals.sandbox }}</strong>
+        <span class="sld-usage__aside">
+          {{ '@pct % del gasto · no cuenta contra ningún alumno'|t({'@pct': totals.sandbox_pct}) }}
+        </span>
+      </div>
+    </div>
+
+    {#
+      La barra es el centro de la pantalla y no un adorno: es lo que hace
+      evidente de dónde sale el ahorro. Con la cifra sola hay que creerse la
+      resta; con la barra se ve.
+    #}
+    <section class="sld-usage__panel">
+      <h2 class="sld-usage__panel-title">{{ 'Tokens de entrada'|t }}</h2>
+      <div class="sld-usage__bar">
+        <div class="sld-usage__bar-fill" style="width: {{ totals.cached_pct }}%"></div>
+      </div>
+      <ul class="sld-usage__legend">
+        <li>
+          <span class="sld-usage__dot sld-usage__dot--cached"></span>
+          {{ 'Reutilizados, al 10 % del precio'|t }}
+          <b>{{ totals.cached }}</b>
+          <span class="sld-usage__aside">{{ totals.cached_pct }} %</span>
+        </li>
+        <li>
+          <span class="sld-usage__dot"></span>
+          {{ 'A precio completo'|t }}
+          <b>{{ totals.full_price }}</b>
+        </li>
+        <li>
+          <span class="sld-usage__dot sld-usage__dot--out"></span>
+          {{ 'Generados'|t }}
+          <b>{{ totals.output }}</b>
+        </li>
+      </ul>
+    </section>
+
+    <div class="sld-usage__split">
+      <section class="sld-usage__panel">
+        <h2 class="sld-usage__panel-title">{{ 'Por agente'|t }}</h2>
+        <table class="sld-usage__table">
+          <thead>
+            <tr>
+              <th>{{ 'Agente'|t }}</th>
+              <th class="sld-usage__num">{{ 'Llamadas'|t }}</th>
+              <th class="sld-usage__num">{{ 'Gasto'|t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for agent in agents %}
+              <tr>
+                <td>
+                  {{ agent.label }}
+                  {% if agent.share is not null %}
+                    <span class="sld-usage__rail"><span style="width: {{ agent.share }}%"></span></span>
+                  {% endif %}
+                </td>
+                <td class="sld-usage__num">{{ agent.calls }}</td>
+                <td class="sld-usage__num">{{ agent.cost }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="sld-usage__panel">
+        <h2 class="sld-usage__panel-title">{{ 'Quién consume'|t }}</h2>
+        <table class="sld-usage__table">
+          <thead>
+            <tr>
+              <th>{{ 'Persona'|t }}</th>
+              <th class="sld-usage__num">{{ 'Llamadas'|t }}</th>
+              <th class="sld-usage__num">{{ 'Gasto'|t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for person in people %}
+              <tr>
+                <td>
+                  {{ person.label }}
+                  {% if person.share is not null %}
+                    <span class="sld-usage__rail"><span style="width: {{ person.share }}%"></span></span>
+                  {% endif %}
+                </td>
+                <td class="sld-usage__num">{{ person.calls }}</td>
+                <td class="sld-usage__num">{{ person.cost }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <section class="sld-usage__panel">
+      <h2 class="sld-usage__panel-title">{{ 'Últimas llamadas'|t }}</h2>
+      <div class="sld-usage__scroller">
+        <table class="sld-usage__table">
+          <thead>
+            <tr>
+              <th>{{ 'Cuándo'|t }}</th>
+              <th>{{ 'Para qué'|t }}</th>
+              <th class="sld-usage__num">{{ 'Entrada'|t }}</th>
+              <th class="sld-usage__num">{{ 'Reutilizado'|t }}</th>
+              <th class="sld-usage__num">{{ 'Salida'|t }}</th>
+              <th class="sld-usage__num">{{ 'Tardó'|t }}</th>
+              <th class="sld-usage__num">{{ 'Gasto'|t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for call in calls %}
+              <tr>
+                <td class="sld-usage__when">{{ call.when }}</td>
+                <td>
+                  {{ call.purpose }}
+                  {% for flag in call.flags %}
+                    <span class="sld-usage__chip sld-usage__chip--{{ flag.kind }}">{{ flag.label }}</span>
+                  {% endfor %}
+                </td>
+                <td class="sld-usage__num">{{ call.input }}</td>
+                <td class="sld-usage__num">
+                  <span class="sld-usage__pct{{ call.cached_pct >= 50 ? ' sld-usage__pct--good' }}">{{ call.cached_pct }} %</span>
+                </td>
+                <td class="sld-usage__num">{{ call.output }}</td>
+                <td class="sld-usage__num">{{ call.seconds }} s</td>
+                <td class="sld-usage__num">{{ call.cost }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  {% endif %}
+</div>

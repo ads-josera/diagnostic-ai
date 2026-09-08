@@ -47,3 +47,10 @@ studio:
     - core/drupal
     - core/once
     - core/drupalSettings
+
+usage:
+  version: 1.x
+  css:
+    theme:
+      css/sld-base.css: {}
+      css/sld-usage.css: {}

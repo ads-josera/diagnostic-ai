@@ -1,0 +1,320 @@
+/**
+ * @file
+ * Pantalla de consumo del proveedor de IA.
+ *
+ * Es una herramienta que se opera, no un texto que se lee, así que el trabajo
+ * está en la jerarquía de la información y no en la tipografía: primero las
+ * cifras que contestan la pregunta por la que se entra, después el detalle.
+ *
+ * Todo el color sale de los tokens del módulo. Nada de valores literales: el
+ * día que llegue la identidad de Salesbumm, esta pantalla la adopta sola.
+ */
+
+.sld-usage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-lg);
+}
+
+/* Periodo ------------------------------------------------------------- */
+
+/*
+ * Control segmentado y no una lista de enlaces: son opciones excluyentes de
+ * una misma cosa, y como lista con viñetas se leían como navegación a otras
+ * páginas.
+ */
+.sld-usage__periods {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border: 1px solid var(--sld-color-border);
+  border-radius: 999px;
+  background: var(--sld-color-surface);
+}
+
+.sld-usage__period {
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  color: var(--sld-color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.sld-usage__period:hover {
+  color: var(--sld-color-text);
+}
+
+.sld-usage__period--on {
+  background: var(--sld-color-bg);
+  box-shadow: var(--sld-shadow);
+  color: var(--sld-color-text);
+  font-weight: 600;
+}
+
+.sld-usage__period:focus-visible {
+  outline: 2px solid var(--sld-color-primary);
+  outline-offset: 1px;
+}
+
+/* Cifras de cabecera --------------------------------------------------- */
+
+.sld-usage__figures {
+  display: grid;
+  /* Se reparten solas: cuatro en pantalla ancha, dos en tableta, una en
+     móvil, sin escribir un punto de ruptura para cada caso. */
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--sld-space-md);
+}
+
+.sld-usage__figure {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: var(--sld-space-md);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-bg);
+}
+
+/*
+ * El ahorro lleva una banda de color y las demás no. Es deliberado: de las
+ * cuatro cifras, es la única que responde «¿esto es sostenible?», y darles a
+ * todas el mismo peso deja la pantalla sin jerarquía.
+ */
+.sld-usage__figure--good {
+  border-color: color-mix(in srgb, var(--sld-color-success) 35%, var(--sld-color-border));
+  box-shadow: inset 3px 0 0 var(--sld-color-success);
+}
+
+.sld-usage__label {
+  color: var(--sld-color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sld-usage__number {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  /* Las cifras se comparan en vertical entre tarjetas: sin ancho fijo de
+     dígito, bailan y la comparación cuesta. */
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.sld-usage__figure--good .sld-usage__number {
+  color: var(--sld-color-success);
+}
+
+.sld-usage__aside {
+  color: var(--sld-color-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+/* Paneles -------------------------------------------------------------- */
+
+.sld-usage__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-md);
+  padding: var(--sld-space-lg);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-bg);
+}
+
+.sld-usage__panel-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.sld-usage__split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: var(--sld-space-md);
+  align-items: start;
+}
+
+/* Barra de reutilización ----------------------------------------------- */
+
+.sld-usage__bar {
+  height: 0.9rem;
+  overflow: hidden;
+  border-radius: 999px;
+  /* El fondo es lo que se paga entero; lo relleno, lo reutilizado. */
+  background: var(--sld-color-border);
+}
+
+.sld-usage__bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--sld-color-success);
+}
+
+.sld-usage__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sld-space-xs) var(--sld-space-lg);
+  margin: 0;
+  padding: 0;
+  font-size: 0.875rem;
+  list-style: none;
+}
+
+.sld-usage__legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sld-usage__legend b {
+  font-variant-numeric: tabular-nums;
+}
+
+.sld-usage__dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--sld-color-border);
+}
+
+.sld-usage__dot--cached {
+  background: var(--sld-color-success);
+}
+
+.sld-usage__dot--out {
+  background: var(--sld-color-primary);
+}
+
+/* Tablas --------------------------------------------------------------- */
+
+.sld-usage__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.sld-usage__table th {
+  padding: 0 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--sld-color-border);
+  color: var(--sld-color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: start;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sld-usage__table td {
+  padding: 0.6rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--sld-color-border) 55%, transparent);
+  vertical-align: middle;
+}
+
+.sld-usage__table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Los números se leen en columna: alineados a la derecha y con ancho de
+   dígito fijo, para poder compararlos sin leerlos uno a uno. */
+.sld-usage__num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sld-usage__when {
+  color: var(--sld-color-text-muted);
+  white-space: nowrap;
+}
+
+/*
+ * Riel de proporción bajo el nombre. Da la comparación de un vistazo sin
+ * añadir una columna más: quién gasta el doble que quién se ve, no se calcula.
+ */
+.sld-usage__rail {
+  display: block;
+  height: 3px;
+  max-width: 12rem;
+  margin-top: 0.35rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sld-color-border) 60%, transparent);
+}
+
+.sld-usage__rail span {
+  display: block;
+  height: 100%;
+  background: var(--sld-color-primary);
+}
+
+/* La tabla ancha se desplaza dentro de su panel, nunca la página entera. */
+.sld-usage__scroller {
+  overflow-x: auto;
+}
+
+/* Marcas de estado ----------------------------------------------------- */
+
+.sld-usage__chip {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--sld-color-surface);
+  color: var(--sld-color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.sld-usage__chip--danger {
+  background: color-mix(in srgb, var(--sld-color-danger) 12%, transparent);
+  color: var(--sld-color-danger);
+}
+
+.sld-usage__chip--warning {
+  background: color-mix(in srgb, var(--sld-color-warning) 15%, transparent);
+  color: var(--sld-color-warning);
+}
+
+.sld-usage__pct {
+  color: var(--sld-color-text-muted);
+}
+
+/* Solo se destaca cuando la reutilización de verdad está ahorrando. Marcar
+   también un 4 % convertiría el color en decoración. */
+.sld-usage__pct--good {
+  color: var(--sld-color-success);
+  font-weight: 600;
+}
+
+/* Vacío ---------------------------------------------------------------- */
+
+.sld-usage__empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-xs);
+  padding: var(--sld-space-xl) var(--sld-space-lg);
+  border: 1px dashed var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  color: var(--sld-color-text-muted);
+  text-align: center;
+}
+
+.sld-usage__empty-title {
+  margin: 0;
+  color: var(--sld-color-text);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.sld-usage__empty p {
+  margin: 0;
+}
