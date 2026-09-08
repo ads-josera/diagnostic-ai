@@ -75,3 +75,21 @@ diagnostic:
   # datos porque alguien actualice el módulo; activarlo es una decisión que
   # alguien tiene que tomar a sabiendas.
   conversation_retention_days: 0
+
+# Busqueda externa. El agente solo busca si hay clave del buscador en el
+# entorno del servidor; sin ella lo declara y sigue con lo que no dependa de
+# ello, que es lo que manda su metodologia.
+search:
+  # Nace APAGADO. Encenderlo cambia lo que el agente puede hacer y lo que
+  # cuesta cada turno, y eso no debe pasar por instalar una version.
+  enabled: false
+  # Cuantas veces puede pedir herramientas el modelo en un mismo turno. Es un
+  # techo de gasto disfrazado: cada vuelta es una llamada mas y, con busqueda,
+  # varias busquedas mas.
+  max_tool_rounds: 4
+  # Resultados por busqueda. El texto recuperado es la mayor parte de lo que
+  # cuesta buscar.
+  max_results: 5
+  # 'basic' o 'advanced'. La avanzada consume mas creditos por consulta.
+  depth: basic
+  timeout: 20

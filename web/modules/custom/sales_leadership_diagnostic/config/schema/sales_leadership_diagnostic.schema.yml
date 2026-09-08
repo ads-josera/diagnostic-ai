@@ -85,6 +85,25 @@ sales_leadership_diagnostic.settings:
           type: integer
           label: 'Días que se conservan las conversaciones'
 
+    search:
+      type: mapping
+      label: 'Búsqueda externa'
+      mapping:
+        enabled:
+          type: boolean
+          label: 'La búsqueda externa está activada'
+        max_tool_rounds:
+          type: integer
+          label: 'Vueltas de herramientas por turno'
+        max_results:
+          type: integer
+          label: 'Resultados por búsqueda'
+        depth:
+          type: string
+          label: 'Profundidad de la búsqueda'
+        timeout:
+          type: integer
+          label: 'Timeout del buscador (segundos)'
     spending:
       type: mapping
       label: 'Topes de gasto del proveedor de IA'

@@ -11,6 +11,7 @@ use Drupal\sales_leadership_diagnostic\Exception\EngineException;
 use Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\DTO\AiCall;
+use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBox;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
@@ -100,6 +101,10 @@ final class OpenAIClient {
    *   que en el log se distinga qué gastó qué.
    * @param int|null $maxTokens
    *   Presupuesto de la respuesta. Sin valor, el de la configuración.
+   * @param \Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBox|null $tools
+   *   Herramientas que el modelo puede pedir en este turno. Sin ellas no se
+   *   declara ninguna, ni siquiera una lista vacía: declararlas cambia el
+   *   prefijo del prompt y con él se pierde la caché.
    *
    * @return array<string, mixed>
    *   El objeto que devolvió el modelo, ya decodificado.
@@ -107,14 +112,14 @@ final class OpenAIClient {
    * @throws \Drupal\sales_leadership_diagnostic\Exception\EngineException
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
    */
-  public function completeJson(array $messages, string $schemaName, array $schema, string $purpose, ?int $maxTokens = NULL): array {
+  public function completeJson(array $messages, string $schemaName, array $schema, string $purpose, ?int $maxTokens = NULL, ?ToolBox $tools = NULL): array {
     $model = $this->getModel();
 
     if ($model === '') {
       throw new EngineException('No hay ningún modelo de IA seleccionado en la configuración.');
     }
 
-    return $this->requestWithRetries([
+    return $this->converse([
       'model' => $model,
       // `input` y no `messages`; la forma de cada mensaje —rol y contenido—
       // es la misma, así que quien llama no se entera del cambio.
@@ -130,7 +135,100 @@ final class OpenAIClient {
           'schema' => $schema,
         ],
       ],
-    ], $purpose);
+    ], $purpose, $tools);
+  }
+
+  /**
+   * Conversa con el modelo hasta que deja de pedir herramientas.
+   *
+   * Un turno del alumno puede ser VARIAS llamadas al proveedor: el modelo pide
+   * una herramienta, se le da el resultado, y con él pide otra. Al sondearlo
+   * el 08-09-2026 pidió dos búsquedas más nada más recibir la primera, así que
+   * el tope de vueltas no es defensivo: es el caso normal.
+   *
+   * Dos cosas se aprendieron probando y no se pueden deducir leyendo:
+   *
+   *  - Hay que reenviarle **su propio razonamiento** junto a la petición de
+   *    herramienta. Devolver solo el resultado da un 400 que nombra el
+   *    elemento de razonamiento que falta.
+   *  - Por eso se reenvía la salida ENTERA del turno anterior, sin filtrar.
+   *
+   * @param array<string, mixed> $payload
+   *   Cuerpo de la primera petición.
+   * @param string $purpose
+   *   Para qué era, para el registro de consumo.
+   * @param \Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBox|null $tools
+   *   Herramientas del turno. Sin ellas no se declara nada, ni siquiera una
+   *   lista vacía: declararlas cambia el prefijo del prompt y con él se
+   *   perdería la caché de los turnos que no las necesitan.
+   *
+   * @return array<string, mixed>
+   *   El objeto que acabó devolviendo el modelo.
+   *
+   * @throws \Drupal\sales_leadership_diagnostic\Exception\EngineException
+   * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
+   */
+  private function converse(array $payload, string $purpose, ?ToolBox $tools): array {
+    $usaHerramientas = $tools !== NULL && !$tools->isEmpty();
+
+    if ($usaHerramientas) {
+      $payload['tools'] = $tools->declarations();
+    }
+
+    $vueltas = $usaHerramientas ? $this->getMaxToolRounds() : 1;
+
+    for ($vuelta = 1; $vuelta <= $vueltas; $vuelta++) {
+      $decoded = $this->requestWithRetries($payload, $purpose);
+      $peticiones = $this->toolCallsOf($decoded);
+
+      if ($peticiones === [] || !$usaHerramientas) {
+        return $this->extractObject($decoded, $purpose);
+      }
+
+      // La salida entera, sin filtrar: el razonamiento va con la petición y el
+      // proveedor rechaza la una sin el otro.
+      $payload['input'] = array_merge($payload['input'], $decoded['output']);
+
+      foreach ($peticiones as $peticion) {
+        $payload['input'][] = [
+          'type' => 'function_call_output',
+          'call_id' => $peticion['call_id'],
+          'output' => $tools->run(
+            (string) $peticion['name'],
+            (array) (json_decode((string) $peticion['arguments'], TRUE) ?? []),
+          ),
+        ];
+      }
+    }
+
+    // Se acabaron las vueltas y el modelo seguía pidiendo. No se le da otra
+    // ronda en silencio: cada una cuesta dinero y el techo existe para eso.
+    $this->logger->warning('El modelo agotó las @n vueltas de herramientas sin cerrar la respuesta.', [
+      '@n' => $vueltas,
+    ]);
+
+    throw new InvalidEngineResponseException('El modelo siguió pidiendo herramientas más allá del límite de vueltas.');
+  }
+
+  /**
+   * Peticiones de herramienta que trae una respuesta.
+   *
+   * @param array<string, mixed> $decoded
+   *   Respuesta del proveedor, ya decodificada.
+   *
+   * @return array<int, array<string, mixed>>
+   *   Las peticiones, en orden. Vacío si no pidió nada.
+   */
+  private function toolCallsOf(array $decoded): array {
+    $peticiones = [];
+
+    foreach ($decoded['output'] ?? [] as $item) {
+      if (($item['type'] ?? '') === 'function_call' && isset($item['call_id'], $item['name'])) {
+        $peticiones[] = $item;
+      }
+    }
+
+    return $peticiones;
   }
 
   /**
@@ -142,7 +240,7 @@ final class OpenAIClient {
    *   Para qué era la llamada, para el registro.
    *
    * @return array<string, mixed>
-   *   Respuesta del modelo, ya decodificada.
+   *   Cuerpo de la respuesta, ya decodificado y sin interpretar.
    *
    * @throws \Drupal\sales_leadership_diagnostic\Exception\EngineException
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
@@ -172,7 +270,10 @@ final class OpenAIClient {
         // dejaría ese gasto fuera de la cuenta.
         $this->registrar($payload, $purpose, $decoded, $inicio, $attempt, '');
 
-        return $this->extractObject($decoded, $purpose);
+        // Devuelve el cuerpo crudo: quien conversa necesita ver si el modelo
+        // pidió una herramienta antes de intentar leer una respuesta que
+        // todavía no existe.
+        return $decoded;
       }
       catch (EngineException $e) {
         $lastError = $e;
@@ -431,6 +532,20 @@ final class OpenAIClient {
    */
   private function getMaxRetries(): int {
     return max(0, min((int) $this->config()->get('openai.max_retries'), 5));
+  }
+
+  /**
+   * Cuántas veces puede pedir herramientas el modelo en un mismo turno.
+   *
+   * Configurable porque es un techo de gasto disfrazado: cada vuelta es una
+   * llamada al proveedor y, si hay búsqueda, varias búsquedas más. Al sondear
+   * el ciclo, el modelo pidió dos búsquedas adicionales nada más recibir la
+   * primera; sin tope, un solo turno se convierte en una factura.
+   */
+  private function getMaxToolRounds(): int {
+    $value = (int) $this->config()->get('search.max_tool_rounds');
+
+    return $value > 0 ? min($value, 20) : 4;
   }
 
   /**

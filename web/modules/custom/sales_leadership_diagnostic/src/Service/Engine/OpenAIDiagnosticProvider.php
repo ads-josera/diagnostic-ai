@@ -7,6 +7,7 @@ namespace Drupal\sales_leadership_diagnostic\Service\Engine;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticContext;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator;
+use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory;
 
 /**
  * Motor de diagnóstico sobre la API de OpenAI (§28, §29).
@@ -110,6 +111,7 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
   public function __construct(
     private readonly OpenAIClient $client,
     private readonly DiagnosticResponseValidator $validator,
+    private readonly ToolBoxFactory $tools,
   ) {}
 
   /**
@@ -121,6 +123,11 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
       'diagnostic_turn',
       self::RESPONSE_SCHEMA,
       'Turno generado',
+      NULL,
+      // Qué herramientas hay lo decide la fábrica, no el motor. Aquí solo se
+      // le pasan: el día que el Research Entitlement gobierne quién puede
+      // buscar y cuándo, esta línea no cambia.
+      $this->tools->forTurn(),
     );
 
     return $this->validator->validate($raw);

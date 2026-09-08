@@ -37,6 +37,15 @@ final class SecretsProvider {
   public const OPENAI_API_KEY = 'sld_openai_api_key';
 
   /**
+   * Clave del buscador externo.
+   *
+   * Vive en el entorno del servidor como las demás y NUNCA en la
+   * configuración exportable: un secreto en config acaba en el repositorio el
+   * día que alguien exporta (§43).
+   */
+  public const SEARCH_API_KEY = 'sld_search_api_key';
+
+  /**
    * Lista completa de los secretos que el módulo necesita para operar.
    *
    * @var string[]
@@ -45,6 +54,21 @@ final class SecretsProvider {
     self::JWT_SHARED_SECRET,
     self::WP_HMAC_SECRET,
     self::OPENAI_API_KEY,
+  ];
+
+  /**
+   * Secretos que el módulo puede usar pero NO necesita para operar.
+   *
+   * Van aparte de ALL a propósito. Esa lista es la que responde «¿falta algo
+   * por configurar?», y meter aquí el buscador dejaba el módulo declarándose
+   * incompleto para siempre: sin buscador el agente no busca, lo declara y
+   * sigue con lo que no dependa de ello, que es un estado válido de su
+   * metodología, no una instalación a medias.
+   *
+   * @var string[]
+   */
+  public const OPTIONAL = [
+    self::SEARCH_API_KEY,
   ];
 
   public function __construct(

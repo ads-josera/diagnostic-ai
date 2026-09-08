@@ -160,6 +160,7 @@ services:
     arguments:
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIClient'
       - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory'
 
   Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory:
     arguments:
@@ -391,4 +392,25 @@ services:
       - '@config.factory'
       - '@datetime.time'
       - '@state'
+      - '@logger.factory'
+
+  # --- Busqueda externa ------------------------------------------------------
+
+  # Unica frontera con quien busca. Cambiar de proveedor es otra clase y esta
+  # linea: la eleccion se tomo con precios de un dia concreto, y esos cambian.
+  Drupal\sales_leadership_diagnostic\Service\Search\SearchProviderInterface: '@Drupal\sales_leadership_diagnostic\Service\Search\TavilySearchProvider'
+
+  Drupal\sales_leadership_diagnostic\Service\Search\TavilySearchProvider:
+    arguments:
+      - '@http_client'
+      - '@Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider'
+      - '@config.factory'
+      - '@logger.factory'
+
+  # Decide que herramientas hay en cada turno. Es donde entrara el Research
+  # Entitlement sin tocar el motor.
+  Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Search\SearchProviderInterface'
+      - '@config.factory'
       - '@logger.factory'

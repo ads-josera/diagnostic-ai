@@ -99,6 +99,11 @@ final class SettingsForm extends ConfigFormBase {
       SecretsProvider::JWT_SHARED_SECRET => $this->t('Firma del token SSO de WordPress'),
       SecretsProvider::WP_HMAC_SECRET => $this->t('Firma de las llamadas hacia WordPress'),
       SecretsProvider::OPENAI_API_KEY => $this->t('API key del proveedor de IA'),
+      // Este SÍ puede faltar sin que nada deje de funcionar: sin él el agente
+      // no busca en internet y lo declara, que es un estado válido de su
+      // metodología. Se enseña igual para que no haya que adivinar por qué un
+      // agente dice que no pudo investigar.
+      SecretsProvider::SEARCH_API_KEY => $this->t('API key del buscador (opcional)'),
     ];
 
     $rows = [];
