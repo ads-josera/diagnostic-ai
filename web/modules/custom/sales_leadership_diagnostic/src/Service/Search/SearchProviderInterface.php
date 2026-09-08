@@ -26,6 +26,13 @@ interface SearchProviderInterface {
    * @param int $max
    *   Cuántos resultados como mucho. Quien llama lo acota: el texto
    *   recuperado es la mayor parte de lo que cuesta una búsqueda.
+   * @param bool $news
+   *   Cierto para buscar en fuentes de noticias. No es un capricho de
+   *   alcance: medido el 08-09-2026, es la ÚNICA forma de que el proveedor
+   *   devuelva la fecha de publicación, y sin fecha no se puede distinguir
+   *   una señal de esta semana de una de hace tres años. La metodología del
+   *   cliente lo exige —su prueba T07 es exactamente ese caso— y prohíbe
+   *   presentar evidencia rancia como un why-now.
    *
    * @return \Drupal\sales_leadership_diagnostic\DTO\SearchResult[]
    *   Los resultados, en el orden que dio el proveedor.
@@ -36,7 +43,7 @@ interface SearchProviderInterface {
    *   conclusiones distintas, y confundirlas le haría declarar cobertura que
    *   no tuvo.
    */
-  public function search(string $query, int $max): array;
+  public function search(string $query, int $max, bool $news = FALSE): array;
 
   /**
    * Si el buscador está configurado y puede usarse.

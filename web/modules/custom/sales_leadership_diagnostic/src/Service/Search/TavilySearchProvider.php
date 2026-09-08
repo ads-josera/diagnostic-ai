@@ -70,7 +70,7 @@ final class TavilySearchProvider implements SearchProviderInterface {
   /**
    * {@inheritdoc}
    */
-  public function search(string $query, int $max): array {
+  public function search(string $query, int $max, bool $news = FALSE): array {
     if (!$this->isAvailable()) {
       throw new SearchException('No hay clave del buscador configurada.');
     }
@@ -81,13 +81,18 @@ final class TavilySearchProvider implements SearchProviderInterface {
           'Authorization' => 'Bearer ' . $this->secrets->get(SecretsProvider::SEARCH_API_KEY),
           'Content-Type' => 'application/json',
         ],
-        'json' => [
+        'json' => array_filter([
           'query' => $query,
           'max_results' => max(1, min($max, 20)),
           // Se pide el contenido, que es para lo que se eligió este proveedor.
           'include_raw_content' => FALSE,
           'search_depth' => $this->depth(),
-        ],
+          // Solo con este tema devuelve la fecha de publicación. Comprobado el
+          // 08-09-2026: en una búsqueda normal el campo sencillamente no
+          // viene, y sin él no hay forma de saber si una señal es de esta
+          // semana o de 2023.
+          'topic' => $news ? 'news' : NULL,
+        ], static fn ($valor): bool => $valor !== NULL),
         'timeout' => $this->timeout(),
         'connect_timeout' => 10,
         'http_errors' => FALSE,
@@ -153,7 +158,10 @@ final class TavilySearchProvider implements SearchProviderInterface {
    * Profundidad de la búsqueda: «basic» o «advanced».
    *
    * Configurable porque cuesta distinto: la avanzada consume más créditos por
-   * consulta y no siempre compensa.
+   * consulta. Por defecto va la básica, y no por tacañería: medido el
+   * 08-09-2026, la avanzada devuelve unos 2 000 caracteres frente a 1 300, y
+   * aquí se recortan a 1 200 de todos modos. Pagar el doble por texto que se
+   * tira no compra nada; subir antes el recorte sí tendría sentido.
    */
   private function depth(): string {
     $valor = (string) $this->config()->get('search.depth');

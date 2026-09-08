@@ -48,7 +48,7 @@ final class WebSearchTool implements ToolInterface {
     return [
       'type' => 'function',
       'name' => self::NAME,
-      'description' => 'Busca información pública y actual en internet. Devuelve resultados con su enlace, que es la fuente que debes citar. No inventes resultados si esta herramienta falla: declara que no pudiste buscar.',
+      'description' => 'Busca información pública en internet. Devuelve resultados con su enlace, que es la fuente que debes citar. La fecha SOLO viene en las búsquedas de tipo "noticias"; sin ella no afirmes que una señal sea reciente. Si esta herramienta falla, declara que no pudiste buscar en lugar de inventar resultados.',
       'parameters' => [
         'type' => 'object',
         'properties' => [
@@ -56,8 +56,13 @@ final class WebSearchTool implements ToolInterface {
             'type' => 'string',
             'description' => 'Qué buscar, en lenguaje natural o con operadores.',
           ],
+          'tipo' => [
+            'type' => 'string',
+            'enum' => ['general', 'noticias'],
+            'description' => 'Usa "noticias" cuando necesites saber CUÁNDO ocurrió algo: es el único modo que devuelve la fecha de publicación, y sin fecha no puedes afirmar que una señal sea actual. Usa "general" para información de fondo que no dependa de la fecha.',
+          ],
         ],
-        'required' => ['consulta'],
+        'required' => ['consulta', 'tipo'],
         'additionalProperties' => FALSE,
       ],
       'strict' => TRUE,
@@ -75,7 +80,11 @@ final class WebSearchTool implements ToolInterface {
     }
 
     try {
-      $resultados = $this->search->search($consulta, $this->maxResults);
+      $resultados = $this->search->search(
+        $consulta,
+        $this->maxResults,
+        ($arguments['tipo'] ?? '') === 'noticias',
+      );
     }
     catch (SearchException $e) {
       // No se propaga: un fallo del buscador no debe cortar el turno. Se le

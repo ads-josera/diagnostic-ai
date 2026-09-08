@@ -136,6 +136,11 @@ export DRUPAL_TRUSTED_HOST='^diagnostico\.salesbumm\.com$'
 export SLD_JWT_SHARED_SECRET="..."   # idéntico al de wp-config.php
 export SLD_WP_HMAC_SECRET="..."      # idéntico al de wp-config.php
 export SLD_OPENAI_API_KEY="..."
+
+# OPCIONAL. Sin ella el agente no busca en internet: lo declara y sigue con lo
+# que no dependa de ello, que es un estado valido de su metodologia y no una
+# instalacion a medias. No aparece como pendiente en el informe de estado.
+export SLD_SEARCH_API_KEY="..."
 ```
 
 ### Reglas que no son opcionales

@@ -947,6 +947,10 @@ if (empty($settings['hash_salt'])) {
 $settings['sld_jwt_shared_secret'] = getenv('SLD_JWT_SHARED_SECRET') ?: '';
 $settings['sld_wp_hmac_secret'] = getenv('SLD_WP_HMAC_SECRET') ?: '';
 $settings['sld_openai_api_key'] = getenv('SLD_OPENAI_API_KEY') ?: '';
+// El buscador es OPCIONAL: sin clave el agente no busca, lo declara y sigue
+// con lo que no dependa de ello. No aparece en hook_requirements como algo que
+// falte, porque no falta.
+$settings['sld_search_api_key'] = getenv('SLD_SEARCH_API_KEY') ?: '';
 
 /**
  * Motor de diagnóstico simulado — SOLO DESARROLLO.
