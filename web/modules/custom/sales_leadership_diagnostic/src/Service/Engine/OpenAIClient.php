@@ -34,7 +34,9 @@ use GuzzleHttp\Exception\GuzzleException;
  * Cuanto se afirma aquí sobre el comportamiento del proveedor se comprobó
  * contra la API real antes de escribirlo, no se dio por supuesto:
  *
- *  - Se usa `max_completion_tokens`; `max_tokens` no aplica a estos modelos.
+ *  - Se habla por `/v1/responses`. El endpoint anterior no admite
+ *    herramientas con este modelo salvo apagando su razonamiento (§0001).
+ *  - Se usa `max_output_tokens`; `max_tokens` no aplica a estos modelos.
  *  - NO se envía `temperature`. El modelo la rechaza con un 400 salvo que sea
  *    su valor por defecto, así que enviarla rompería todas las llamadas.
  *  - El modelo razona antes de responder y ese razonamiento consume parte del
@@ -47,8 +49,14 @@ final class OpenAIClient {
 
   /**
    * Endpoint de conversación.
+   *
+   * Es `/v1/responses` y no `/v1/chat/completions` por una razón medida, no
+   * por modernidad: el modelo en uso **no admite herramientas** en el endpoint
+   * antiguo salvo apagando su razonamiento, y apagarlo degradaría también al
+   * agente de diagnóstico, que comparte esta clase. Lo dijo la propia API al
+   * probarlo el 07-09-2026. Ver `docs/decisiones/0001`.
    */
-  private const ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+  private const ENDPOINT = 'https://api.openai.com/v1/responses';
 
   /**
    * Códigos que merecen reintento.
@@ -108,11 +116,15 @@ final class OpenAIClient {
 
     return $this->requestWithRetries([
       'model' => $model,
-      'messages' => $messages,
-      'max_completion_tokens' => $maxTokens ?? $this->getMaxCompletionTokens(),
-      'response_format' => [
-        'type' => 'json_schema',
-        'json_schema' => [
+      // `input` y no `messages`; la forma de cada mensaje —rol y contenido—
+      // es la misma, así que quien llama no se entera del cambio.
+      'input' => $messages,
+      'max_output_tokens' => $maxTokens ?? $this->getMaxCompletionTokens(),
+      // El esquema estricto vive un nivel más arriba que en el endpoint
+      // anterior, y su nombre deja de estar anidado.
+      'text' => [
+        'format' => [
+          'type' => 'json_schema',
           'name' => $schemaName,
           'strict' => TRUE,
           'schema' => $schema,
@@ -252,30 +264,63 @@ final class OpenAIClient {
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
    */
   private function extractObject(array $decoded, string $purpose): array {
-    if (!isset($decoded['choices'][0])) {
-      throw new InvalidEngineResponseException('La respuesta del proveedor no tiene la forma esperada.');
+    $estado = (string) ($decoded['status'] ?? '');
+
+    if ($estado === 'incomplete') {
+      $motivo = (string) ($decoded['incomplete_details']['reason'] ?? 'desconocido');
+
+      // Se nombra la causa real porque el síntoma —«JSON inválido»— apunta al
+      // sitio equivocado. Comprobado el 08-09-2026 contra la API: cuando se
+      // agota el presupuesto, `output` solo trae el razonamiento y no llega a
+      // haber mensaje, así que no hay nada que salvar.
+      if ($motivo === 'max_output_tokens') {
+        $this->logger->error('El proveedor agotó el presupuesto de tokens antes de completar la respuesta. Aumente el límite de tokens en la configuración.');
+
+        throw new InvalidEngineResponseException('La respuesta se cortó por falta de presupuesto de tokens.');
+      }
+
+      $this->logger->error('El proveedor devolvió una respuesta incompleta (@motivo).', ['@motivo' => $motivo]);
+
+      throw new InvalidEngineResponseException('El proveedor devolvió una respuesta incompleta.');
     }
 
-    $choice = $decoded['choices'][0];
-    $finishReason = (string) ($choice['finish_reason'] ?? '');
-
-    if ($finishReason === 'length') {
-      // El presupuesto de tokens se agotó antes de terminar. El JSON llega
-      // cortado, así que no hay nada que salvar. Se nombra la causa real
-      // porque el síntoma —"JSON inválido"— apunta al sitio equivocado.
-      $this->logger->error('El proveedor agotó el presupuesto de tokens antes de completar la respuesta. Aumente el límite de tokens en la configuración.');
-
-      throw new InvalidEngineResponseException('La respuesta se cortó por falta de presupuesto de tokens.');
-    }
-
-    $content = (string) ($choice['message']['content'] ?? '');
-    $objeto = json_decode($content, TRUE);
+    $objeto = json_decode($this->textOf($decoded), TRUE);
 
     if (!is_array($objeto)) {
       throw new InvalidEngineResponseException('El proveedor no devolvió un objeto JSON válido.');
     }
 
     return $objeto;
+  }
+
+  /**
+   * Texto que devolvió el modelo, recorriendo su lista de salidas.
+   *
+   * La respuesta no trae un único mensaje sino una LISTA de elementos
+   * tipados: el razonamiento va como uno más, y las peticiones de herramienta
+   * también. Quedarse con el primero devolvería el razonamiento en lugar de la
+   * respuesta.
+   *
+   * No se usa el campo `output_text` que documenta el proveedor: al medirlo el
+   * 08-09-2026 no venía en la respuesta.
+   *
+   * @param array<string, mixed> $decoded
+   *   Respuesta del proveedor, ya decodificada.
+   */
+  private function textOf(array $decoded): string {
+    $texto = '';
+
+    foreach ($decoded['output'] ?? [] as $item) {
+      if (($item['type'] ?? '') !== 'message') {
+        continue;
+      }
+
+      foreach ($item['content'] ?? [] as $parte) {
+        $texto .= (string) ($parte['text'] ?? '');
+      }
+    }
+
+    return $texto;
   }
 
   /**
@@ -341,10 +386,10 @@ final class OpenAIClient {
     $llamada = new AiCall(
       model: (string) ($payload['model'] ?? ''),
       purpose: $purpose,
-      inputTokens: (int) ($usage['prompt_tokens'] ?? 0),
-      cachedInputTokens: (int) ($usage['prompt_tokens_details']['cached_tokens'] ?? 0),
-      outputTokens: (int) ($usage['completion_tokens'] ?? 0),
-      reasoningTokens: (int) ($usage['completion_tokens_details']['reasoning_tokens'] ?? 0),
+      inputTokens: (int) ($usage['input_tokens'] ?? 0),
+      cachedInputTokens: (int) ($usage['input_tokens_details']['cached_tokens'] ?? 0),
+      outputTokens: (int) ($usage['output_tokens'] ?? 0),
+      reasoningTokens: (int) ($usage['output_tokens_details']['reasoning_tokens'] ?? 0),
       latencyMs: (int) round((microtime(TRUE) - $inicio) * 1000),
       attempts: $intentos,
       error: $error,

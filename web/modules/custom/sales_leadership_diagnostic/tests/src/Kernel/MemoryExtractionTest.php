@@ -170,8 +170,11 @@ final class MemoryExtractionTest extends KernelTestBase {
     // Se decodifica antes de mirar: Guzzle escapa los acentos al serializar,
     // así que buscar el texto tal cual en el cuerpo crudo no encontraría nada
     // aunque estuviera.
+    // `input` y no `messages`: desde el 08-09-2026 se habla por
+    // /v1/responses, donde la conversación viaja con ese nombre. La forma de
+    // cada mensaje —rol y contenido— no cambió.
     $enviado = json_decode((string) self::$proveedor->getLastRequest()->getBody(), TRUE);
-    $mensajeDelUsuario = $enviado['messages'][1]['content'];
+    $mensajeDelUsuario = $enviado['input'][1]['content'];
 
     $this->assertStringContainsString('Lo que ya se sabía', $mensajeDelUsuario);
     $this->assertStringContainsString('Instaladores pequeños del noreste', $mensajeDelUsuario);
@@ -229,13 +232,21 @@ final class MemoryExtractionTest extends KernelTestBase {
    */
   private function responder(array $temas): void {
     self::$proveedor->append(new Response(200, [], (string) json_encode([
-      'choices' => [
+      'status' => 'completed',
+      'output' => [
+        ['type' => 'reasoning', 'summary' => []],
         [
-          'finish_reason' => 'stop',
-          'message' => ['content' => json_encode($temas)],
+          'type' => 'message',
+          'status' => 'completed',
+          'content' => [['type' => 'output_text', 'text' => json_encode($temas)]],
         ],
       ],
-      'usage' => ['prompt_tokens' => 100, 'completion_tokens' => 50],
+      'usage' => [
+        'input_tokens' => 100,
+        'input_tokens_details' => ['cached_tokens' => 0],
+        'output_tokens' => 50,
+        'output_tokens_details' => ['reasoning_tokens' => 5],
+      ],
     ])));
   }
 

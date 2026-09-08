@@ -276,8 +276,14 @@ final class SpendLimitTest extends KernelTestBase {
   private function cliente(): OpenAIClient {
     $pila = HandlerStack::create(new MockHandler([
       new Response(200, [], (string) json_encode([
-        'choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{"ok":true}']]],
-        'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5],
+        'status' => 'completed',
+        'output' => [
+          [
+            'type' => 'message',
+            'content' => [['type' => 'output_text', 'text' => '{"ok":true}']],
+          ],
+        ],
+        'usage' => ['input_tokens' => 10, 'output_tokens' => 5],
       ])),
     ]));
     $pila->push(Middleware::history($this->enviadas));

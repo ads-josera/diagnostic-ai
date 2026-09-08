@@ -101,13 +101,13 @@ final class OpenAIClientTest extends UnitTestCase {
    */
   public function testUnaRespuestaCortadaSeNombraPorSuCausa(): void {
     $client = $this->client([
+      // Así lo devuelve de verdad: medido el 08-09-2026 contra la API, cuando
+      // se agota el presupuesto solo llega el razonamiento y NO hay mensaje,
+      // así que no queda ni un JSON a medias del que tirar.
       new Response(200, [], (string) json_encode([
-        'choices' => [
-          [
-            'finish_reason' => 'length',
-            'message' => ['content' => '{"topic":"emp'],
-          ],
-        ],
+        'status' => 'incomplete',
+        'incomplete_details' => ['reason' => 'max_output_tokens'],
+        'output' => [['type' => 'reasoning', 'summary' => []]],
       ])),
     ]);
 
@@ -152,13 +152,24 @@ final class OpenAIClientTest extends UnitTestCase {
    */
   private function respuestaCorrecta(array $objeto): Response {
     return new Response(200, [], (string) json_encode([
-      'choices' => [
+      'status' => 'completed',
+      // La respuesta trae una LISTA de elementos tipados, y el razonamiento va
+      // como uno más. Se incluye a propósito: si el código se quedara con el
+      // primero, esta prueba lo cazaría.
+      'output' => [
+        ['type' => 'reasoning', 'summary' => []],
         [
-          'finish_reason' => 'stop',
-          'message' => ['content' => json_encode($objeto)],
+          'type' => 'message',
+          'status' => 'completed',
+          'content' => [['type' => 'output_text', 'text' => json_encode($objeto)]],
         ],
       ],
-      'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5],
+      'usage' => [
+        'input_tokens' => 10,
+        'input_tokens_details' => ['cached_tokens' => 0],
+        'output_tokens' => 5,
+        'output_tokens_details' => ['reasoning_tokens' => 2],
+      ],
     ]));
   }
 
