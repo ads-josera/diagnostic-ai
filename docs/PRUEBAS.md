@@ -50,8 +50,36 @@ todos los enumerados los encontró el cliente usando el producto.
 
 Solo pasa si devuelve la lista de fallos **vacía**.
 
+## 4. Una misión de verdad contra el agente
+
+Las tres anteriores no gastan un céntimo y no hablan con el modelo. Esta sí:
+conduce una conversación real, con los documentos y el prompt del cliente, y la
+mide.
+
+```
+ddev drush php:script bin/mision-real.php -- arrancar
+ddev drush php:script bin/mision-real.php -- decir <sesión> "…"
+ddev drush php:script bin/mision-real.php -- medir <sesión>
+```
+
+**Gasta dinero de verdad.** Cada turno es una llamada al proveedor y, si el
+agente investiga, varias búsquedas. Conviene mirar antes el tope global en
+`/admin/config/salesbumm/diagnostic/consumo`.
+
+Se conversa **turno a turno y no de un tirón**, porque el agente pregunta antes
+de investigar —el territorio, la empresa— y lo que se le conteste decide lo que
+busca después. Un guion cerrado mediría otra cosa.
+
+Es de donde salen los números que se le dan al cliente, y lo que hace falta para
+el benchmark que pide su §9: los topes se calibran midiendo, no por decreto. Lo
+medido hasta hoy está en `docs/decisiones/0012-topes-para-discovery.md`.
+
+**No es una de las tres.** No se corre para dar algo por terminado: se corre
+cuando hace falta un número o cuando se toca algo que solo se ve hablando con
+el modelo de verdad.
+
 ## Antes de dar algo por terminado
 
-Las tres, y además abrir en el navegador la pantalla que se tocó. Una prueba
-verde dice que el código hace lo que se le pidió, no que la pantalla se vea
-bien ni que el enlace que lleva a ella exista.
+Las tres primeras, y además abrir en el navegador la pantalla que se tocó. Una
+prueba verde dice que el código hace lo que se le pidió, no que la pantalla se
+vea bien ni que el enlace que lleva a ella exista.

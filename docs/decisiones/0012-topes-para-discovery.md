@@ -63,7 +63,7 @@ León; sectores manufactura, alimentos y bebidas, y transporte de carga.
 | Tiempo de modelo | 118 s |
 | Tiempo de búsqueda | ~55 s (2,1 s por búsqueda) |
 | **Coste de la misión completa** | **$0.5806 USD** |
-| Afirmaciones guardadas en el ledger | 7 |
+| Afirmaciones guardadas en el ledger | 3 |
 
 El turno pesado —el que criba— gastó 25 búsquedas y unos 95 s de modelo. En una
 petición web habrían sido dos minutos y medio de página en blanco; en la cola,
