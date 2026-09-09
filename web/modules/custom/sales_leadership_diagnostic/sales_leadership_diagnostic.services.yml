@@ -131,6 +131,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService'
       - '@Drupal\sales_leadership_diagnostic\Service\Research\TurnClassifier'
       - '@Drupal\sales_leadership_diagnostic\Service\Research\ResearchRuntime'
+      - '@Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger'
 
   # Valida la respuesta del motor antes de almacenarla (§32).
   Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator:
@@ -423,6 +424,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository'
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard'
       - '@Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService'
+      - '@Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger'
 
   # De quien es el turno en curso. El gateway lo necesita DURANTE la llamada,
   # no al terminarla, y esa identidad no puede viajar en lo que se manda al
@@ -448,3 +450,13 @@ services:
   Drupal\sales_leadership_diagnostic\Service\Research\TurnClassifier: {}
 
   Drupal\sales_leadership_diagnostic\Service\Research\ResearchRuntime: {}
+
+  # --- Evidence Ledger -------------------------------------------------------
+
+  # Lo que ya se sabe, con su procedencia. Cuelga de la PERSONA y sobrevive al
+  # cierre de la mision que lo recogio.
+  Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger:
+    arguments:
+      - '@database'
+      - '@config.factory'
+      - '@datetime.time'

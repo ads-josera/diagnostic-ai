@@ -92,6 +92,9 @@ sales_leadership_diagnostic.settings:
         max_rechecks_per_period:
           type: integer
           label: 'Comprobaciones puntuales por periodo'
+        evidence_stale_days:
+          type: integer
+          label: 'Días tras los que una evidencia se considera vieja'
     tools:
       type: mapping
       label: 'Topes de las herramientas'

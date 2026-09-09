@@ -8,6 +8,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticContext;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
+use Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger;
 use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
 use Drupal\sales_leadership_diagnostic\Service\Research\ResearchRuntime;
 use Drupal\sales_leadership_diagnostic\Service\Research\TurnClassifier;
@@ -27,6 +28,7 @@ final class DiagnosticContextBuilder {
     private readonly ResearchEntitlementService $entitlements,
     private readonly TurnClassifier $classifier,
     private readonly ResearchRuntime $runtime,
+    private readonly EvidenceLedger $ledger,
   ) {}
 
   /**
@@ -74,6 +76,9 @@ final class DiagnosticContextBuilder {
       $entitlement,
       $this->classifier->classify($entitlement, $rechecks),
       $rechecks,
+      // Decirle que hay ledger cuando está vacío le haría mirar ahí primero
+      // para no encontrar nada, y perder un turno en ello.
+      $this->ledger->hasAnyFor($uid),
     );
   }
 

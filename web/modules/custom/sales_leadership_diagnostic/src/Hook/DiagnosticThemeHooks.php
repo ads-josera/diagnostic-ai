@@ -180,6 +180,8 @@ final class DiagnosticThemeHooks {
           // Búsquedas externas. Nulo si no ha habido ninguna: un panel a cero
           // ocupa sitio y no dice nada.
           'searches' => NULL,
+          // Evidencia reutilizable. Nulo si no hay nada anotado.
+          'ledger' => NULL,
           'has_data' => FALSE,
           'totals' => [],
           'agents' => [],

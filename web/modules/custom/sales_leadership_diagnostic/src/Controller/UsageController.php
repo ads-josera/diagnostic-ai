@@ -10,6 +10,7 @@ use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Url;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository;
+use Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -49,6 +50,7 @@ final class UsageController extends ControllerBase {
     private readonly AiUsageRepository $usage,
     private readonly SpendGuard $spend,
     private readonly ToolCallRepository $toolCalls,
+    private readonly EvidenceLedger $ledger,
     private readonly AgentRegistry $agents,
     private readonly DateFormatterInterface $dates,
     private readonly TimeInterface $time,
@@ -63,6 +65,7 @@ final class UsageController extends ControllerBase {
       $container->get(AiUsageRepository::class),
       $container->get(SpendGuard::class),
       $container->get(ToolCallRepository::class),
+      $container->get(EvidenceLedger::class),
       $container->get(AgentRegistry::class),
       $container->get('date.formatter'),
       $container->get('datetime.time'),
@@ -93,6 +96,7 @@ final class UsageController extends ControllerBase {
       '#has_data' => $total['calls'] > 0,
       '#totals' => $this->totales($total, $sinCache),
       '#searches' => $this->busquedas($desde),
+      '#ledger' => $this->evidencia($desde),
       '#agents' => $this->porAgente($desde),
       '#people' => $this->porAlumno($desde),
       '#calls' => $this->ultimas(),
@@ -230,6 +234,31 @@ final class UsageController extends ControllerBase {
       'results' => number_format($resumen['results']),
       'chars' => number_format($resumen['chars']),
       'reasons' => $motivos,
+    ];
+  }
+
+  /**
+   * La evidencia reutilizable del periodo.
+   *
+   * Lo que se enseña no son las anotaciones sino **las reutilizaciones**: es la
+   * medida directa del ahorro que pide el §10 de la especificación del
+   * cliente. Una anotación que nadie vuelve a mirar no ahorró nada; una
+   * reutilizada es una búsqueda que no se hizo.
+   *
+   * @return array<string, mixed>|null
+   *   Las cifras, o NULL si no hay nada anotado.
+   */
+  private function evidencia(int $desde): ?array {
+    $resumen = $this->ledger->summarySince($desde);
+
+    if ($resumen['entries'] === 0) {
+      return NULL;
+    }
+
+    return [
+      'entries' => number_format($resumen['entries']),
+      'reused' => number_format($resumen['reused']),
+      'scopes' => number_format($resumen['scopes']),
     ];
   }
 

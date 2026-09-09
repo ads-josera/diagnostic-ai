@@ -56,7 +56,11 @@ final class UserDeletionTest extends KernelTestBase {
     $this->installEntitySchema('sld_diagnostic_session');
     $this->installEntitySchema('sld_diagnostic_result');
     $this->installEntitySchema('sld_student_memory');
-    $this->installSchema('sales_leadership_diagnostic', ['sld_diagnostic_message', 'sld_research_entitlement']);
+    $this->installSchema('sales_leadership_diagnostic', [
+      'sld_diagnostic_message',
+      'sld_research_entitlement',
+      'sld_evidence',
+    ]);
     // Borrar una cuenta limpia sus datos de usuario y su vínculo con
     // WordPress; sin estas tablas fallaría por algo ajeno a lo que se prueba.
     $this->installSchema('user', ['users_data']);

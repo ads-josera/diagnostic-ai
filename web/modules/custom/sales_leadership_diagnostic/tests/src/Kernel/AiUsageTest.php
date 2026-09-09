@@ -48,7 +48,7 @@ final class AiUsageTest extends KernelTestBase {
   protected function setUp(): void {
     parent::setUp();
 
-    $this->installSchema('sales_leadership_diagnostic', ['sld_ai_usage', 'sld_research_entitlement']);
+    $this->installSchema('sales_leadership_diagnostic', ['sld_ai_usage', 'sld_research_entitlement', 'sld_evidence']);
     $this->installConfig(['system', 'sales_leadership_diagnostic']);
 
     $this->config('sales_leadership_diagnostic.settings')

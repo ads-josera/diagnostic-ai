@@ -84,6 +84,125 @@ function sales_leadership_diagnostic_schema(): array {
     'sld_ai_usage' => sales_leadership_diagnostic_usage_table(),
     'sld_tool_call' => sales_leadership_diagnostic_tool_call_table(),
     'sld_research_entitlement' => sales_leadership_diagnostic_entitlement_table(),
+    'sld_evidence' => sales_leadership_diagnostic_evidence_table(),
+  ];
+}
+
+/**
+ * Definición del Evidence Ledger.
+ *
+ * Los campos son los del §7 de la especificación del cliente, uno a uno y con
+ * sus nombres. No es una tabla de resultados de búsqueda: guarda
+ * **afirmaciones que el agente usó**, cada una con su procedencia. La
+ * diferencia importa —una página no es una afirmación— y es lo que permite
+ * reutilizarla sin volver a leer la página entera.
+ *
+ * Cuelga de la PERSONA, no de la conversación ni de la misión. Su §14 pide que
+ * «una cuenta ya investigada que reaparece la semana siguiente» se reutilice en
+ * vez de empezar de cero, y eso solo funciona si la evidencia sobrevive al
+ * cierre de la misión que la recogió.
+ *
+ * @return array<string, mixed>
+ *   La definición de la tabla.
+ */
+function sales_leadership_diagnostic_evidence_table(): array {
+  return [
+    'description' => 'Evidencia reutilizable: afirmaciones con su procedencia.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Identificador de la anotación.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Persona a la que pertenece la evidencia.',
+      ],
+      'mission_id' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Misión que la recogió. Sobrevive a su cierre.',
+      ],
+      'session_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Conversación donde se anotó.',
+      ],
+      'scope' => [
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'A qué aplica: empresa, persona, mercado. Es por lo que se busca al reutilizar.',
+      ],
+      'claim' => [
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => TRUE,
+        'description' => 'La afirmación concreta que el agente usó.',
+      ],
+      'summary' => [
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'description' => 'Resumen compacto, suficiente para reutilizar. NUNCA la página completa: el §9 pide no reenviar contenido entero si basta el ledger.',
+      ],
+      'source' => [
+        'type' => 'varchar',
+        'length' => 1024,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'De dónde sale. Sin procedencia no entra: la metodología del cliente prohíbe afirmar sin ella.',
+      ],
+      'evidence_type' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'HECHO, SIGNAL, INFERENCE o CONTRADICTION.',
+      ],
+      'confidence' => [
+        'type' => 'varchar',
+        'length' => 16,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'ALTA, MEDIA o BAJA.',
+      ],
+      'status' => [
+        'type' => 'varchar',
+        'length' => 16,
+        'not null' => TRUE,
+        'default' => 'CURRENT',
+        'description' => 'CURRENT, STALE, CONTRADICTED o SUPERSEDED. El paso a STALE se deduce de la antigüedad al leer; los otros dos los declara el agente.',
+      ],
+      'observed_at' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cuándo se recuperó. Es lo que permite distinguir una señal de esta semana de una de hace tres años.',
+      ],
+      'reused' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cuántas veces se ha reutilizado. Es la medida directa del ahorro que el §10 pide medir.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'indexes' => [
+      // Lo que se consulta: la evidencia de una persona, y la de un ámbito
+      // concreto dentro de ella.
+      'uid_observed' => ['uid', 'observed_at'],
+      'uid_scope' => ['uid', 'scope'],
+    ],
   ];
 }
 
@@ -1072,4 +1191,23 @@ function sales_leadership_diagnostic_update_10016(): string {
   $esquema->createTable('sld_research_entitlement', sales_leadership_diagnostic_entitlement_table());
 
   return 'Creada la tabla del Research Entitlement, una fila por persona y semana.';
+}
+
+/**
+ * Crea el Evidence Ledger.
+ *
+ * Nace vacío. Lo anterior no se puede reconstruir: hasta ahora la evidencia se
+ * quedaba en la conversación y se perdía con ella, que es justo el problema
+ * que esta tabla resuelve.
+ */
+function sales_leadership_diagnostic_update_10017(): string {
+  $esquema = \Drupal::database()->schema();
+
+  if ($esquema->tableExists('sld_evidence')) {
+    return 'El Evidence Ledger ya existía; no se ha modificado nada.';
+  }
+
+  $esquema->createTable('sld_evidence', sales_leadership_diagnostic_evidence_table());
+
+  return 'Creado el Evidence Ledger. Empieza vacío: lo anterior vivía en las conversaciones y se perdía con ellas.';
 }

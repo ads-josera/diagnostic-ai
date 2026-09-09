@@ -119,3 +119,7 @@ research:
   # Es lo que hace util el estado TARGETED_ONLY: permite resolver un bloqueo
   # concreto sin resetear la mision.
   max_rechecks_per_period: 3
+  # A partir de cuantos dias una evidencia guardada se marca STALE al leerla.
+  # No se guarda ese estado: se deduce al consultar, porque una evidencia no
+  # cambia de naturaleza porque nadie haya pasado a revisarla.
+  evidence_stale_days: 30

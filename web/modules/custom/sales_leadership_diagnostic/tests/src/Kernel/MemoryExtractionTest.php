@@ -96,7 +96,11 @@ final class MemoryExtractionTest extends KernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('sld_diagnostic_session');
     $this->installEntitySchema('sld_student_memory');
-    $this->installSchema('sales_leadership_diagnostic', ['sld_diagnostic_message', 'sld_research_entitlement']);
+    $this->installSchema('sales_leadership_diagnostic', [
+      'sld_diagnostic_message',
+      'sld_research_entitlement',
+      'sld_evidence',
+    ]);
     $this->installConfig(['sales_leadership_diagnostic']);
 
     User::create(['name' => 'uid1_no_usar', 'status' => 1])->save();

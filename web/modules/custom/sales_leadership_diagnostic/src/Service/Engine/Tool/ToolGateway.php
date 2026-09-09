@@ -89,6 +89,32 @@ final class ToolGateway implements ToolRunnerInterface {
    * {@inheritdoc}
    */
   public function run(string $name, array $arguments): string {
+    // Las herramientas del ledger no salen a internet: no cuestan dinero, no
+    // gastan cupo de búsqueda y no abren misión. Someterlas a los topes de
+    // investigación dejaría al agente sin poder mirar lo que ya sabe justo
+    // cuando se le acaba de negar buscar, que es cuando más falta le hace.
+    //
+    // Pero SÍ se anotan. El §10 de la especificación pide medir `ledger_reads`,
+    // y sin la fila no habría forma de distinguir un follow-up que se resolvió
+    // con lo guardado de uno que se quedó sin decir nada: son las dos caras del
+    // ahorro que el ledger existe para producir.
+    if ($this->isLedgerTool($name)) {
+      $inicio = microtime(TRUE);
+      $salida = $this->tools->run($name, $arguments);
+
+      $this->calls->record(
+        uid: $this->turn->uid(),
+        sessionId: $this->turn->sessionId(),
+        tool: $name,
+        query: (string) ($arguments['ambito'] ?? ''),
+        allowed: TRUE,
+        latencyMs: (int) round((microtime(TRUE) - $inicio) * 1000),
+        isSandbox: $this->turn->isSandbox(),
+      );
+
+      return $salida;
+    }
+
     $consulta = (string) ($arguments['consulta'] ?? '');
     $motivo = $this->denyReason();
 
@@ -256,6 +282,13 @@ final class ToolGateway implements ToolRunnerInterface {
     return $this->entitlements
       ->forUser($this->turn->uid())
       ->access($this->entitlements->maxRechecks());
+  }
+
+  /**
+   * Si la herramienta solo mira lo que ya está guardado.
+   */
+  private function isLedgerTool(string $name): bool {
+    return in_array($name, [LedgerReadTool::NAME, LedgerWriteTool::NAME], TRUE);
   }
 
   /**

@@ -58,7 +58,11 @@ final class ConversationServiceTest extends KernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('sld_diagnostic_session');
     $this->installEntitySchema('sld_diagnostic_result');
-    $this->installSchema('sales_leadership_diagnostic', ['sld_diagnostic_message', 'sld_research_entitlement']);
+    $this->installSchema('sales_leadership_diagnostic', [
+      'sld_diagnostic_message',
+      'sld_research_entitlement',
+      'sld_evidence',
+    ]);
     $this->installConfig(['sales_leadership_diagnostic']);
 
     // El uid 1 es superusuario y no debe usarse como sujeto de prueba.

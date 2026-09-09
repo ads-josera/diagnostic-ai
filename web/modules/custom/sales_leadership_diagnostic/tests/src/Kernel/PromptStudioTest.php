@@ -58,7 +58,11 @@ final class PromptStudioTest extends KernelTestBase {
     // Borrar una sesión consulta sus resultados para llevárselos por delante,
     // así que la tabla tiene que existir aunque un ensayo nunca produzca uno.
     $this->installEntitySchema('sld_diagnostic_result');
-    $this->installSchema('sales_leadership_diagnostic', ['sld_diagnostic_message', 'sld_research_entitlement']);
+    $this->installSchema('sales_leadership_diagnostic', [
+      'sld_diagnostic_message',
+      'sld_research_entitlement',
+      'sld_evidence',
+    ]);
     $this->installConfig(['sales_leadership_diagnostic']);
 
     User::create(['name' => 'uid1_no_usar', 'status' => 1])->save();

@@ -99,7 +99,11 @@ final class DiagnosticStarterTest extends KernelTestBase {
     // Al crear una sesion se consulta la memoria del alumno para añadirla al
     // prompt; sin esta tabla el arranque fallaria.
     $this->installEntitySchema('sld_student_memory');
-    $this->installSchema('sales_leadership_diagnostic', ['sld_diagnostic_message', 'sld_research_entitlement']);
+    $this->installSchema('sales_leadership_diagnostic', [
+      'sld_diagnostic_message',
+      'sld_research_entitlement',
+      'sld_evidence',
+    ]);
     $this->installSchema('externalauth', ['authmap']);
     $this->installConfig(['sales_leadership_diagnostic']);
 

@@ -159,6 +159,23 @@
       </section>
     {% endif %}
 
+    {% if ledger %}
+      <section class="sld-usage__panel">
+        <h2 class="sld-usage__panel-title">{{ 'Evidencia reutilizable'|t }}</h2>
+        <ul class="sld-usage__legend">
+          <li>
+            <span class="sld-usage__dot sld-usage__dot--cached"></span>
+            {{ 'Reutilizaciones'|t }} <b>{{ ledger.reused }}</b>
+          </li>
+          <li>{{ 'Anotaciones'|t }} <b>{{ ledger.entries }}</b></li>
+          <li>{{ 'Cuentas o mercados distintos'|t }} <b>{{ ledger.scopes }}</b></li>
+        </ul>
+        <p class="sld-usage__aside">
+          {{ 'Cada reutilización es una búsqueda que no se hizo. Una anotación que nadie vuelve a mirar no ahorra nada.'|t }}
+        </p>
+      </section>
+    {% endif %}
+
     <div class="sld-usage__split">
       <section class="sld-usage__panel">
         <h2 class="sld-usage__panel-title">{{ 'Por agente'|t }}</h2>

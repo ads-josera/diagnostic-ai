@@ -65,7 +65,12 @@ final class ResearchEntitlementTest extends KernelTestBase {
   protected function setUp(): void {
     parent::setUp();
 
-    $this->installSchema('sales_leadership_diagnostic', ['sld_ai_usage', 'sld_tool_call', 'sld_research_entitlement']);
+    $this->installSchema('sales_leadership_diagnostic', [
+      'sld_ai_usage',
+      'sld_tool_call',
+      'sld_research_entitlement',
+      'sld_evidence',
+    ]);
     $this->installConfig(['system', 'sales_leadership_diagnostic']);
 
     $this->espia = new class() implements ToolInterface {
