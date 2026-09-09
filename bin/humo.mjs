@@ -270,6 +270,46 @@ export default async function run(page) {
   // secciones sin barra: sin navegacion y sin cerrar sesion. Lo encontro el
   // usuario el 04-09-2026, y no lo vio ninguna prueba porque todas entraban
   // como administrador, que si tiene la barra.
+  // La pantalla de consumo es la que vigila el dinero, y se entrega vacia de
+  // datos con frecuencia. Se comprueba su ESTRUCTURA, no sus cifras: un panel
+  // que desaparece porque no hay datos es correcto; uno que desaparece porque
+  // el controlador reventó, no, y desde fuera se ven igual.
+  await page.goto(`${SITIO}/admin/config/salesbumm/diagnostic/consumo`, { waitUntil: 'networkidle' });
+
+  const consumo = await page.evaluate(() => {
+    const cuerpo = document.body.innerText;
+    return {
+      // El selector de periodo va siempre, haya datos o no.
+      periodos: document.querySelectorAll('.sld-usage__period').length,
+      // Con datos, el resumen; sin ellos, el estado vacio. Uno de los dos.
+      resumen: document.querySelectorAll('.sld-usage__figure').length,
+      vacio: document.querySelectorAll('.sld-usage__empty').length,
+      // Si hubo gasto, tiene que decir cuanto se ahorro reutilizando: es la
+      // cifra por la que existe la pantalla.
+      //
+      // Se compara sin distinguir mayusculas: la etiqueta se pinta con
+      // text-transform y innerText devuelve lo RENDERIZADO, no lo escrito.
+      // Comparar literalmente daba un fallo que no lo era.
+      diceAhorro: cuerpo.toLowerCase().includes('ahorrado por reutilizaci'),
+      // Y nunca debe aparecer una tabla cruda de administracion: eso seria la
+      // pantalla anterior, que se rehizo por no estar a nivel de producto.
+      tablasDeAdmin: document.querySelectorAll('table.responsive-enabled, table.sticky-enabled').length,
+    };
+  });
+
+  anotar(consumo.periodos === 4, 'consumo: selector de periodo', `hay ${consumo.periodos} y deben ser 4`);
+  anotar(
+    consumo.resumen > 0 || consumo.vacio > 0,
+    'consumo: resumen o estado vacio',
+    'no hay ni cifras ni mensaje de vacio; probablemente el controlador fallo',
+  );
+  anotar(
+    consumo.resumen === 0 || consumo.diceAhorro,
+    'consumo: dice cuanto se ahorro',
+    'hay cifras pero no aparece el ahorro por reutilizacion',
+  );
+  anotar(consumo.tablasDeAdmin === 0, 'consumo: sin tablas crudas de admin', `hay ${consumo.tablasDeAdmin}`);
+
   for (const [ruta, nombre] of [
     ['/admin/content/sales-diagnostic', 'resultados'],
     ['/admin/config/salesbumm/diagnostic/agentes', 'agentes'],

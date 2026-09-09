@@ -64,15 +64,20 @@ final class DiagnosticContextBuilder {
    * caché a los agentes que no investigan.
    */
   private function researchRuntimeFor(DiagnosticSessionInterface $session): string {
+    // Lo que la plataforma NO puede hacer es cierto con búsqueda y sin ella:
+    // los dos prompts del cliente declaran MULTIMODAL-FIRST y aquí no se
+    // pueden enviar archivos, se investigue o no. Va siempre.
+    $plataforma = $this->runtime->platform();
+
     if (!(bool) $this->configFactory->get('sales_leadership_diagnostic.settings')->get('search.enabled')) {
-      return '';
+      return $plataforma;
     }
 
     $uid = (int) $session->getOwnerId();
     $entitlement = $this->entitlements->forUser($uid);
     $rechecks = $this->entitlements->maxRechecks();
 
-    return $this->runtime->compose(
+    $research = $this->runtime->compose(
       $entitlement,
       $this->classifier->classify($entitlement, $rechecks),
       $rechecks,
@@ -80,6 +85,8 @@ final class DiagnosticContextBuilder {
       // para no encontrar nada, y perder un turno en ello.
       $this->ledger->hasAnyFor($uid),
     );
+
+    return $research . "\n\n" . $plataforma;
   }
 
   /**

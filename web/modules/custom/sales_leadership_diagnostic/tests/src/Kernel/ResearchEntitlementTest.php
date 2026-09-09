@@ -228,6 +228,14 @@ final class ResearchEntitlementTest extends KernelTestBase {
       ->compose($entitlement, TurnClass::ResearchMission, 3);
 
     $this->assertStringContainsString('RESEARCH_RUNTIME', $bloque);
+
+    // Y se le dice que no puede recibir archivos, porque sus dos prompts
+    // declaran MULTIMODAL-FIRST y la plataforma no los admite. Sin esto pide
+    // decks y hojas de cálculo que nadie le puede enviar.
+    $plataforma = $this->container->get(ResearchRuntime::class)->platform();
+
+    $this->assertStringContainsString('PLATFORM_RUNTIME', $plataforma);
+    $this->assertStringContainsString('file_upload: NOT_AVAILABLE', $plataforma);
     $this->assertStringContainsString('mission_state: ACTIVE', $bloque);
     $this->assertStringContainsString('external_research: ALLOWED', $bloque);
     $this->assertStringContainsString('mission_id: ', $bloque);

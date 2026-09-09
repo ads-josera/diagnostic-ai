@@ -61,4 +61,34 @@ final class ResearchRuntime {
     return implode("\n", $lineas);
   }
 
+  /**
+   * Lo que la plataforma puede y no puede, en el mismo lenguaje.
+   *
+   * Este bloque **no es del §5 del cliente**: es nuestro, y por eso va aparte y
+   * con otro nombre. Existe porque sus dos prompts declaran `MULTIMODAL-FIRST`
+   * —analizar hojas de cálculo, dashboards y capturas— y **la plataforma no
+   * admite archivos**: ni en el chat, ni en el JavaScript, ni en el endpoint.
+   * Los archivos quedaron acordados para una etapa posterior.
+   *
+   * Sin decírselo, el agente pide lo que nadie le puede dar. Se vio el
+   * 07-09-2026: en una misión de territorio pidió «un deck comercial, un caso
+   * de cliente o una ficha de producto», y no hay forma de enviárselos. La
+   * persona se queda mirando una petición que no puede atender.
+   *
+   * No es una modificación de su prompt (§15): es una entrada que su propio
+   * contrato pide. Su regla de Tool Reality dice «úsalos solo si disponibles Y
+   * autorizados», y esto le dice cuáles lo están.
+   */
+  public function platform(): string {
+    return implode("\n", [
+      'PLATFORM_RUNTIME',
+      // El nombre va en su vocabulario para que su prompt lo reconozca: es el
+      // mismo valor que usa para la investigación externa.
+      'file_upload: NOT_AVAILABLE',
+      'multimodal_input: NOT_AVAILABLE',
+      'user_can_paste_text: true',
+      'guidance: NO pidas archivos, capturas ni hojas de cálculo: no hay forma de enviártelos. Pide el contenido PEGADO como texto, o trabaja con lo que la persona pueda escribir.',
+    ]);
+  }
+
 }
