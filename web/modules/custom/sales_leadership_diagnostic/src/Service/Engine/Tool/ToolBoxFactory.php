@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Drupal\sales_leadership_diagnostic\Service\Engine\Tool;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Search\SearchProviderInterface;
 use Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger;
@@ -15,13 +17,26 @@ use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 /**
  * Decide qué herramientas hay en un turno.
  *
- * Hoy la decisión es simple —un interruptor de configuración y si el buscador
- * está configurado— y a propósito: **quién** puede buscar y **cuándo** es lo
- * que gobierna el Research Entitlement del cliente, y eso llega después. Esta
- * clase es el sitio donde entrará esa decisión sin tocar el motor.
+ * La búsqueda externa tiene que superar TRES puertas, y están en este orden a
+ * propósito, de la más general a la más particular:
  *
- * El interruptor nace APAGADO. Encenderlo cambia lo que el agente puede hacer
- * y lo que cuesta cada turno, y eso no debe pasar por instalar una versión.
+ *  1. **El interruptor del módulo** (`search.enabled`) y que haya buscador
+ *     configurado. Es el corte de emergencia: apagarlo apaga todo el sitio.
+ *     Nace APAGADO, porque encenderlo cambia lo que el agente puede hacer y lo
+ *     que cuesta cada turno, y eso no debe pasar por instalar una versión.
+ *  2. **El agente** (`can_search`). Responde a «¿este agente necesita salir a
+ *     internet?». El de diagnóstico GAP no: diagnostica a la persona con lo
+ *     que ella cuenta. El de prospección sí: su trabajo es mirar cuentas.
+ *  3. **La persona** (el Research Entitlement del §2). Responde a «¿le queda
+ *     misión esta semana?».
+ *
+ * La segunda puerta existe porque la tercera se comparte. La misión es una por
+ * persona y semana, y vale para todos los agentes: sin esta puerta, un agente
+ * que no necesita buscar puede gastarle a alguien la investigación de la
+ * semana, y el fallo no se ve —el otro agente, días después, simplemente dice
+ * que ya no puede investigar—. Además, declarar herramientas cambia el prefijo
+ * del prompt y tira su caché, que es el descuento del que vive el coste por
+ * turno.
  */
 final class ToolBoxFactory {
 
@@ -34,6 +49,7 @@ final class ToolBoxFactory {
     private readonly SpendGuard $spend,
     private readonly ResearchEntitlementService $entitlements,
     private readonly EvidenceLedger $ledger,
+    private readonly EntityTypeManagerInterface $entityTypeManager,
   ) {}
 
   /**
@@ -55,10 +71,8 @@ final class ToolBoxFactory {
    * No necesita que el turno esté declarado —se le pasa la persona— porque se
    * consulta antes de empezarlo.
    */
-  public function mayResearch(int $uid): bool {
-    $config = $this->configFactory->get('sales_leadership_diagnostic.settings');
-
-    if (!(bool) $config->get('search.enabled') || !$this->search->isAvailable()) {
+  public function mayResearch(int $uid, string $agentId): bool {
+    if (!$this->searchIsOn() || !$this->agentMaySearch($agentId)) {
       return FALSE;
     }
 
@@ -74,7 +88,7 @@ final class ToolBoxFactory {
   public function forTurn(): ToolRunnerInterface {
     $config = $this->configFactory->get('sales_leadership_diagnostic.settings');
 
-    if (!(bool) $config->get('search.enabled') || !$this->search->isAvailable() || !$this->turn->isSet()) {
+    if (!$this->searchIsOn() || !$this->turn->isSet()) {
       return new ToolBox();
     }
 
@@ -95,7 +109,10 @@ final class ToolBoxFactory {
     // nuevo»— sin depender de que el gateway diga que no una y otra vez.
     $entitlement = $this->entitlements->forUser($this->turn->uid());
 
-    if ($entitlement->access($this->entitlements->maxRechecks())->allowsAnything()) {
+    if (
+      $this->agentMaySearch($this->turn->agentId())
+      && $entitlement->access($this->entitlements->maxRechecks())->allowsAnything()
+    ) {
       $herramientas[] = new WebSearchTool(
         $this->search,
         $this->loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL),
@@ -119,6 +136,41 @@ final class ToolBoxFactory {
       $this->loggerFactory,
       $this->entitlements,
     );
+  }
+
+  /**
+   * La primera puerta: si el sitio entero tiene la búsqueda encendida.
+   */
+  private function searchIsOn(): bool {
+    return (bool) $this->configFactory->get('sales_leadership_diagnostic.settings')->get('search.enabled')
+      && $this->search->isAvailable();
+  }
+
+  /**
+   * La segunda puerta: si ESTE agente tiene concedida la búsqueda.
+   *
+   * Un agente que no se encuentra devuelve NO. Es lo prudente de las dos
+   * lecturas posibles: la única forma de llegar aquí sin agente es que la
+   * sesión nombre uno borrado, y conceder la capacidad cara a un agente que ya
+   * no existe no lo arregla.
+   *
+   * @param string $agentId
+   *   Identificador del agente que conduce el turno.
+   */
+  private function agentMaySearch(string $agentId): bool {
+    if ($agentId === '') {
+      return FALSE;
+    }
+
+    try {
+      $agente = $this->entityTypeManager->getStorage('sld_agent')->load($agentId);
+    }
+    catch (\Throwable) {
+      // Un almacén ilegible no debe conceder búsquedas por descuido.
+      return FALSE;
+    }
+
+    return $agente instanceof DiagnosticAgentInterface && $agente->canSearch();
   }
 
 }

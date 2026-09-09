@@ -145,7 +145,12 @@ final class ConversationService {
       // viajar en lo que se le manda al proveedor (§31, §43).
       //
       // Sin esto, el gateway ve un turno sin dueño y deniega toda búsqueda.
-      $this->currentTurn->begin($uid, $sessionId, (bool) $session->get('is_sandbox')->value);
+      $this->currentTurn->begin(
+        $uid,
+        $sessionId,
+        (bool) $session->get('is_sandbox')->value,
+        $session->getAgentId(),
+      );
 
       // El consumo se registra ANTES de llamar al proveedor, no después de que
       // el turno salga bien. Lo que cuesta dinero es el intento: la llamada se
@@ -171,7 +176,7 @@ final class ConversationService {
       // Se encola y la sesión pasa a «procesando». El estado ya no admite
       // mensajes, así que hace de cerrojo por sí solo mientras el trabajo
       // ocurre fuera.
-      if ($this->tools->mayResearch($uid)) {
+      if ($this->tools->mayResearch($uid, $session->getAgentId())) {
         $session->setStatus(DiagnosticStatus::Processing);
 
         // La marca de tiempo se pone A MANO y no se deja al campo `changed`.
@@ -295,6 +300,7 @@ final class ConversationService {
       (int) $session->getOwnerId(),
       $sessionId,
       (bool) $session->get('is_sandbox')->value,
+      $session->getAgentId(),
     );
 
     $turn = $this->engine->process($context);

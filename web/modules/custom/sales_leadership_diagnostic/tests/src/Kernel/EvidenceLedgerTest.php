@@ -51,6 +51,11 @@ final class EvidenceLedgerTest extends KernelTestBase {
   private const ALUMNO = 7;
 
   /**
+   * Agente de las pruebas. Tiene la búsqueda concedida.
+   */
+  private const AGENTE = 'prospeccion';
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -64,7 +69,15 @@ final class EvidenceLedgerTest extends KernelTestBase {
     ]);
     $this->installConfig(['system', 'sales_leadership_diagnostic']);
 
-    $this->container->get(CurrentTurn::class)->begin(self::ALUMNO, 42, FALSE);
+    $this->container->get('entity_type.manager')->getStorage('sld_agent')->create([
+      'id' => self::AGENTE,
+      'label' => 'Prospección',
+      'course_id' => '35884',
+      'system_prompt' => 'PROMPT',
+      'can_search' => TRUE,
+    ])->save();
+
+    $this->container->get(CurrentTurn::class)->begin(self::ALUMNO, 42, FALSE, self::AGENTE);
   }
 
   /**
@@ -201,6 +214,38 @@ final class EvidenceLedgerTest extends KernelTestBase {
 
     $this->assertContains(WebSearchTool::NAME, $nombres);
     $this->assertContains(LedgerReadTool::NAME, $nombres);
+  }
+
+  /**
+   * Sin búsqueda concedida al agente, el ledger sigue estando.
+   *
+   * Es el mismo reparto que con el entitlement agotado, pero decidido una
+   * puerta más arriba. Importa que salga igual: el agente de diagnóstico no
+   * sale a internet, y aun así tiene que poder mirar lo que ya se sabe de la
+   * persona. Quitarle también eso lo dejaría sin nada que consultar.
+   */
+  public function testUnAgenteSinBusquedaConservaElLedger(): void {
+    $this->setSetting('sld_search_api_key', 'clave-de-prueba');
+    $this->config('sales_leadership_diagnostic.settings')->set('search.enabled', TRUE)->save();
+
+    $this->container->get('entity_type.manager')->getStorage('sld_agent')->create([
+      'id' => 'diagnostico_gap',
+      'label' => 'Diagnóstico GAP',
+      'course_id' => '35885',
+      'system_prompt' => 'PROMPT',
+      'can_search' => FALSE,
+    ])->save();
+
+    $this->container->get(CurrentTurn::class)->begin(self::ALUMNO, 42, FALSE, 'diagnostico_gap');
+
+    $nombres = array_column(
+      $this->container->get(ToolBoxFactory::class)->forTurn()->declarations(),
+      'name',
+    );
+
+    $this->assertNotContains(WebSearchTool::NAME, $nombres, 'Este agente no sale a internet.');
+    $this->assertContains(LedgerReadTool::NAME, $nombres);
+    $this->assertContains(LedgerWriteTool::NAME, $nombres);
   }
 
   /**

@@ -89,6 +89,7 @@ use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
     'welcome_suggestions',
     'result_title',
     'weight',
+    'can_search',
   ],
 )]
 final class DiagnosticAgent extends ConfigEntityBase implements DiagnosticAgentInterface {
@@ -174,6 +175,27 @@ final class DiagnosticAgent extends ConfigEntityBase implements DiagnosticAgentI
    * Orden en los listados y en el panel del alumno.
    */
   protected int $weight = 0;
+
+  /**
+   * Si este agente puede salir a buscar en internet.
+   *
+   * Empieza en NO, y ese valor por defecto es la decisión: un agente nuevo
+   * nace sin la capacidad cara. La búsqueda se concede a mano, agente por
+   * agente, sabiendo lo que se concede.
+   *
+   * No es un interruptor de comodidad. Cuesta de tres maneras distintas:
+   *
+   *  - **Gasta la misión de la semana**, que es una por persona y se comparte
+   *    entre todos los agentes (§2). Un agente que busca sin necesitarlo deja
+   *    sin investigación al que sí la necesita, y no falla de forma visible:
+   *    el otro agente simplemente dice después que no puede investigar.
+   *  - **Tira la caché del prompt.** Declarar herramientas cambia el prefijo,
+   *    y con él se pierde el descuento de todos los turnos. Medido, es la
+   *    diferencia entre una misión de $0.58 y una de varios dólares.
+   *  - **Manda el turno a la cola**, porque una misión no cabe en una petición
+   *    web. Un agente que no investiga no debería esperar por eso.
+   */
+  protected bool $can_search = FALSE;
 
   /**
    * {@inheritdoc}
@@ -269,6 +291,13 @@ final class DiagnosticAgent extends ConfigEntityBase implements DiagnosticAgentI
    */
   public function getWeight(): int {
     return $this->weight;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function canSearch(): bool {
+    return $this->can_search;
   }
 
   /**

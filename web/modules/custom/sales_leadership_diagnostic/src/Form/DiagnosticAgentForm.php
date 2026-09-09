@@ -91,6 +91,15 @@ final class DiagnosticAgentForm extends EntityForm {
       '#default_value' => $agente->isNew() ? TRUE : $agente->status(),
     ];
 
+    // Va junto a «Disponible» y no entre los campos de presentación: las dos
+    // dicen lo que el agente PUEDE hacer, y esa es la lectura que importa.
+    $form['can_search'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Puede buscar en internet'),
+      '#description' => $this->t('Márcalo solo si el agente necesita salir a investigar fuera, como el de prospección. El de diagnóstico no: trabaja con lo que la persona cuenta. Concederlo de más cuesta: cada alumno tiene UNA misión de investigación por semana, compartida entre todos sus agentes, y un agente que busca sin necesitarlo se la gasta al que sí la necesita. Por encima de esta casilla manda el interruptor general de los ajustes.'),
+      '#default_value' => $agente->canSearch(),
+    ];
+
     $form['course_id'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Curso que lo concede'),

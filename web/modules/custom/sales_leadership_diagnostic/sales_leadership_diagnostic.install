@@ -1211,3 +1211,44 @@ function sales_leadership_diagnostic_update_10017(): string {
 
   return 'Creado el Evidence Ledger. Empieza vacío: lo anterior vivía en las conversaciones y se perdía con ellas.';
 }
+
+/**
+ * Concede la búsqueda por agente en vez de a todo el sitio.
+ *
+ * Hasta ahora `search.enabled` era una sola llave para toda la casa: o la
+ * tenían los dos agentes o ninguno. Eso obligaba a dejarla apagada, porque
+ * encenderla se la daba también al agente de diagnóstico GAP —que no la
+ * necesita— y ese agente le gastaba a la persona la única misión de
+ * investigación de la semana, que se comparte entre todos sus agentes (§2).
+ *
+ * Se concede a mano y solo al que la necesita. A quien no se nombre aquí le
+ * queda en NO, que es el valor por defecto de la propiedad: un agente sin
+ * decidir no debe heredar la capacidad cara.
+ */
+function sales_leadership_diagnostic_update_10018(): string {
+  // El único agente que investiga: su trabajo es mirar cuentas fuera.
+  $investigan = ['prospecting_diagnostic'];
+  $tocados = [];
+
+  foreach (\Drupal::entityTypeManager()->getStorage('sld_agent')->loadMultiple() as $id => $agente) {
+    $puede = in_array($id, $investigan, TRUE);
+
+    // Se guardan TODOS, también los que quedan en NO. Sin guardarlos, la clave
+    // no existe en su configuración exportada y la diferencia con Git aparece
+    // la próxima vez que alguien edite el agente por otra cosa.
+    $agente->set('can_search', $puede)->save();
+
+    if ($puede) {
+      $tocados[] = $id;
+    }
+  }
+
+  if ($tocados === []) {
+    return 'Ningún agente puede buscar en internet. Se concede agente por agente desde su ficha.';
+  }
+
+  return sprintf(
+    'La búsqueda se concede ahora por agente. La tienen: %s. El resto queda sin ella.',
+    implode(', ', $tocados),
+  );
+}

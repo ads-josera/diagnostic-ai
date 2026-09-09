@@ -426,6 +426,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard'
       - '@Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService'
       - '@Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger'
+      - '@entity_type.manager'
 
   # De quien es el turno en curso. El gateway lo necesita DURANTE la llamada,
   # no al terminarla, y esa identidad no puede viajar en lo que se manda al

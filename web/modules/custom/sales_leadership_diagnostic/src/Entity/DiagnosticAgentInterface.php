@@ -95,6 +95,16 @@ interface DiagnosticAgentInterface extends ConfigEntityInterface {
   public function getWeight(): int;
 
   /**
+   * Si este agente puede salir a buscar en internet.
+   *
+   * Es una condición NECESARIA y no suficiente: por encima está el interruptor
+   * general del módulo, y por debajo el entitlement de la persona, que decide
+   * si le queda misión esta semana. Aquí solo se responde a «¿este agente
+   * necesita buscar?».
+   */
+  public function canSearch(): bool;
+
+  /**
    * Si el agente puede ofrecerse a un alumno.
    */
   public function isUsable(): bool;

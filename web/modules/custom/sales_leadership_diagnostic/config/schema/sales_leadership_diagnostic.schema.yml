@@ -280,3 +280,6 @@ sales_leadership_diagnostic.agent.*:
     weight:
       type: integer
       label: 'Orden'
+    can_search:
+      type: boolean
+      label: 'Puede buscar en internet'

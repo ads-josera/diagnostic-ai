@@ -109,6 +109,30 @@ final class BackgroundTurnTest extends KernelTestBase {
   }
 
   /**
+   * Un agente sin búsqueda concedida NO se va a la cola.
+   *
+   * Es la prueba de la puerta del agente, y lo que comprueba de verdad no es
+   * la cola: es que ese turno no le gasta a la alumna su misión de la semana.
+   * La misión es una por persona y se comparte entre todos sus agentes, así
+   * que sin esta puerta el agente que no investiga deja sin investigar al que
+   * sí, y no falla de forma visible: días después, el otro agente simplemente
+   * dice que ya no puede.
+   *
+   * El interruptor general está encendido aquí. Es el punto: encenderlo NO
+   * reparte la capacidad por su cuenta.
+   */
+  public function testUnAgenteSinBusquedaConcedidaNoSeEncola(): void {
+    $this->habilitarBusqueda(agenteBusca: FALSE);
+    $sesion = $this->crearSesion();
+
+    $salida = $this->conversacion()->submitMessage($sesion, 'Investiga Cemex.');
+
+    $this->assertFalse($salida['processing'], 'Sin búsqueda concedida el turno se genera en el acto.');
+    $this->assertSame(0, $this->cola()->numberOfItems());
+    $this->assertSame(DiagnosticStatus::InProgress, $this->recargar($sesion)->getStatus());
+  }
+
+  /**
    * Mientras procesa, no admite mensajes nuevos.
    *
    * El estado hace de cerrojo por sí solo mientras el trabajo ocurre fuera de
@@ -225,10 +249,20 @@ final class BackgroundTurnTest extends KernelTestBase {
   /**
    * Enciende la búsqueda y da capacidad de investigar.
    */
-  private function habilitarBusqueda(): void {
+  private function habilitarBusqueda(bool $agenteBusca = TRUE): void {
     $this->setSetting('sld_search_api_key', 'clave-de-prueba');
     $this->config('sales_leadership_diagnostic.settings')->set('search.enabled', TRUE)->save();
     $this->container->get(ResearchEntitlementService::class)->forUser((int) $this->alumno->id());
+
+    // El interruptor general no basta: la búsqueda se concede POR AGENTE, y
+    // sin agente concedido no hay investigación ni, por tanto, cola.
+    $this->container->get('entity_type.manager')->getStorage('sld_agent')->create([
+      'id' => 'prospecting_diagnostic',
+      'label' => 'Prospección',
+      'course_id' => '35884',
+      'system_prompt' => 'PROMPT',
+      'can_search' => $agenteBusca,
+    ])->save();
   }
 
   /**

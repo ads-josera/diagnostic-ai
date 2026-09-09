@@ -39,12 +39,22 @@ final class CurrentTurn {
   private bool $sandbox = FALSE;
 
   /**
+   * Agente que conduce el turno.
+   *
+   * Hace falta aquí por lo mismo que la persona: la búsqueda se concede por
+   * agente, y esa decisión hay que tomarla DURANTE la llamada, al construir
+   * las herramientas. La sesión lo sabe, pero la sesión no llega al gateway.
+   */
+  private string $agentId = '';
+
+  /**
    * Declara de quién es el turno que empieza.
    */
-  public function begin(int $uid, int $sessionId, bool $sandbox): void {
+  public function begin(int $uid, int $sessionId, bool $sandbox, string $agentId = ''): void {
     $this->uid = $uid;
     $this->sessionId = $sessionId;
     $this->sandbox = $sandbox;
+    $this->agentId = $agentId;
   }
 
   /**
@@ -58,6 +68,7 @@ final class CurrentTurn {
     $this->uid = NULL;
     $this->sessionId = NULL;
     $this->sandbox = FALSE;
+    $this->agentId = '';
   }
 
   /**
@@ -86,6 +97,13 @@ final class CurrentTurn {
    */
   public function isSandbox(): bool {
     return $this->sandbox;
+  }
+
+  /**
+   * Agente que conduce el turno. Cadena vacía si no hay turno declarado.
+   */
+  public function agentId(): string {
+    return $this->agentId;
   }
 
 }
