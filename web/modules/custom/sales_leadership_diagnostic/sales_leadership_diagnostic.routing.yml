@@ -265,6 +265,18 @@ sales_leadership_diagnostic.studio_message:
     _custom_access: 'Drupal\sales_leadership_diagnostic\Access\SandboxSessionCheck::access'
     _csrf_request_header_token: 'TRUE'
 
+# Como va un ensayo del estudio que corre en segundo plano. Va aparte de la del
+# alumno porque el control de acceso NO es el mismo: el del alumno comprueba la
+# autorizacion del curso contra WordPress, y una sesion de ensayo del gestor no
+# tiene curso que comprobar. Reutilizar el del alumno daba 403.
+sales_leadership_diagnostic.studio_status:
+  path: '/admin/config/salesbumm/diagnostic/estudio/estado/{sld_diagnostic_session}'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\sales_leadership_diagnostic\Controller\ConversationApiController::status'
+  requirements:
+    _custom_access: 'Drupal\sales_leadership_diagnostic\Access\SandboxSessionCheck::access'
+
 sales_leadership_diagnostic.branding:
   path: '/admin/config/salesbumm/diagnostic/marca'
   defaults:
@@ -329,3 +341,14 @@ sales_leadership_diagnostic.usage:
     _title: 'Consumo de IA'
   requirements:
     _permission: 'view all diagnostic results+administer sales leadership diagnostic'
+
+# Como va un turno que se genera en segundo plano. La pide el navegador cada
+# pocos segundos mientras la sesion esta procesando.
+sales_leadership_diagnostic.session_status:
+  path: '/sales-diagnostic/session/{sld_diagnostic_session}/estado'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\sales_leadership_diagnostic\Controller\ConversationApiController::status'
+  requirements:
+    _permission: 'access sales leadership diagnostic'
+    _custom_access: 'Drupal\sales_leadership_diagnostic\Access\DiagnosticAccessCheck::access'

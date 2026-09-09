@@ -262,6 +262,32 @@
 
         const data = await response.json();
 
+        // El turno puede haberse ido a segundo plano. Ocurre cuando el agente
+        // tiene capacidad de investigar: una mision que criba cuentas son
+        // decenas de busquedas y minutos de trabajo, y eso no cabe en una
+        // peticion web. En ese caso aqui no hay respuesta todavia: hay que
+        // preguntar cada pocos segundos hasta que la haya.
+        if (data.processing) {
+          const resultado = await esperarTurno(log);
+
+          if (resultado === null) {
+            return;
+          }
+
+          appendMessage(log, {
+            role: 'assistant',
+            author: Drupal.t('Diagnostic AI'),
+            time: nowLabel(),
+            html: resultado.message_html,
+          });
+
+          if (resultado.session_status && resultado.session_status !== 'in_progress') {
+            window.location.reload();
+          }
+
+          return;
+        }
+
         appendMessage(log, {
           role: 'assistant',
           author: Drupal.t('Diagnostic AI'),
@@ -284,6 +310,82 @@
         scrollToEnd(log);
         input.focus();
       }
+    };
+
+    /**
+     * Cada cuanto se pregunta como va, y cuanto se espera como maximo.
+     *
+     * Dos segundos es lo bastante frecuente para que la cuenta de busquedas se
+     * mueva a la vista, y lo bastante espaciado para no castigar al servidor
+     * durante una mision de veinte minutos.
+     *
+     * El maximo son treinta minutos. Mas alla, algo se rompio: es preferible
+     * decirlo a dejar a alguien mirando indefinidamente.
+     */
+    const INTERVALO_SONDEO = 2000;
+    const ESPERA_MAXIMA = 30 * 60 * 1000;
+
+    /**
+     * Espera a que termine un turno que corre en segundo plano.
+     *
+     * Mientras espera, ensena cuantas busquedas lleva hechas. No es un adorno:
+     * es la diferencia entre una espera y una espera que se entiende. Un
+     * indicador que no se mueve durante quince minutos se lee como «se colgo»,
+     * y la persona cierra la pestana justo cuando el trabajo iba bien.
+     *
+     * Devuelve null si no se pudo terminar; en ese caso ya avisó por su cuenta.
+     */
+    const esperarTurno = async (log) => {
+      if (!settings.statusEndpoint) {
+        showError(GENERIC_ERROR);
+        return null;
+      }
+
+      const aviso = document.createElement('p');
+      aviso.className = 'sld-chat__working';
+      aviso.setAttribute('role', 'status');
+      aviso.textContent = Drupal.t('Investigando…');
+      log.appendChild(aviso);
+      scrollToEnd(log);
+
+      const hasta = Date.now() + ESPERA_MAXIMA;
+
+      while (Date.now() < hasta) {
+        await new Promise((resolver) => window.setTimeout(resolver, INTERVALO_SONDEO));
+
+        let estado;
+
+        try {
+          const respuesta = await fetch(settings.statusEndpoint, { credentials: 'same-origin' });
+
+          if (!respuesta.ok) {
+            aviso.remove();
+            showError(GENERIC_ERROR);
+            return null;
+          }
+
+          estado = await respuesta.json();
+        }
+        catch (error) {
+          // Un fallo de red suelto no cancela la espera: el trabajo sigue
+          // corriendo en el servidor y la siguiente vuelta puede funcionar.
+          continue;
+        }
+
+        if (!estado.processing) {
+          aviso.remove();
+          return estado;
+        }
+
+        aviso.textContent = estado.searches > 0
+          ? Drupal.formatPlural(estado.searches, 'Investigando… 1 búsqueda hecha', 'Investigando… @count búsquedas hechas')
+          : Drupal.t('Investigando…');
+      }
+
+      aviso.remove();
+      showError(Drupal.t('La investigación está tardando más de lo normal. Recarga la página en unos minutos: el trabajo sigue en marcha y no se ha perdido.'));
+
+      return null;
     };
 
     composer.addEventListener('submit', (event) => {

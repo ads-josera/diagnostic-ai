@@ -95,6 +95,13 @@ final class ChatController extends ControllerBase {
                 'sld_diagnostic_session' => $session->id(),
               ])->toString()
               : NULL,
+            // Este SÍ se entrega siempre, aunque la sesión no admita
+            // mensajes: se usa para preguntar cómo va un turno que ya está
+            // corriendo, y en ese momento la sesión está «procesando», que es
+            // precisamente un estado que no admite mensajes.
+            'statusEndpoint' => Url::fromRoute('sales_leadership_diagnostic.session_status', [
+              'sld_diagnostic_session' => $session->id(),
+            ])->toString(),
             'csrfTokenUrl' => Url::fromRoute('system.csrftoken')->toString(),
           ],
         ],

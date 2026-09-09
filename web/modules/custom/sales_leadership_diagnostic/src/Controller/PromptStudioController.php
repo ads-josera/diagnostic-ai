@@ -108,6 +108,19 @@ final class PromptStudioController extends ControllerBase {
               'sales_leadership_diagnostic.studio_message',
               ['sld_diagnostic_session' => $sessionId],
             )->toString(),
+            // El ensayo también puede irse a segundo plano: usa el mismo
+            // motor y las mismas herramientas, así que una prueba con búsqueda
+            // tarda lo mismo que una misión real. Sin esto, el gestor vería su
+            // ensayo colgado para siempre.
+            //
+            // Va a la ruta DEL ESTUDIO, no a la del alumno: aquella comprueba
+            // la autorización del curso contra WordPress, y una sesión de
+            // ensayo no tiene curso que comprobar. Apuntarla a la del alumno
+            // daba 403, y se vio probándolo en el navegador.
+            'statusEndpoint' => Url::fromRoute(
+              'sales_leadership_diagnostic.studio_status',
+              ['sld_diagnostic_session' => $sessionId],
+            )->toString(),
             // El nombre lo fija el JS, que es el mismo archivo que usa el
             // alumno: 'csrfTokenUrl', no otro.
             'csrfTokenUrl' => Url::fromRoute('system.csrftoken')->toString(),

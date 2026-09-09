@@ -270,6 +270,35 @@ export default async function run(page) {
   // secciones sin barra: sin navegacion y sin cerrar sesion. Lo encontro el
   // usuario el 04-09-2026, y no lo vio ninguna prueba porque todas entraban
   // como administrador, que si tiene la barra.
+  // El estudio entrega al navegador el punto donde preguntar como va un turno
+  // que corre en segundo plano. Se comprueba que RESPONDE, no solo que existe:
+  // la primera version apuntaba a la ruta del alumno, que comprueba la
+  // autorizacion del curso contra WordPress, y una sesion de ensayo no tiene
+  // curso. Daba 403 y desde fuera la pagina se veia perfecta.
+  await page.goto(`${SITIO}/admin/config/salesbumm/diagnostic/estudio/agente/prospecting_diagnostic`, { waitUntil: 'networkidle' });
+
+  const sondeo = await page.evaluate(async () => {
+    const tag = document.querySelector('script[data-drupal-selector="drupal-settings-json"]');
+    const url = tag ? JSON.parse(tag.textContent)?.salesLeadershipDiagnostic?.statusEndpoint : null;
+
+    if (!url) {
+      return { url: null };
+    }
+
+    const res = await fetch(url, { credentials: 'same-origin' });
+    const cuerpo = await res.json();
+
+    return {
+      url,
+      http: res.status,
+      campos: ['processing', 'session_status', 'searches'].every((k) => k in cuerpo),
+    };
+  });
+
+  anotar(sondeo.url !== null, 'estudio: entrega el punto de consulta', 'no llega statusEndpoint al navegador');
+  anotar(sondeo.http === 200, 'estudio: el punto de consulta responde', `devolvio ${sondeo.http}`);
+  anotar(sondeo.campos === true, 'estudio: la respuesta trae lo que el JS lee', 'faltan campos en el JSON');
+
   // La pantalla de consumo es la que vigila el dinero, y se entrega vacia de
   // datos con frecuencia. Se comprueba su ESTRUCTURA, no sus cifras: un panel
   // que desaparece porque no hay datos es correcto; uno que desaparece porque

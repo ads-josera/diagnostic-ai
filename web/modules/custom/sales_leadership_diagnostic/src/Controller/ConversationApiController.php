@@ -13,8 +13,12 @@ use Drupal\sales_leadership_diagnostic\Exception\DiagnosticException;
 use Drupal\sales_leadership_diagnostic\Exception\RateLimitException;
 use Drupal\sales_leadership_diagnostic\Exception\SpendLimitException;
 use Drupal\sales_leadership_diagnostic\Exception\SessionBusyException;
+use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
+use Drupal\sales_leadership_diagnostic\MessageRole;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\ConversationService;
+use Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer;
+use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -52,6 +56,8 @@ final class ConversationApiController extends ControllerBase {
   public function __construct(
     private readonly ConversationService $conversation,
     private readonly DateFormatterInterface $dateFormatter,
+    private readonly ToolCallRepository $toolCalls,
+    private readonly MarkdownRenderer $markdown,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -64,8 +70,49 @@ final class ConversationApiController extends ControllerBase {
     return new static(
       $container->get(ConversationService::class),
       $container->get('date.formatter'),
+      $container->get(ToolCallRepository::class),
+      $container->get(MarkdownRenderer::class),
       $container->get('logger.factory'),
     );
+  }
+
+  /**
+   * Dice cómo va un turno que se está generando en segundo plano.
+   *
+   * La pide el navegador cada pocos segundos mientras la sesión está
+   * «procesando». Una misión que investiga puede tardar minutos, y sin esto
+   * la persona vería una pantalla quieta sin saber si avanza o se rompió.
+   *
+   * Devuelve además **cuántas búsquedas lleva hechas**, que no es un adorno:
+   * es la diferencia entre una espera y una espera que se entiende. El dato ya
+   * existe —el gateway anota cada búsqueda al concederla— así que no hace falta
+   * inventar un mecanismo de progreso aparte.
+   */
+  public function status(DiagnosticSessionInterface $sld_diagnostic_session): JsonResponse {
+    $sessionId = (int) $sld_diagnostic_session->id();
+    $estado = $sld_diagnostic_session->getStatus();
+    $procesando = $estado === DiagnosticStatus::Processing;
+
+    $respuesta = [
+      'processing' => $procesando,
+      'session_status' => $estado->value,
+      'searches' => $this->toolCalls->usedInMission($sessionId)['calls'],
+    ];
+
+    if (!$procesando) {
+      // Ya terminó: se devuelve lo último que dijo el agente, que es lo que el
+      // navegador está esperando para pintarlo.
+      $mensajes = $this->conversation->getConversation($sessionId);
+      $ultimo = end($mensajes);
+
+      $respuesta['message_html'] = $ultimo !== FALSE && $ultimo->role === MessageRole::Assistant
+        ? $this->markdown->render($ultimo->content)
+        : '';
+      $respuesta['completed'] = $estado === DiagnosticStatus::Completed;
+    }
+
+    // Sin caché: es una pregunta sobre algo que cambia cada pocos segundos.
+    return (new JsonResponse($respuesta))->setPrivate()->setMaxAge(0);
   }
 
   /**

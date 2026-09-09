@@ -72,6 +72,9 @@ sales_leadership_diagnostic.settings:
       type: mapping
       label: 'Reglas de uso del diagnóstico'
       mapping:
+        stuck_turn_minutes:
+          type: integer
+          label: 'Minutos tras los que un turno en segundo plano se da por atascado'
         repeat_policy:
           # Decisión comercial, no técnica: define si el diagnóstico se vende
           # como herramienta de seguimiento o como entregable de cada compra.

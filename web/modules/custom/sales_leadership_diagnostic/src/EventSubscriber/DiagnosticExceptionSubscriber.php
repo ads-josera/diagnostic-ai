@@ -70,6 +70,8 @@ final class DiagnosticExceptionSubscriber implements EventSubscriberInterface {
   private const JSON_ROUTES = [
     self::ROUTE_PREFIX . 'session_message',
     self::ROUTE_PREFIX . 'studio_message',
+    self::ROUTE_PREFIX . 'session_status',
+    self::ROUTE_PREFIX . 'studio_status',
   ];
 
   /**

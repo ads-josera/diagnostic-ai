@@ -44,6 +44,33 @@ final class ToolBoxFactory {
    * una lista vacía. Declararlas cambia el prefijo del prompt, y con él se
    * perdería la caché de todos los turnos que no las necesitan.
    */
+
+  /**
+   * Si el turno de esta persona puede salir a investigar.
+   *
+   * Se pregunta ANTES de generar el turno, para decidir si hay que ejecutarlo
+   * en segundo plano: una misión que investiga puede tardar veinte minutos, y
+   * eso no cabe en una petición web.
+   *
+   * No necesita que el turno esté declarado —se le pasa la persona— porque se
+   * consulta antes de empezarlo.
+   */
+  public function mayResearch(int $uid): bool {
+    $config = $this->configFactory->get('sales_leadership_diagnostic.settings');
+
+    if (!(bool) $config->get('search.enabled') || !$this->search->isAvailable()) {
+      return FALSE;
+    }
+
+    return $this->entitlements
+      ->forUser($uid)
+      ->access($this->entitlements->maxRechecks())
+      ->allowsAnything();
+  }
+
+  /**
+   * Herramientas para el turno que va a generarse.
+   */
   public function forTurn(): ToolRunnerInterface {
     $config = $this->configFactory->get('sales_leadership_diagnostic.settings');
 

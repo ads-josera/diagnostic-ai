@@ -207,6 +207,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard'
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn'
       - '@Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory'
       - '@logger.factory'
 
   # --- Repositorios --------------------------------------------------------
@@ -460,3 +461,12 @@ services:
       - '@database'
       - '@config.factory'
       - '@datetime.time'
+
+  # Desatasca conversaciones que se quedaron generando un turno. Sin esto, un
+  # proceso que muere a mitad deja la conversacion inutilizable para siempre.
+  Drupal\sales_leadership_diagnostic\Hook\StuckTurnHooks:
+    arguments:
+      - '@entity_type.manager'
+      - '@config.factory'
+      - '@datetime.time'
+      - '@logger.factory'

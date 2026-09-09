@@ -427,3 +427,19 @@
 .sld-chat__bubble h3:first-child {
   margin-top: 0;
 }
+
+/*
+ * Aviso mientras un turno se genera en segundo plano.
+ *
+ * Lleva la cuenta de busquedas a proposito. Un indicador que no se mueve
+ * durante quince minutos se lee como «se colgo», y la persona cierra la
+ * pestana justo cuando el trabajo iba bien.
+ */
+.sld-chat__working {
+  margin: var(--sld-space-sm) 0 0;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-surface);
+  color: var(--sld-color-text-muted);
+  font-size: 0.9rem;
+}

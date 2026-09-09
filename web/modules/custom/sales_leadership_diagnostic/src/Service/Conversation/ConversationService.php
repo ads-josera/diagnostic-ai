@@ -19,7 +19,10 @@ use Drupal\sales_leadership_diagnostic\Exception\SessionBusyException;
 use Drupal\sales_leadership_diagnostic\MessageRole;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\DTO\DiagnosticContext;
+use Drupal\sales_leadership_diagnostic\Plugin\QueueWorker\DiagnosticTurnWorker;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn;
+use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory;
 use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
@@ -81,6 +84,7 @@ final class ConversationService {
     private readonly SpendGuard $spendGuard,
     private readonly CurrentTurn $currentTurn,
     private readonly ResearchEntitlementService $entitlements,
+    private readonly ToolBoxFactory $tools,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -159,43 +163,55 @@ final class ConversationService {
       // cuantos fallos no dejen a nadie fuera, y ese margen es configurable.
       $this->rateLimiter->registerMessage($uid);
 
-      $turn = $this->engine->process($context);
+      // Si este turno puede salir a investigar, no se ejecuta aquí. Una misión
+      // que criba diez cuentas son decenas de búsquedas y veinte minutos: no
+      // cabe en una petición web, y no es cuestión de subir un timeout, porque
+      // nadie mira una pantalla en blanco veinte minutos.
+      //
+      // Se encola y la sesión pasa a «procesando». El estado ya no admite
+      // mensajes, así que hace de cerrojo por sí solo mientras el trabajo
+      // ocurre fuera.
+      if ($this->tools->mayResearch($uid)) {
+        $session->setStatus(DiagnosticStatus::Processing);
 
-      $this->messages->append($sessionId, MessageRole::Assistant, $turn->message, $turn->raw);
+        // La marca de tiempo se pone A MANO y no se deja al campo `changed`.
+        // Es lo que usa el cron para saber si un turno lleva demasiado tiempo
+        // corriendo, y depender de que el marco mantenga ese campo dejaba la
+        // recuperación funcionando por casualidad: si valiera cero, toda
+        // conversación se daría por atascada nada más empezar.
+        $session->set('changed', $this->time->getRequestTime());
+        $session->save();
 
-      $resultId = $this->finalizeSession($session, $turn);
+        $this->queueFactory->get(DiagnosticTurnWorker::QUEUE)->createItem(['session_id' => $sessionId]);
 
-      $this->logger->info('Turno completado en la sesión @id (turno @n).', [
-        '@id' => $sessionId,
-        '@n' => $session->getTurnCount(),
-      ]);
+        $this->logger->info('Turno de la sesión @id encolado para ejecutarse en segundo plano.', [
+          '@id' => $sessionId,
+        ]);
 
-      return [
-        'message_html' => $this->markdown->render($turn->message),
-        'session_status' => $session->getStatus()->value,
-        'completed' => $turn->completed,
-        'result_id' => $resultId,
-      ];
+        return [
+          'processing' => TRUE,
+          'session_status' => DiagnosticStatus::Processing->value,
+          'message_html' => '',
+          'completed' => FALSE,
+          'result_id' => NULL,
+        ];
+      }
+
+      return $this->executeTurn($session, $context);
     }
     finally {
-      // Se libera siempre, también si algo falló: un bloqueo huérfano dejaría
-      // la sesión inutilizable hasta que expirase.
+      // Se libera siempre, también si algo falló: un cerrojo huérfano dejaría
+      // la sesión inutilizable hasta que expirase. Y se retira la identidad
+      // del turno, o la siguiente llamada de la misma petición se atribuiría a
+      // quien no fue.
       $this->lock->release($lockName);
-
-      // Se retira la identidad del turno. Sin esto, un turno que falla dejaría
-      // la suya puesta y la siguiente llamada de la misma petición se
-      // atribuiría a quien no fue.
       $this->currentTurn->end();
 
-      // Y se anota lo gastado, también si falló, por el mismo motivo que el
+      // Lo gastado se anota también si falló, por el mismo motivo que el
       // limitador se registra antes de llamar: lo que cuesta dinero es el
       // intento. Va en el `finally` a propósito; detrás de un `return` se
       // perdería justo el consumo de los turnos que se rompieron, que son de
       // los más caros.
-      //
-      // Aquí es donde el gasto recibe nombre: el cliente de IA mide los
-      // tokens pero no sabe de quién son, porque lo que se le envía al
-      // proveedor está deliberadamente libre de identidad (§31, §43).
       $this->usageRepository->recordAll(
         $this->usageCollector->drain(),
         $uid,
@@ -204,6 +220,101 @@ final class ConversationService {
         (bool) $session->get('is_sandbox')->value,
       );
     }
+  }
+
+  /**
+   * Ejecuta un turno que quedó encolado.
+   *
+   * Lo llama el trabajador de la cola. Adquiere el mismo cerrojo que el camino
+   * síncrono: dos ejecuciones del mismo turno costarían dos llamadas al
+   * proveedor y dejarían dos respuestas en la conversación.
+   *
+   * @param int $sessionId
+   *   Conversación cuyo turno hay que generar.
+   *
+   * @throws \Drupal\sales_leadership_diagnostic\Exception\DiagnosticException
+   */
+  public function processQueuedTurn(int $sessionId): void {
+    $lockName = 'sld_session:' . $sessionId;
+
+    if (!$this->lock->acquire($lockName, self::LOCK_TIMEOUT)) {
+      throw new SessionBusyException(sprintf('Ya hay un turno en curso para la sesión %d.', $sessionId));
+    }
+
+    $session = $this->reloadSession($sessionId);
+    $uid = (int) $session->getOwnerId();
+
+    try {
+      // Si ya no está procesando, alguien lo hizo antes: un reintento de la
+      // cola, o una recuperación. Se sale sin tocar nada en lugar de generar
+      // un turno de más, que es lo que su §14 pide por «idempotencia».
+      if ($session->getStatus() !== DiagnosticStatus::Processing) {
+        $this->logger->info('El turno encolado de la sesión @id ya no estaba pendiente; no se repite.', [
+          '@id' => $sessionId,
+        ]);
+
+        return;
+      }
+
+      $this->executeTurn($session, $this->contextBuilder->build($session));
+    }
+    finally {
+      $this->lock->release($lockName);
+      $this->currentTurn->end();
+
+      $this->usageRepository->recordAll(
+        $this->usageCollector->drain(),
+        $uid,
+        $session->getAgentId(),
+        $sessionId,
+        (bool) $session->get('is_sandbox')->value,
+      );
+    }
+  }
+
+  /**
+   * Genera el turno de verdad.
+   *
+   * Lo comparten el camino síncrono y el de la cola, y por eso no adquiere ni
+   * suelta el cerrojo: quien llama ya lo tiene. Tener un solo cuerpo importa
+   * más de lo que parece: si hubiera dos, el que se usa menos acabaría siendo
+   * el que tiene los fallos.
+   *
+   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface $session
+   *   Conversación, ya releída bajo el cerrojo.
+   * @param \Drupal\sales_leadership_diagnostic\DTO\DiagnosticContext $context
+   *   Contexto del turno.
+   *
+   * @return array{message_html: string, session_status: string, completed: bool, result_id: int|null}
+   *   Lo que el navegador necesita para pintar el turno.
+   */
+  private function executeTurn(DiagnosticSessionInterface $session, DiagnosticContext $context): array {
+    $sessionId = (int) $session->id();
+
+    $this->currentTurn->begin(
+      (int) $session->getOwnerId(),
+      $sessionId,
+      (bool) $session->get('is_sandbox')->value,
+    );
+
+    $turn = $this->engine->process($context);
+
+    $this->messages->append($sessionId, MessageRole::Assistant, $turn->message, $turn->raw);
+
+    $resultId = $this->finalizeSession($session, $turn);
+
+    $this->logger->info('Turno completado en la sesión @id (turno @n).', [
+      '@id' => $sessionId,
+      '@n' => $session->getTurnCount(),
+    ]);
+
+    return [
+      'processing' => FALSE,
+      'message_html' => $this->markdown->render($turn->message),
+      'session_status' => $session->getStatus()->value,
+      'completed' => $turn->completed,
+      'result_id' => $resultId,
+    ];
   }
 
   /**

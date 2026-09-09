@@ -31,7 +31,7 @@ que importa esté versionado.
 | Base de datos | MariaDB 10.6+ / MySQL 8.0+ / PostgreSQL 12+ |
 | Composer | 2.x |
 | HTTPS | **Obligatorio.** El token de acceso viaja en la URL |
-| Cron | **Debe ejecutarse.** Ver más abajo |
+| Cron | **Cada minuto** si se usa la búsqueda externa; cada 15 en otro caso |
 | Tiempo de espera de PHP | **300 s** si se usa la búsqueda externa. Ver más abajo |
 
 ### Los tiempos de espera de PHP, si se va a usar la búsqueda externa
@@ -44,6 +44,12 @@ varias: el modelo pide una búsqueda, recibe el resultado y con él pide otra.
 **Medido el 08-09-2026 con una cuenta concreta: 3 llamadas, 76 segundos en
 total, y una sola de ellas 44.6.** Una misión que criba diez cuentas tarda
 bastante más.
+
+**Desde el 08-09-2026, esos turnos ya no corren en la petición web**: si el
+agente tiene capacidad de investigar, el turno se encola y lo genera el cron
+por línea de órdenes, donde PHP no tiene límite de tiempo. Los límites de abajo
+siguen importando —el turno síncrono existe y el estudio del prompt también—
+pero dejan de ser la diferencia entre funcionar y no funcionar.
 
 Este servidor es **WHM/cPanel con acceso de raíz**, así que los cuatro límites
 se pueden poner. Hay que revisarlos **en este orden**, porque el primero es el
@@ -123,6 +129,27 @@ el alumno simplemente vuelve a contarlo todo cada vez, sin que nadie sepa por
 qué. Si el cron de Drupal no está programado en el servidor, prográmelo.
 
     */15 * * * * cd /ruta/al/sitio && vendor/bin/drush cron
+
+#### Con la búsqueda encendida, cada MINUTO
+
+Desde el 08-09-2026 el cron hace algo mucho más urgente que escribir memoria:
+**genera los turnos que investigan**. Un turno con capacidad de búsqueda se
+encola y espera al siguiente cron para empezar.
+
+Con el cron cada quince minutos, un alumno escribiría y **esperaría hasta un
+cuarto de hora a que su turno arrancara**. Con el cron cada minuto, arranca casi
+en el acto.
+
+    * * * * * cd /ruta/al/sitio && vendor/bin/drush cron
+
+Esto es viable aquí porque el servidor es propio. En alojamiento compartido no
+suele permitirse, y sería el argumento para no encender la búsqueda ahí.
+
+El mismo cron hace otra cosa que importa: **desatasca conversaciones**. Si el
+proceso muere a mitad de un turno, la conversación se queda en «procesando»,
+un estado que no admite mensajes. Sin cron, esa conversación queda inutilizable
+para siempre; con él, se recupera sola a los 45 minutos —configurable— y la
+persona puede volver a escribir.
 
 También hay directorio privado que crear, para los documentos de conocimiento:
 

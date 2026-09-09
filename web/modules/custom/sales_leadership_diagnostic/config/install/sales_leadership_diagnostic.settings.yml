@@ -75,6 +75,12 @@ diagnostic:
   # datos porque alguien actualice el módulo; activarlo es una decisión que
   # alguien tiene que tomar a sabiendas.
   conversation_retention_days: 0
+  # Cuantos minutos puede tardar un turno en segundo plano antes de darlo por
+  # atascado y devolver la conversacion a un estado en el que se pueda escribir.
+  # Generoso a proposito: una mision que criba diez cuentas puede tardar veinte
+  # minutos de trabajo legitimo, y desatascarla a mitad seria peor que el
+  # problema.
+  stuck_turn_minutes: 45
 
 # Topes de las herramientas. A diferencia de los de gasto, estos SI nacen con
 # valores: la herramienta solo existe si alguien enciende la busqueda a
