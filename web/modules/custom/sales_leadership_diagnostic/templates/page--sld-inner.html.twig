@@ -38,6 +38,32 @@
       </a>
 
       {#
+        Las secciones del gestor, SOLO cuando es él quien mira.
+
+        Un resultado lo abren dos personas distintas: el alumno llega desde su
+        panel a leer el suyo, y el gestor desde su listado a dar soporte sobre
+        el de otro. El marco es el mismo —es la misma pantalla y duplicarla
+        acabaría en dos versiones que divergen— y lo que cambia es que el
+        gestor necesita poder seguir a sus otras secciones.
+
+        Se intentó darle directamente el marco del gestor y fue peor: esa
+        plantilla pinta la región de cabecera del tema, y en el tema público
+        ahí vive la marca del sitio. Salía una banda azul enorme encima del
+        informe.
+      #}
+      {% if sld_manager_nav %}
+        <nav class="sld-manager__nav" aria-label="{{ 'Secciones'|t }}">
+          {% for seccion in sld_manager_nav %}
+            <a class="sld-manager__nav-link{{ seccion.activa ? ' is-active' : '' }}"
+               href="{{ seccion.url }}"
+               {% if seccion.activa %}aria-current="page"{% endif %}>
+              {{ seccion.titulo }}
+            </a>
+          {% endfor %}
+        </nav>
+      {% endif %}
+
+      {#
         Enlace simple y no un formulario: `user.logout` es la ruta pública de
         Drupal core para cerrar sesión, ya pensada para enlazarse por GET.
       #}

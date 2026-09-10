@@ -305,18 +305,6 @@ final class DiagnosticThemeHooks {
       $suggestions[] = 'page__sld_inner';
     }
 
-    // Un resultado lo abren DOS personas distintas, y no necesitan lo mismo.
-    //
-    // El alumno llega desde su panel y quiere leer: marco limpio. El gestor
-    // llega desde su listado para dar soporte, y con el marco del alumno se
-    // quedaba con un solo enlace de vuelta y sin ninguna de sus secciones.
-    //
-    // La ruta es la misma para los dos —una segunda pantalla con el mismo dato
-    // acabaria divergiendo— asi que lo que cambia es el marco.
-    if ($routeName === self::RESULT_ROUTE && $this->miraElGestor()) {
-      $suggestions[] = 'page__sld_manager';
-    }
-
     if (in_array($routeName, self::LOGIN_ROUTES, TRUE)) {
       $suggestions[] = 'page__user__login';
     }
@@ -364,7 +352,14 @@ final class DiagnosticThemeHooks {
       // de la pantalla de consumo. Va aquí y no en cada controlador porque
       // varias de estas pantallas las pinta Drupal —el listado de agentes, el
       // formulario de la entidad— y no pasan por código nuestro.
-      $variables['#attached']['library'][] = 'sales_leadership_diagnostic/manager';
+      //
+      // En la pantalla de resultado NO se adjunta: esa la pinta el tema
+      // público y ya trae su propia hoja. Ahí lo único que hace falta del
+      // gestor es su navegación, que la barra del marco del alumno pinta si
+      // le llega.
+      if ($this->routeMatch->getRouteName() !== self::RESULT_ROUTE) {
+        $variables['#attached']['library'][] = 'sales_leadership_diagnostic/manager';
+      }
     }
 
     if (!$this->usesHomeFrame()) {

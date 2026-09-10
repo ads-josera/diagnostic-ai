@@ -50,7 +50,7 @@ todos los enumerados los encontró el cliente usando el producto.
 
 Solo pasa si devuelve la lista de fallos **vacía**.
 
-## 4. Una misión de verdad contra el agente
+## 5. Una misión de verdad contra el agente
 
 Las tres anteriores no gastan un céntimo y no hablan con el modelo. Esta sí:
 conduce una conversación real, con los documentos y el prompt del cliente, y la
@@ -74,7 +74,7 @@ Es de donde salen los números que se le dan al cliente, y lo que hace falta par
 el benchmark que pide su §9: los topes se calibran midiendo, no por decreto. Lo
 medido hasta hoy está en `docs/decisiones/0012-topes-para-discovery.md`.
 
-**No es una de las tres.** No se corre para dar algo por terminado: se corre
+**No es una de las cuatro.** No se corre para dar algo por terminado: se corre
 cuando hace falta un número o cuando se toca algo que solo se ve hablando con
 el modelo de verdad.
 
@@ -100,6 +100,35 @@ es uno por persona y semana— y **una sola persona las corre todas**, lo que
 mantiene la caché caliente y no representa el primer turno de alguien que llega
 de cero.
 
+## 4. El recorrido de todos los caminos
+
+Las anteriores comprueban lógica y una pantalla. Esta recorre **el producto
+entero, con la cuenta de cada rol**:
+
+```
+SLD_GESTOR="$(ddev drush uli --uid=24 --no-browser | tail -1)" \
+SLD_ALUMNO="$(ddev drush uli --uid=25 --no-browser | tail -1)" \
+SLD_ADMIN="$(ddev drush uli --uid=1  --no-browser | tail -1)" \
+  node ~/.claude/skills/browser-automation/browser.mjs \
+  https://diagnostic-ai.ddev.site/ --script bin/caminos.mjs
+```
+
+Comprueba tres cosas por pantalla, y las tres nacieron de un fallo que llegó al
+cliente:
+
+- **El código que devuelve, en los dos sentidos.** Que cada rol entre donde debe
+  y que **reciba 403 donde no debe**. Comprobar solo lo permitido deja pasar una
+  pantalla que se abre a quien no toca.
+- **Que tenga salida.** Ya han salido tres callejones distintos.
+- **El contraste efectivo** de cada texto sobre el fondo que de verdad tiene
+  detrás. Un botón salió con texto rojo sobre azul —1,06 a 1— y la captura
+  parecía razonable.
+
+Solo pasa si devuelve la lista de fallos **vacía**.
+
+**Los uid son los de este entorno.** Y usa enlaces de un solo uso, no
+contraseñas: no toca ninguna cuenta.
+
 ## El cron, en local
 
 DDEV no ejecuta cron por su cuenta, y desde que los turnos que investigan corren
@@ -122,6 +151,6 @@ ven exactamente igual.
 
 ## Antes de dar algo por terminado
 
-Las tres primeras, y además abrir en el navegador la pantalla que se tocó. Una
+Las cuatro primeras, y además abrir en el navegador la pantalla que se tocó. Una
 prueba verde dice que el código hace lo que se le pidió, no que la pantalla se
 vea bien ni que el enlace que lleva a ella exista.

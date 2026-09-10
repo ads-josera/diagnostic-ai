@@ -279,9 +279,20 @@
   color: var(--sld-color-danger);
 }
 
+/*
+ * El chip de aviso lleva el texto MAS oscuro que su color semantico.
+ *
+ * El color de aviso sobre su propio tinte al 15 % da 4,49 a 1: por debajo del
+ * minimo, y por tan poco que mirandolo no se nota nada. Lo encontro una
+ * barrida de contraste el 10-09-2026, no un par de ojos.
+ *
+ * Se oscurece el texto en vez de aclarar el fondo porque el tinte es lo que
+ * distingue el chip de los de al lado; sin el, «denegada por tope» se lee
+ * igual que cualquier otra etiqueta.
+ */
 .sld-usage__chip--warning {
   background: color-mix(in srgb, var(--sld-color-warning) 15%, transparent);
-  color: var(--sld-color-warning);
+  color: color-mix(in srgb, var(--sld-color-warning) 78%, black);
 }
 
 .sld-usage__pct {

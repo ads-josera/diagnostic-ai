@@ -221,10 +221,15 @@
   color: #fff;
 }
 
+/* El gris de este texto medía 4,44 a 1 sobre el fondo que de verdad tiene
+   detrás —que no es blanco puro, y por eso la cuenta a mano daba 4,83 y la
+   medida en la página daba menos—. Lo encontró la barrida de contraste el
+   10-09-2026. Mirándolo no se distingue de uno que sí pasa, y es la letra
+   pequeña de la pantalla pública: la que menos margen tiene. */
 .sld-home__help {
   margin: 2.5rem auto 0;
   max-width: 32rem;
-  color: #6b7280;
+  color: #545b67;
   font-size: 0.8125rem;
   line-height: 1.6;
 }

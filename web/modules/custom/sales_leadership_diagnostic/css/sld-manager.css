@@ -287,8 +287,40 @@
   border-top: 1px solid var(--sld-color-border);
 }
 
-/* Enlace de borrar: es destructivo y se separa de las acciones normales. */
-.sld-manager__main .form-actions .button--danger,
+/*
+ * Acciones destructivas.
+ *
+ * El modulo ya marca cuales lo son: «Publicar en este agente» lleva
+ * `button--danger` porque sobrescribe el prompt en produccion. Lo que faltaba
+ * era que se VIERA.
+ *
+ * Y hay que distinguir dos casos, porque ese boton lleva ademas
+ * `button--primary`. Pintar solo el texto de rojo daba rojo sobre azul: 1,06
+ * a 1, es decir invisible. Medido, no mirado.
+ */
+.sld-manager__main .button--danger.button--primary {
+  border-color: var(--sld-color-danger);
+  background: var(--sld-color-danger);
+  /* Blanco sobre ese rojo son 6,5 a 1. */
+  color: #ffffff;
+}
+
+.sld-manager__main .button--danger.button--primary:hover {
+  border-color: color-mix(in srgb, var(--sld-color-danger) 82%, black);
+  background: color-mix(in srgb, var(--sld-color-danger) 82%, black);
+}
+
+/* La destructiva que NO es la accion principal se queda en contorno: pesa
+   menos que la de guardar, que es lo que se pulsa casi siempre. */
+.sld-manager__main .button--danger:not(.button--primary) {
+  border: 1px solid var(--sld-color-danger);
+  background: var(--sld-color-bg);
+  color: var(--sld-color-danger);
+}
+
+/* Un ENLACE de borrar se aparta a la derecha, lejos de guardar. Un boton de
+   envio no: su sitio lo decide el formulario, y «Publicar» es una accion
+   principal aunque sea peligrosa. */
 .sld-manager__main .form-actions a[href*="borrar"],
 .sld-manager__main .form-actions a[href*="delete"] {
   margin-inline-start: auto;
