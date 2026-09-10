@@ -126,7 +126,11 @@ sales_leadership_diagnostic.session:
     # Este título es el <h1> de la página y el de la pestaña del navegador. La
     # plantilla no imprime otro: dos <h1> idénticos rompen el esquema del
     # documento y se anuncian dos veces en un lector de pantalla.
-    _title: 'Sales Leadership Diagnostic AI'
+    #
+    # Lo pone el agente de LA conversación, no una cadena fija. Estuvo fija
+    # hasta el 10-09-2026, de cuando había un solo agente, y con dos hacía que
+    # toda conversación se titulara con el nombre del otro.
+    _title_callback: '\Drupal\sales_leadership_diagnostic\Controller\ChatController::title'
   requirements:
     _permission: 'access sales leadership diagnostic'
     # Sin barra invertida inicial: el ID del servicio se registra sin ella, y con

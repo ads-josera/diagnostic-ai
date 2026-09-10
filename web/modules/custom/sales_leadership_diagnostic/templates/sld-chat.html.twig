@@ -54,7 +54,7 @@
       alumno en una pantalla por lo demás en blanco.
     #}
     {% if messages is empty %}
-      {% if welcome_icon or welcome_intro or welcome_suggestions %}
+      {% if welcome_title or welcome_icon or welcome_intro or welcome_suggestions %}
         <div class="sld-chat__welcome">
           {% if welcome_icon %}
             {#
@@ -63,6 +63,13 @@
               pantalla sin aportar nada.
             #}
             <img class="sld-chat__welcome-icon" src="{{ welcome_icon }}" alt="" aria-hidden="true">
+          {% endif %}
+
+          {# El nombre del agente. No es un <h1>: ese lo pone la página, y con
+             este título ya dice lo mismo. Aquí va como encabezado de sección
+             para que quien llega sepa con quién habla sin mirar arriba. #}
+          {% if welcome_title %}
+            <h2 class="sld-chat__welcome-agent">{{ welcome_title }}</h2>
           {% endif %}
 
           {% if welcome_intro %}

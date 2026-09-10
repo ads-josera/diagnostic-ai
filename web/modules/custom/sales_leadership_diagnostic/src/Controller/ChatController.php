@@ -49,6 +49,25 @@ final class ChatController extends ControllerBase {
   }
 
   /**
+   * El título de la conversación: el nombre del agente con el que se habla.
+   *
+   * Estaba escrito a mano en la ruta —«Sales Leadership Diagnostic AI»— de
+   * cuando había un solo agente. Con dos, TODA conversación llevaba el nombre
+   * del que no era, incluida la pestaña del navegador. Lo vio el usuario el
+   * 10-09-2026 hablando con el de prospección.
+   *
+   * Es el mismo arreglo que ya se le hizo a la página de resultado; al chat se
+   * le pasó. Un agente borrado deja el nombre genérico: la conversación existe
+   * y hay que poder abrirla igual.
+   */
+  public function title(DiagnosticSessionInterface $sld_diagnostic_session): string {
+    $agente = $this->agents->get($sld_diagnostic_session->getAgentId());
+    $nombre = $agente?->label() ?? '';
+
+    return $nombre !== '' ? $nombre : (string) $this->t('Diagnóstico');
+  }
+
+  /**
    * Renderiza la conversación de una sesión.
    */
   public function view(DiagnosticSessionInterface $sld_diagnostic_session): array {
@@ -75,6 +94,10 @@ final class ChatController extends ControllerBase {
       // hay conversación, el alumno ya sabe de qué va esto y el cartel
       // estorbaría al leer. Se resuelve aquí y no en la plantilla para que la
       // decisión quede junto al resto de la lógica de la página.
+      // El nombre del agente encabeza la bienvenida. Sin él, la pantalla de
+      // arranque no dice con quién se va a hablar: el alumno con dos agentes
+      // llega desde su panel y ya no sabe en cuál de los dos entró.
+      '#welcome_title' => $messages === [] ? ($agente?->label() ?? NULL) : NULL,
       '#welcome_icon' => $messages === [] ? $this->welcome->getIconUrl($agente) : NULL,
       '#welcome_intro' => $messages === [] ? $this->welcome->getIntro($agente) : NULL,
       '#welcome_suggestions' => $messages === [] && $status->acceptsMessages()

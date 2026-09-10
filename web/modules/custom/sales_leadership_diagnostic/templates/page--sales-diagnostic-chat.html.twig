@@ -23,7 +23,10 @@
 <div class="sld-page">
 
   <header class="sld-page__bar">
-    <h1 class="sld-page__title">{{ 'Sales Leadership Diagnostic AI'|t }}</h1>
+    {# El nombre del agente de ESTA conversación, no una cadena fija. Estuvo
+       fija hasta el 10-09-2026 y con dos agentes mostraba el nombre del que
+       no era. El respaldo cubre una sesión cuyo agente se borró. #}
+    <h1 class="sld-page__title">{{ sld_page_title|default('Diagnóstico'|t) }}</h1>
   </header>
 
   {# Mensajes del sistema: se conservan porque el alumno necesita verlos. #}

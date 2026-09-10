@@ -322,6 +322,19 @@
   object-fit: contain;
 }
 
+/* El nombre del agente, encabezando la bienvenida.
+ *
+ * Manda mas que el texto de intro y menos que el titulo de la pagina: es lo
+ * primero que hay que leer aqui —con quien voy a hablar— pero no compite con
+ * el <h1>. */
+.sld-chat__welcome-agent {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
 .sld-chat__welcome-intro {
   max-width: 52ch;
   margin: 0;

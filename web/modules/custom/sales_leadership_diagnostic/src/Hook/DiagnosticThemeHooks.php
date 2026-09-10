@@ -6,6 +6,8 @@ namespace Drupal\sales_leadership_diagnostic\Hook;
 
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
+use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Branding\HomePage;
 
 /**
@@ -90,6 +92,7 @@ final class DiagnosticThemeHooks {
   public function __construct(
     private readonly RouteMatchInterface $routeMatch,
     private readonly HomePage $home,
+    private readonly AgentRegistry $agents,
   ) {}
 
   /**
@@ -151,6 +154,8 @@ final class DiagnosticThemeHooks {
       'sld_chat' => [
         'variables' => [
           'session_id' => 0,
+          // El nombre del agente, encima de la bienvenida.
+          'welcome_title' => NULL,
           'welcome_icon' => NULL,
           'welcome_intro' => NULL,
           'welcome_suggestions' => [],
@@ -312,6 +317,20 @@ final class DiagnosticThemeHooks {
    */
   #[Hook('preprocess_page')]
   public function preprocessPage(array &$variables): void {
+    // El nombre del agente para la barra del chat.
+    //
+    // Va ANTES de la comprobación del marco de portada porque la conversación
+    // no usa ese marco y se quedaría sin título. Estuvo escrito a mano en la
+    // plantilla —«Sales Leadership Diagnostic AI»— de cuando había un solo
+    // agente, y era la TERCERA copia del mismo nombre: la ruta, la plantilla
+    // de página y el título de la pestaña. Con dos agentes, quien hablaba con
+    // el de prospección leía arriba el nombre del otro.
+    $sesion = $this->routeMatch->getParameter('sld_diagnostic_session');
+
+    if ($sesion instanceof DiagnosticSessionInterface) {
+      $variables['sld_page_title'] = $this->agents->get($sesion->getAgentId())?->label() ?? '';
+    }
+
     if (!$this->usesHomeFrame()) {
       return;
     }

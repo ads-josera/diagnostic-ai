@@ -110,6 +110,44 @@ final class BackgroundTurnTest extends KernelTestBase {
   }
 
   /**
+   * Cada conversación se titula con SU agente.
+   *
+   * El título estaba escrito a mano en tres sitios —la ruta, la plantilla de
+   * página y la barra— de cuando había un solo agente. Con dos, quien hablaba
+   * con el de prospección leía arriba y en la pestaña el nombre del otro. Lo
+   * vio el usuario el 10-09-2026.
+   *
+   * Es el mismo arreglo que ya tenía la página de resultado; al chat se le
+   * pasó, y por eso esta prueba existe: para que la próxima vez que se añada
+   * un agente no haya que acordarse.
+   */
+  public function testCadaConversacionSeTitulaConSuAgente(): void {
+    $this->container->get('entity_type.manager')->getStorage('sld_agent')->create([
+      'id' => 'prospecting_diagnostic',
+      'label' => 'GAP Prospecting AI',
+      'course_id' => '35884',
+      'system_prompt' => 'PROMPT',
+    ])->save();
+
+    $chat = ChatController::create($this->container);
+
+    $this->assertSame('GAP Prospecting AI', $chat->title($this->crearSesion()));
+  }
+
+  /**
+   * Una conversación cuyo agente ya no existe se sigue pudiendo abrir.
+   *
+   * Va junto a la anterior porque el título es lo primero que se resuelve al
+   * pintar la página: si reventara ahí, la conversación entera dejaría de
+   * abrirse por un agente borrado.
+   */
+  public function testUnaConversacionSinAgenteSigueTeniendoTitulo(): void {
+    $chat = ChatController::create($this->container);
+
+    $this->assertNotSame('', $chat->title($this->crearSesion()));
+  }
+
+  /**
    * La pantalla que CARGA con un turno corriendo sabe que tiene que sondear.
    *
    * Es la mitad que faltaba de la ejecución en segundo plano, y falló en manos
