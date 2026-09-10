@@ -435,11 +435,16 @@
  * durante quince minutos se lee como «se colgo», y la persona cierra la
  * pestana justo cuando el trabajo iba bien.
  */
+/* La espera de un turno en segundo plano.
+ *
+ * Lleva ADEMAS `.sld-chat__typing`, asi que hereda los puntos animados y su
+ * version estatica para quien pide menos movimiento. Aqui solo va la caja: sin
+ * ella se confundiria con el indicador del turno sincrono, que dura segundos,
+ * cuando este puede durar minutos. */
 .sld-chat__working {
   margin: var(--sld-space-sm) 0 0;
   padding: 0.5rem 0.9rem;
   border-radius: var(--sld-radius-sm);
   background: var(--sld-color-surface);
-  color: var(--sld-color-text-muted);
   font-size: 0.9rem;
 }

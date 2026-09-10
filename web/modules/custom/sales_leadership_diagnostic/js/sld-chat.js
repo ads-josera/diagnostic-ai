@@ -202,10 +202,26 @@
       return null;
     }
 
-    const aviso = document.createElement('p');
-    aviso.className = 'sld-chat__working';
+    // Se reutiliza el indicador de «analizando», con sus puntos y su version
+    // sin movimiento. Inventar aqui un aviso distinto daria dos cosas que
+    // hacen lo mismo y se ven distinto, que es de los defectos que mas se
+    // notan; y, sobre todo, un texto quieto durante minutos se lee como
+    // colgado. Es el mismo problema que el turno que nadie sondeaba, esta vez
+    // en lo visual.
+    const aviso = document.createElement('div');
+    aviso.className = 'sld-chat__typing sld-chat__working';
     aviso.setAttribute('role', 'status');
-    aviso.textContent = Drupal.t('Investigando…');
+
+    const puntos = document.createElement('span');
+    puntos.className = 'sld-chat__typing-dots';
+    puntos.setAttribute('aria-hidden', 'true');
+    puntos.innerHTML = '<span></span><span></span><span></span>';
+
+    const etiqueta = document.createElement('span');
+    etiqueta.className = 'sld-chat__typing-label';
+    etiqueta.textContent = Drupal.t('Investigando');
+
+    aviso.append(puntos, etiqueta);
     log.appendChild(aviso);
     scrollToEnd(log);
 
@@ -238,9 +254,11 @@
         return estado;
       }
 
-      aviso.textContent = estado.searches > 0
-        ? Drupal.formatPlural(estado.searches, 'Investigando… 1 búsqueda hecha', 'Investigando… @count búsquedas hechas')
-        : Drupal.t('Investigando…');
+      // Se toca la ETIQUETA, no el aviso: escribir sobre el aviso entero se
+      // llevaria por delante los puntos.
+      etiqueta.textContent = estado.searches > 0
+        ? Drupal.formatPlural(estado.searches, 'Investigando · 1 búsqueda hecha', 'Investigando · @count búsquedas hechas')
+        : Drupal.t('Investigando');
     }
 
     aviso.remove();
