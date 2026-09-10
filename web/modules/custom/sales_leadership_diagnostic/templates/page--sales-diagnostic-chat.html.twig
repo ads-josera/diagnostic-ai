@@ -27,6 +27,18 @@
        fija hasta el 10-09-2026 y con dos agentes mostraba el nombre del que
        no era. El respaldo cubre una sesión cuyo agente se borró. #}
     <h1 class="sld-page__title">{{ sld_page_title|default('Diagnóstico'|t) }}</h1>
+
+    {#
+      Cerrar sesión. Faltaba hasta el 10-09-2026: la única salida de esta
+      pantalla era «volver al panel», y es donde el alumno pasa más tiempo.
+      Es el mismo defecto que se le arregló al gestor, en la pantalla que
+      entonces no se miró.
+    #}
+    <a class="sld-home__logout sld-page__logout"
+       {% if sld_accent_color %}style="background-color: {{ sld_accent_color }}"{% endif %}
+       href="{{ path('user.logout') }}">
+      {{ 'Cerrar sesión'|t }}
+    </a>
   </header>
 
   {# Mensajes del sistema: se conservan porque el alumno necesita verlos. #}

@@ -236,20 +236,49 @@
   font-family: var(--sld-font);
 }
 
+/* La barra de la conversacion.
+ *
+ * Lleva el nombre del agente a la izquierda y la salida a la derecha. Hasta el
+ * 10-09-2026 solo llevaba el titulo, y la unica forma de salir de la pantalla
+ * donde el alumno pasa mas tiempo era volver al panel. */
 .sld-page__bar {
   flex: 0 0 auto;
-  padding: var(--sld-space-md) var(--sld-space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--sld-space-md);
+  padding: var(--sld-space-md);
   border-bottom: 1px solid var(--sld-color-border);
 }
 
+/* El titulo deja de centrarse solo: ahora comparte fila. El centrado lo hace
+   el contenedor de dentro, que alinea con el ancho de la conversacion. */
 .sld-page__title {
-  max-width: 60rem;
-  margin: 0 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
   color: var(--sld-color-text);
   font-size: 1.05rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.sld-page__logout {
+  flex: 0 0 auto;
+}
+
+/* La barra se alinea con la conversacion, que va acotada a 48rem. Sin esto,
+   el titulo empieza pegado al borde y el chat empieza mas adentro: dos margen
+   distintos en la misma pantalla se notan aunque no se sepa por que. */
+.sld-page__bar > * {
+  max-width: none;
+}
+
+@media (min-width: 52rem) {
+  .sld-page__bar {
+    padding-inline: clamp(1rem, 4vw, 2.5rem);
+  }
 }
 
 .sld-page__content {

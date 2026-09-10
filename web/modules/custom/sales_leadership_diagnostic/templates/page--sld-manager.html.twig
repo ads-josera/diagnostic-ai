@@ -51,6 +51,23 @@
     </a>
 
     {#
+      Las secciones. Van en la barra y no como pestañas de Drupal porque esas
+      solo se pintan en las pantallas de aterrizaje: al entrar a editar un
+      agente desaparecían y el gestor se quedaba sin por dónde volver.
+    #}
+    {% if sld_manager_nav %}
+      <nav class="sld-manager__nav" aria-label="{{ 'Secciones'|t }}">
+        {% for seccion in sld_manager_nav %}
+          <a class="sld-manager__nav-link{{ seccion.activa ? ' is-active' : '' }}"
+             href="{{ seccion.url }}"
+             {% if seccion.activa %}aria-current="page"{% endif %}>
+            {{ seccion.titulo }}
+          </a>
+        {% endfor %}
+      </nav>
+    {% endif %}
+
+    {#
       Enlace simple y no un formulario: `user.logout` es la ruta pública de
       Drupal core para cerrar sesión, ya pensada para enlazarse por GET.
     #}

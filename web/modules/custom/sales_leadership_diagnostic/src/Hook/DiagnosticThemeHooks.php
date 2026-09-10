@@ -6,9 +6,11 @@ namespace Drupal\sales_leadership_diagnostic\Hook;
 
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Branding\HomePage;
+use Drupal\sales_leadership_diagnostic\Service\Manager\ManagerNavigation;
 
 /**
  * Plantillas que aporta el módulo.
@@ -41,6 +43,11 @@ final class DiagnosticThemeHooks {
    *
    * @var string[]
    */
+  /**
+   * La pantalla de resultado, que comparten el alumno y el gestor.
+   */
+  private const RESULT_ROUTE = 'sales_leadership_diagnostic.result';
+
   private const INNER_ROUTES = [
     'sales_leadership_diagnostic.dashboard',
     'sales_leadership_diagnostic.agent_page',
@@ -93,6 +100,7 @@ final class DiagnosticThemeHooks {
     private readonly RouteMatchInterface $routeMatch,
     private readonly HomePage $home,
     private readonly AgentRegistry $agents,
+    private readonly ManagerNavigation $navegacion,
   ) {}
 
   /**
@@ -297,6 +305,18 @@ final class DiagnosticThemeHooks {
       $suggestions[] = 'page__sld_inner';
     }
 
+    // Un resultado lo abren DOS personas distintas, y no necesitan lo mismo.
+    //
+    // El alumno llega desde su panel y quiere leer: marco limpio. El gestor
+    // llega desde su listado para dar soporte, y con el marco del alumno se
+    // quedaba con un solo enlace de vuelta y sin ninguna de sus secciones.
+    //
+    // La ruta es la misma para los dos —una segunda pantalla con el mismo dato
+    // acabaria divergiendo— asi que lo que cambia es el marco.
+    if ($routeName === self::RESULT_ROUTE && $this->miraElGestor()) {
+      $suggestions[] = 'page__sld_manager';
+    }
+
     if (in_array($routeName, self::LOGIN_ROUTES, TRUE)) {
       $suggestions[] = 'page__user__login';
     }
@@ -331,6 +351,16 @@ final class DiagnosticThemeHooks {
       $variables['sld_page_title'] = $this->agents->get($sesion->getAgentId())?->label() ?? '';
     }
 
+    // Las secciones del gestor. Van SIEMPRE que la pantalla lleve su marco,
+    // incluidas las de dentro: es lo que impide que editar un agente sea un
+    // callejón sin vuelta.
+    if (
+      in_array($this->routeMatch->getRouteName(), self::MANAGER_ROUTES, TRUE)
+      || ($this->routeMatch->getRouteName() === self::RESULT_ROUTE && $this->miraElGestor())
+    ) {
+      $variables['sld_manager_nav'] = $this->navegacion->secciones();
+    }
+
     if (!$this->usesHomeFrame()) {
       return;
     }
@@ -356,12 +386,35 @@ final class DiagnosticThemeHooks {
   }
 
   /**
+   * Si quien mira el resultado es personal y no su dueño.
+   *
+   * Se decide por el DUEÑO del resultado y no por el rol: el gestor podría
+   * tener también su propio diagnóstico, y al abrir el suyo debe verlo como
+   * cualquier alumno. Lo que cambia el marco es mirar el de otra persona.
+   */
+  private function miraElGestor(): bool {
+    $resultado = $this->routeMatch->getParameter('sld_diagnostic_result');
+
+    if (!$resultado instanceof DiagnosticResultInterface) {
+      return FALSE;
+    }
+
+    // phpcs:ignore DrupalPractice.Objects.GlobalDrupal.GlobalDrupal
+    return (string) \Drupal::currentUser()->id() !== (string) $resultado->getOwnerId();
+  }
+
+  /**
    * Si la ruta actual usa el marco compartido de la portada.
    */
   private function usesHomeFrame(): bool {
     return in_array(
       $this->routeMatch->getRouteName(),
-      [...self::LOGIN_ROUTES, ...self::INNER_ROUTES, ...self::MANAGER_ROUTES],
+      // La conversación va incluida desde el 10-09-2026. Su barra llevaba solo
+      // un título y ninguna salida: el alumno podía volver al panel y nada
+      // más, sin cerrar sesión desde la pantalla donde más tiempo pasa. Es el
+      // mismo defecto que se le arregló al gestor el 04-09-2026, en la
+      // pantalla que entonces no se miró.
+      [self::CHAT_ROUTE, ...self::LOGIN_ROUTES, ...self::INNER_ROUTES, ...self::MANAGER_ROUTES],
       TRUE,
     );
   }

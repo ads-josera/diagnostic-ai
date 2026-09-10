@@ -548,6 +548,75 @@
   margin: 0;
 }
 
+/*
+ * Las secciones del gestor, dentro de la barra.
+ *
+ * Van aqui y no como pestanas de Drupal porque esas solo se pintan en las
+ * pantallas de aterrizaje: al entrar a editar un agente desaparecian. Una
+ * navegacion que cambia segun donde estes no es una navegacion.
+ *
+ * Se envuelven en movil en vez de esconderse tras un boton: son cinco
+ * entradas, caben, y un menu desplegable en una barra de trabajo anade un
+ * clic a cada salto.
+ */
+.sld-manager__nav {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  margin-inline: clamp(0.5rem, 3vw, 2rem);
+}
+
+.sld-manager__nav-link {
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sld-manager__nav-link:hover,
+.sld-manager__nav-link:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.sld-manager__nav-link:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* La activa se marca con fondo lleno, no solo con color: sobre una barra de
+   color el matiz solo no se distingue, y es la unica pista de donde estas. */
+.sld-manager__nav-link.is-active {
+  background: #ffffff;
+  color: var(--sld-color-primary, #1f4788);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sld-manager__nav-link {
+    transition: none;
+  }
+}
+
+/*
+ * Las pestanas locales de Drupal se ocultan DENTRO del marco del gestor.
+ *
+ * No se borran: siguen existiendo para cualquier otra pantalla de
+ * administracion. Aqui sobran porque la barra ya lleva las mismas secciones,
+ * y ademas mejor: la barra las lleva SIEMPRE y las pestanas solo en las
+ * pantallas de aterrizaje.
+ */
+.sld-manager .block-local-tasks-block,
+.sld-manager nav.tabs--primary,
+.sld-manager .tabs--primary {
+  display: none;
+}
+
 .sld-manager__main {
   padding: 1.5rem clamp(1rem, 4vw, 2.5rem) 4rem;
 }
