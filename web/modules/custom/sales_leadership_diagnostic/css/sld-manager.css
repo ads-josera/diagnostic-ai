@@ -95,6 +95,21 @@
   background: transparent;
 }
 
+/*
+ * Un boton DENTRO de una fila es una accion de fila.
+ *
+ * El del tema mide 48 px de alto y trae sus margenes, y eso inflaba cada fila
+ * a 105 px: quince documentos eran metro y medio de tabla para leer cinco
+ * datos por linea. Medido, no estimado.
+ */
+.sld-manager__main tbody .button,
+.sld-manager__main tbody input[type="submit"] {
+  margin: 0;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
 /* La primera columna es el nombre de la cosa: manda sobre el resto. */
 .sld-manager__main tbody td:first-child,
 .sld-manager__main tbody th:first-child {
@@ -191,9 +206,20 @@
  * rellenar, y hace que un formulario de doce campos parezca una hoja de
  * calculo.
  */
+/*
+ * El ancho comodo es para los CAMPOS, no para los paneles.
+ *
+ * Al principio se acotaron tambien los `details`, y eso oculto datos: el panel
+ * de documentos contiene una tabla de cinco columnas y 1227 px, el recorte lo
+ * dejo en 832, y con el `overflow: hidden` que le da las esquinas redondeadas
+ * **cuatro columnas desaparecieron sin dejar rastro**. La pantalla parecia
+ * correcta: una tabla, con su cabecera y sus filas.
+ *
+ * Un recorte de ancho nunca debe poder esconder contenido. Los paneles van
+ * libres y lo ancho scrollea dentro, que es visible y recuperable.
+ */
 .sld-manager__main .layout-region,
 .sld-manager__main form > .form-item,
-.sld-manager__main form > details,
 .sld-manager__main form > .form-actions {
   max-width: 52rem;
 }
@@ -269,6 +295,8 @@
 
 .sld-manager__main details > *:not(summary) {
   padding-inline: 1rem;
+  /* Lo que no cabe se desplaza a la vista, no se recorta. */
+  overflow-x: auto;
 }
 
 .sld-manager__main details > *:last-child:not(summary) {

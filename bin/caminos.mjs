@@ -31,6 +31,11 @@
  *
  * Los uid son los de este entorno; en otro habra que ajustarlos. Se usan
  * enlaces de un solo uso y no contrasenas para no tocar ninguna cuenta.
+ *
+ * **Los enlaces se generan justo antes de correr.** Son de un solo uso: si se
+ * reutiliza uno ya gastado, Drupal no entra y el recorrido corre como anonimo.
+ * Cuando pasa, cada fallo lo dice —«entro como login»— en vez de dejar creer
+ * que las pantallas se rompieron.
  */
 
 const SITIO = 'https://diagnostic-ai.ddev.site';
