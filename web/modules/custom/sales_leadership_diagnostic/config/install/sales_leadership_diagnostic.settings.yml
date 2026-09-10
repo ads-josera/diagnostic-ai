@@ -40,7 +40,21 @@ openai:
       cached_input: 0.2
       output: 12.0
   max_retries: 2
-  max_completion_tokens: 2000
+  # Techo de la respuesta del modelo, en tokens.
+  #
+  # 16 000 y no menos porque el Weekly GOLD Pack escribe el Pack DOS veces: en
+  # Markdown para la persona, que es lo unico que lee, y en campos para que el
+  # sistema pueda comprobarlo y guardarlo. Es inherente al diseno y no se puede
+  # evitar componiendo la prosa nosotros: eso seria escribir su entregable.
+  #
+  # Medido el 10-09-2026 sobre 17 misiones Discovery: el turno que cierra ocupa
+  # entre 7 100 y 8 000 tokens. Con el tope en 8 000, dos misiones de siete se
+  # cortaron a la mitad y la respuesta se perdio entera. Las que si cerraron
+  # pasaron a menos de 900 tokens del techo, que no es margen: es suerte.
+  #
+  # Subirlo no cuesta nada por si solo. Solo se paga lo que el modelo escribe,
+  # y lo que escribe lo decide el contenido, no el techo.
+  max_completion_tokens: 16000
 # Topes de gasto del proveedor de IA, en DOLARES por mes natural.
 #
 # Cero significa SIN TOPE, que es lo que el modulo ha hecho siempre: activar un
@@ -90,24 +104,38 @@ diagnostic:
 # Los numeros son de partida y hay que calibrarlos con el benchmark, como pide
 # su §9. Cero significa sin tope.
 tools:
-  # Por mision. Estan calibrados para que quepa una mision Discovery, que es la
-  # mas cara de las cuatro puertas: su metodologia exige cribar 10 cuentas
-  # candidatas y profundizar en 3 a 5, verificando Buyer en cada una. Son entre
-  # 30 y 45 busquedas.
+  # CALIBRADOS CON 18 MISIONES DISCOVERY REALES el 10-09-2026, como pide su §9.
+  # Lo medido, con `bin/benchmark.php`:
   #
-  # Parecen generosos y no lo son: el entitlement concede UNA mision de
-  # investigacion por persona y semana, asi que este tope no acota cuanto se
-  # gasta al mes —eso lo hacen el tope por persona y periodo y, sobre todo, el
-  # tope de dinero—. Acota que UNA mision se desboque.
-  max_calls_per_mission: 50
+  #                  minimo  mediana     p90   maximo
+  #   busquedas           8       16      22       25
+  #   caracteres     21 020   56 513  78 398   89 487
+  #
+  # Los topes van sobre el p90 con holgura, NO sobre la media: la media deja
+  # fuera a la mitad de las misiones.
+  #
+  # Y se yerra por ARRIBA a proposito, porque los dos errores no cuestan lo
+  # mismo. Un tope alto de mas deja que una mision rara gaste un poco mas, y el
+  # gasto ya lo acotan el entitlement —una mision por persona y semana— y el
+  # tope en dolares. Un tope bajo de mas hace que el agente investigue a
+  # medias, y eso NO se ve: declara honestamente lo que no pudo verificar,
+  # exactamente igual que cuando termina bien.
+  #
+  # Por mision: 40 es 1,8 veces el p90 y 1,6 veces la mision mas cara medida.
+  max_calls_per_mission: 40
   # Caracteres de contenido externo que pueden entrar al modelo en una mision.
-  # Es donde esta la mayor parte de lo que cuesta buscar: unos 4 000 por
-  # busqueda, asi que 200 000 dan para las 50.
-  max_retrieved_chars_per_mission: 200000
+  # Es donde esta la mayor parte de lo que cuesta buscar: unos 3 500 por
+  # busqueda medidos. 160 000 son 2 veces el p90.
+  max_retrieved_chars_per_mission: 160000
   # Por persona y mes. NO es redundante con el de la mision: sin este, el tope
   # se salta abriendo otra conversacion, que es el bypass que nombra su §6.
-  # Cuatro misiones al mes a 50 busquedas, con margen.
-  max_calls_per_user_period: 220
+  #
+  # 200 = cinco misiones a la mas cara medida (25), mas las comprobaciones
+  # puntuales. Con una mision por semana, nadie legitimo se acerca. Este tope
+  # es el unico que se ha visto disparar de verdad: lo hizo el benchmark al
+  # correr veinte misiones con una sola persona, que son cinco veces lo que el
+  # sistema concede a nadie.
+  max_calls_per_user_period: 200
 
 # Busqueda externa. El agente solo busca si hay clave del buscador en el
 # entorno del servidor; sin ella lo declara y sigue con lo que no dependa de
@@ -120,13 +148,13 @@ search:
   # techo de gasto disfrazado: cada vuelta es una llamada mas y, con busqueda,
   # varias busquedas mas.
   #
-  # 20 porque una mision Discovery no cabe en menos: el modelo pide dos o tres
-  # busquedas por vuelta, y necesita entre 30 y 45. Con 4 vueltas se quedaba a
-  # mitad y lo declaraba honestamente, que es correcto pero no es cribar.
+  # Medido sobre 18 misiones: la que mas vueltas dio uso siete. 15 es el doble,
+  # y por el mismo motivo que los de arriba se deja holgado: quedarse una
+  # vuelta corto produce un Pack a medias que nadie distingue de uno completo.
   #
   # Ahora que estos turnos corren en segundo plano, subirlo ya no alarga
   # ninguna espera en una peticion web.
-  max_tool_rounds: 20
+  max_tool_rounds: 15
   # Resultados por busqueda. El texto recuperado es la mayor parte de lo que
   # cuesta buscar.
   max_results: 5

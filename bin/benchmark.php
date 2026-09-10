@@ -45,107 +45,127 @@ use Drupal\user\Entity\User;
  * operación. Repetir el mismo veinte veces mediría una cosa veinte veces, y lo
  * que hace falta saber es cuánto varía una misión según lo que se le pida.
  *
- * @return array<int, array{oferta: string, territorio: string, sectores: string}>
+ * @return array<int, array{empresa: string, oferta: string, territorio: string, sectores: string}>
  *   Un escenario por entrada.
  */
 function sld_bench_escenarios(): array {
   return [
     [
+      'empresa' => 'Vialta Telematica',
       'oferta' => 'telemetria para flotillas pesadas: GPS, sensores de combustible y camaras de cabina. No vendemos por debajo de 60 unidades',
       'territorio' => 'Bajio: Queretaro, Guanajuato y Aguascalientes',
       'sectores' => 'manufactura, alimentos y bebidas, transporte de carga',
     ],
     [
+      'empresa' => 'Almatek Systems',
       'oferta' => 'automatizacion de almacen: pallet shuttles y software de gestion. Proyectos desde 4 millones de pesos',
       'territorio' => 'Nuevo Leon y Coahuila',
       'sectores' => 'retail, distribucion y comercio electronico',
     ],
     [
+      'empresa' => 'Vibrantia Predictivo',
       'oferta' => 'mantenimiento predictivo con sensores de vibracion para maquinaria rotativa',
       'territorio' => 'Veracruz y Tabasco',
       'sectores' => 'petroquimica, energia y quimica',
     ],
     [
+      'empresa' => 'Cadena Fria Nova',
       'oferta' => 'plataforma de trazabilidad para cadena de frio, con certificacion sanitaria',
       'territorio' => 'Jalisco y Michoacan',
       'sectores' => 'agroindustria, lacteos y exportacion de berries',
     ],
     [
+      'empresa' => 'Muro OT Seguridad',
       'oferta' => 'ciberseguridad industrial OT: segmentacion de redes y monitoreo de planta',
       'territorio' => 'Estado de Mexico y CDMX',
       'sectores' => 'automotriz, autopartes y manufactura pesada',
     ],
     [
+      'empresa' => 'Pronostica Demanda',
       'oferta' => 'software de planeacion de demanda con pronostico, para empresas de consumo',
-      'territorio' => 'nacional, con foco en el centro del pais',
+      'territorio' => 'Mexico, con foco en el centro del pais',
       'sectores' => 'consumo masivo y farmaceutico',
     ],
     [
+      'empresa' => 'Nomina Norte',
       'oferta' => 'servicios de nomina y administracion de personal para plantillas de mas de 500',
       'territorio' => 'Baja California y Sonora',
       'sectores' => 'maquila, electronica y dispositivos medicos',
     ],
     [
+      'empresa' => 'Solaria Techo Industrial',
       'oferta' => 'paneles solares industriales en techo, con financiamiento a diez anos',
       'territorio' => 'Sonora y Chihuahua',
       'sectores' => 'mineria, cemento y manufactura intensiva en energia',
     ],
     [
+      'empresa' => 'Lotea ERP',
       'oferta' => 'ERP de manufactura por lotes, implantacion en menos de seis meses',
       'territorio' => 'Puebla y Tlaxcala',
       'sectores' => 'textil, calzado y alimentos procesados',
     ],
     [
+      'empresa' => 'Ciclo Agua Industrial',
       'oferta' => 'tratamiento y reuso de agua industrial, con obligacion de cumplimiento normativo',
       'territorio' => 'Guanajuato y Queretaro',
       'sectores' => 'curtiduria, quimica y alimentos',
     ],
     [
+      'empresa' => 'Eleva Montacargas',
       'oferta' => 'flota de montacargas en arrendamiento con telemetria y mantenimiento incluido',
       'territorio' => 'Nuevo Leon',
       'sectores' => 'logistica, acero y distribucion',
     ],
     [
+      'empresa' => 'Metrologia Exacta',
       'oferta' => 'laboratorio de metrologia y calibracion acreditado',
       'territorio' => 'Aguascalientes y San Luis Potosi',
       'sectores' => 'automotriz y aeroespacial',
     ],
     [
+      'empresa' => 'Distribuye B2B',
       'oferta' => 'plataforma de comercio B2B para distribuidores, con catalogo y credito',
       'territorio' => 'Yucatan y Quintana Roo',
       'sectores' => 'materiales de construccion y ferreteria',
     ],
     [
+      'empresa' => 'Vigia Analitica',
       'oferta' => 'seguridad patrimonial con videoanalitica y centro de monitoreo propio',
       'territorio' => 'Sinaloa y Nayarit',
       'sectores' => 'agroindustria, pesca y logistica',
     ],
     [
+      'empresa' => 'Ahorro Compartido Energia',
       'oferta' => 'consultoria de eficiencia energetica con contratos por ahorro compartido',
       'territorio' => 'CDMX y Estado de Mexico',
       'sectores' => 'hoteleria, hospitales y centros comerciales',
     ],
     [
+      'empresa' => 'Empaque Vivo',
       'oferta' => 'empaque sostenible a medida, con troquel propio y tirajes medianos',
       'territorio' => 'Jalisco',
       'sectores' => 'alimentos artesanales, tequila y cosmetica',
     ],
     [
+      'empresa' => 'Cobot Integra',
       'oferta' => 'robots colaborativos para linea de ensamble, con integracion llave en mano',
       'territorio' => 'Guanajuato y Queretaro',
       'sectores' => 'autopartes y electrodomesticos',
     ],
     [
+      'empresa' => 'Riesgo Claro',
       'oferta' => 'plataforma de gestion de riesgo crediticio para financieras medianas',
-      'territorio' => 'nacional',
+      'territorio' => 'Mexico',
       'sectores' => 'sofomes, uniones de credito y arrendadoras',
     ],
     [
+      'empresa' => 'Clinilab Empresas',
       'oferta' => 'servicios de laboratorio clinico para empresas, con unidad movil',
       'territorio' => 'Nuevo Leon y Tamaulipas',
       'sectores' => 'industria pesada y maquila',
     ],
     [
+      'empresa' => 'Subestacion Segura',
       'oferta' => 'mantenimiento de subestaciones electricas y pruebas de aceite',
       'territorio' => 'Coahuila y Durango',
       'sectores' => 'mineria, acero y parques industriales',
@@ -160,16 +180,17 @@ function sld_bench_escenarios(): array {
  * protocolo a las veinte. Una conversación distinta en cada una mediría la
  * conversación, no la misión.
  *
- * @param array{oferta: string, territorio: string, sectores: string} $escenario
+ * @param array{empresa: string, oferta: string, territorio: string, sectores: string} $escenario
  *   Escenario a plantear.
  */
 function sld_bench_mensaje(array $escenario): string {
   return sprintf(
-    'Soy director comercial. Vendemos %s. Somos una empresa joven y no vas a '
+    'Soy director comercial de %s. Vendemos %s. Somos una empresa joven y no vas a '
     . 'encontrar nada publico de nosotros: usa esta descripcion como fuente de '
     . 'primera parte y no gastes busquedas en buscarnos. Battlefield: %s. '
     . 'Sectores: %s. Adelante con el screening y cierrame la mision con el '
     . 'Weekly GOLD Pack completo.',
+    $escenario['empresa'],
     $escenario['oferta'],
     $escenario['territorio'],
     $escenario['sectores'],
@@ -177,18 +198,33 @@ function sld_bench_mensaje(array $escenario): string {
 }
 
 /**
- * La cuenta con la que se mide.
+ * La cuenta con la que se mide una misión concreta.
+ *
+ * **Una persona por misión**, y no una para todas. Se descubrió corriéndolo:
+ * con una sola cuenta, el benchmark topó contra el tope por persona y mes en
+ * la misión quince —220 búsquedas exactas— y las cinco siguientes salieron
+ * vacías porque el gateway las denegó una por una.
+ *
+ * El tope hizo su trabajo; el que estaba mal era el método. Veinte misiones en
+ * una persona son cinco veces lo que el sistema concede a nadie: el
+ * entitlement da una por semana. En producción cada misión es de alguien
+ * distinto, así que medirlo así también es más fiel.
+ *
+ * @param int $indice
+ *   Escenario que va a correr esta cuenta.
  */
-function sld_bench_alumno(): User {
+function sld_bench_alumno(int $indice): User {
+  $nombre = 'benchmark_p' . $indice;
+
   $existentes = \Drupal::entityTypeManager()->getStorage('user')
-    ->loadByProperties(['name' => 'benchmark_prueba']);
+    ->loadByProperties(['name' => $nombre]);
 
   if ($existentes !== []) {
     return reset($existentes);
   }
 
   $cuenta = User::create([
-    'name' => 'benchmark_prueba',
+    'name' => $nombre,
     'status' => 1,
     'timezone' => 'America/Mexico_City',
   ]);
@@ -204,8 +240,6 @@ if ($accion === 'correr') {
   $cuantas = max(1, min(20, (int) ($extra[1] ?? 1)));
   $desde = max(0, (int) ($extra[2] ?? 0));
 
-  $alumno = sld_bench_alumno();
-  $uid = (int) $alumno->id();
   $agente = \Drupal::entityTypeManager()->getStorage('sld_agent')->load('prospecting_diagnostic');
   $prompt = \Drupal::service(DiagnosticPromptManager::class)->composeFor($agente);
   $conversacion = \Drupal::service(ConversationService::class);
@@ -213,8 +247,10 @@ if ($accion === 'correr') {
   $escenarios = sld_bench_escenarios();
 
   for ($i = $desde; $i < $desde + $cuantas && $i < count($escenarios); $i++) {
+    $uid = (int) sld_bench_alumno($i)->id();
+
     // Se le devuelve la semana. En producción es una misión por persona y
-    // semana; sin esto solo se podría medir una cada siete días.
+    // semana; sin esto una repetición del benchmark no mediría nada.
     $bd->delete('sld_research_entitlement')->condition('uid', $uid)->execute();
 
     $sesion = $almacen->create([
@@ -281,25 +317,49 @@ if ($accion === 'correr') {
 }
 
 if ($accion === 'informe') {
-  $uid = (int) sld_bench_alumno()->id();
-
   $filas = $bd->query(
     'SELECT s.id sid,
             (SELECT COUNT(*) FROM {sld_tool_call} t WHERE t.session_id = s.id AND t.allowed = 1 AND t.tool = :t) busquedas,
             (SELECT COALESCE(SUM(retrieved_chars),0) FROM {sld_tool_call} t WHERE t.session_id = s.id AND t.allowed = 1 AND t.tool = :t) chars,
             (SELECT COUNT(*) FROM {sld_ai_usage} u WHERE u.session_id = s.id) llamadas,
             (SELECT COALESCE(SUM(cost_usd),0) FROM {sld_ai_usage} u WHERE u.session_id = s.id) usd,
-            (SELECT COUNT(*) FROM {sld_diagnostic_result} r WHERE r.session_id = s.id) cerro
+            (SELECT COUNT(*) FROM {sld_diagnostic_result} r WHERE r.session_id = s.id) cerro,
+            (SELECT COUNT(*) FROM {sld_tool_call} t WHERE t.session_id = s.id AND t.denial_reason = :d) topada
        FROM {sld_diagnostic_session} s
-      WHERE s.uid = :u
+      WHERE s.uid IN (SELECT uid FROM {users_field_data} WHERE name LIKE :n)
       ORDER BY s.id',
-    [':t' => 'buscar_web', ':u' => $uid],
+    [':t' => 'buscar_web', ':n' => 'benchmark_%', ':d' => 'tope_llamadas_periodo'],
   )->fetchAll();
 
   if ($filas === []) {
     print "Todavía no hay misiones medidas.\n";
     return;
   }
+
+  // Se apartan las misiones que no midieron nada, y se dice cuántas y por qué.
+  // Promediarlas con las buenas hundiría los percentiles y haría parecer que
+  // una misión necesita menos búsquedas de las que necesita, que es justo el
+  // error que un tope mal puesto convierte en investigación a medias.
+  //
+  // Los dos motivos son distintos y conviene no confundirlos:
+  //
+  //  - **Topada**: el benchmark chocó contra su propio tope por persona y mes.
+  //    Es un fallo del método —veinte misiones no caben en una persona—, no de
+  //    la misión.
+  //  - **Sin cerrar**: el agente pidió un dato antes de investigar, casi
+  //    siempre porque el escenario no decía de qué país era el territorio. Es
+  //    conducta correcta suya y escenario mal escrito nuestro.
+  $topadas = array_filter($filas, static fn ($f): bool => (int) $f->topada > 0);
+  $sinCerrar = array_filter($filas, static fn ($f): bool => (int) $f->topada === 0 && (int) $f->cerro === 0);
+  $validas = array_filter($filas, static fn ($f): bool => (int) $f->topada === 0 && (int) $f->cerro > 0);
+
+  if ($validas === []) {
+    print "Ninguna misión válida que medir.\n";
+    return;
+  }
+
+  $descartadas = $filas;
+  $filas = array_values($validas);
 
   $busquedas = array_map(static fn ($f): int => (int) $f->busquedas, $filas);
   $chars = array_map(static fn ($f): int => (int) $f->chars, $filas);
@@ -323,9 +383,17 @@ if ($accion === 'informe') {
     return $valores[max(0, min($i, count($valores) - 1))];
   };
 
-  $cerradas = count(array_filter($filas, static fn ($f): bool => (int) $f->cerro > 0));
+  printf("BENCHMARK — %d misiones válidas de %d corridas\n", count($filas), count($descartadas));
 
-  printf("BENCHMARK — %d misiones, %d cerraron en un Pack\n\n", count($filas), $cerradas);
+  if ($topadas !== []) {
+    printf("  %d apartadas: toparon el cupo por persona y mes (fallo del método)\n", count($topadas));
+  }
+
+  if ($sinCerrar !== []) {
+    printf("  %d apartadas: el agente pidió un dato antes de investigar\n", count($sinCerrar));
+  }
+
+  print "\n";
   printf("%-14s %8s %8s %8s %8s\n", '', 'mínimo', 'mediana', 'p90', 'máximo');
   printf("%-14s %8d %8d %8d %8d\n", 'búsquedas', $busquedas[0], $percentil($busquedas, 0.5), $percentil($busquedas, 0.9), end($busquedas));
   printf("%-14s %8s %8s %8s %8s\n", 'caracteres', number_format($chars[0]), number_format($percentil($chars, 0.5)), number_format($percentil($chars, 0.9)), number_format(end($chars)));
