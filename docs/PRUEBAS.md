@@ -78,6 +78,28 @@ medido hasta hoy está en `docs/decisiones/0012-topes-para-discovery.md`.
 cuando hace falta un número o cuando se toca algo que solo se ve hablando con
 el modelo de verdad.
 
+### El benchmark
+
+Para calibrar los topes hace falta más de una misión. `bin/benchmark.php` corre
+varias seguidas con el **mismo protocolo y escenarios distintos** —sector,
+territorio y tipo de oferta— y saca los percentiles:
+
+```
+ddev drush php:script bin/benchmark.php -- correr 5
+ddev drush php:script bin/benchmark.php -- correr 5 5   # las cinco siguientes
+ddev drush php:script bin/benchmark.php -- informe
+```
+
+Gasta unos **$0.40 USD por misión** y tarda unos **dos minutos y medio** cada
+una. El tope global de la pantalla de consumo es la red: si se agota, las
+llamadas dejan de ocurrir y el benchmark se detiene solo.
+
+Dos cosas se apartan de producción a propósito y hay que tenerlas presentes al
+leer los números: se **devuelve el entitlement** entre misiones —en producción
+es uno por persona y semana— y **una sola persona las corre todas**, lo que
+mantiene la caché caliente y no representa el primer turno de alguien que llega
+de cero.
+
 ## Antes de dar algo por terminado
 
 Las tres primeras, y además abrir en el navegador la pantalla que se tocó. Una
