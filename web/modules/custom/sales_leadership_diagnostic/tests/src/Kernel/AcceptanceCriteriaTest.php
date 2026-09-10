@@ -6,6 +6,7 @@ namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\DTO\AiCall;
+use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator;
 use Drupal\sales_leadership_diagnostic\MissionState;
 use Drupal\sales_leadership_diagnostic\ResearchAccess;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn;
@@ -29,15 +30,11 @@ use PHPUnit\Framework\Attributes\CoversNothing;
  * nuestra: es la lista contra la que él dijo que revisaría el trabajo, y por
  * eso cada prueba lleva su identificador en el nombre.
  *
- * **Dos quedan fuera y conviene decir por qué**, no dejarlos sin marcar:
- *
- * - **A10** «PREPARED sin mensaje: validator lo rechaza/corrige a BLOCKED».
- * - **A11** «Pool declarado ≥10: validator exige cuentas nominales».
- *
- * Los dos comprueban la **salida estructurada del Weekly GOLD Pack**, que no
- * está construida: quedó explícitamente fuera del alcance acordado. Hoy el Pack
- * se entrega dentro de la conversación y no como objeto validable cuenta por
- * cuenta. Escribir esas dos pruebas ahora sería fingir cobertura.
+ * Los doce están cubiertos desde el 10-09-2026. Hasta esa fecha, **A10 y A11
+ * quedaban fuera** porque comprobaban la salida estructurada del Weekly GOLD
+ * Pack y el Pack solo existía como prosa dentro de la conversación: escribir
+ * esas pruebas antes habría sido fingir cobertura. Ahora el Pack tiene campos
+ * y las dos comprueban algo de verdad.
  */
 #[CoversNothing]
 final class AcceptanceCriteriaTest extends KernelTestBase {
@@ -300,6 +297,107 @@ final class AcceptanceCriteriaTest extends KernelTestBase {
 
     $this->assertCount(1, $recordado, 'La evidencia sobrevive a la renovación.');
     $this->assertSame('CURRENT', $recordado[0]['status'], 'Y sigue vigente, con su delta por antigüedad.');
+  }
+
+  /**
+   * A10 — Una cuenta sin mensaje no sale marcada como lista para enviar.
+   *
+   * Su §13: «PREPARED sin mensaje: el validador lo corrige a BLOCKED». Corrige,
+   * no avisa: el estado de envío es lo que mira alguien para decidir si manda
+   * algo hoy.
+   *
+   * Se comprueban los DOS estados que prometen un mensaje. Su criterio nombra
+   * PREPARED, pero RELEASED sin mensaje es peor —dice que se puede enviar ya— y
+   * taparlo solo en uno dejaría abierta la puerta más ancha.
+   */
+  public function testA10UnaCuentaSinMensajeSeBloquea(): void {
+    $resultado = $this->validar([
+      'pool_declared' => 3,
+      'accounts' => [
+        ['name' => 'Grupo MexAmerik', 'outreach_status' => 'PREPARED', 'outreach_message' => ''],
+        ['name' => 'Olympic Transport', 'outreach_status' => 'RELEASED', 'outreach_message' => '   '],
+        [
+          'name' => 'XBorder Solutions',
+          'outreach_status' => 'PREPARED',
+          'outreach_message' => 'Vi que abrieron una vacante…',
+        ],
+      ],
+    ]);
+
+    $cuentas = $resultado['accounts'];
+
+    $this->assertSame('BLOCKED', $cuentas[0]['outreach_status'], 'PREPARED sin mensaje se bloquea.');
+    $this->assertSame('BLOCKED', $cuentas[1]['outreach_status'], 'RELEASED con un mensaje en blanco, también.');
+    $this->assertNotSame('', $cuentas[0]['blocked_reason'], 'Y se dice por qué.');
+
+    $this->assertSame(
+      'PREPARED',
+      $cuentas[2]['outreach_status'],
+      'La que sí trae mensaje se queda como está.',
+    );
+  }
+
+  /**
+   * A11 — El pool declarado no puede superar a las cuentas con nombre.
+   *
+   * Su §13: «Pool declarado ≥10: el validador exige cuentas nominales».
+   * Declarar diez y nombrar tres no es un pool auditable, y su metodología pide
+   * que lo sea.
+   *
+   * Lo declarado NO se borra: queda aparte. La diferencia entre lo dicho y lo
+   * sostenido es justo el dato que dice si el agente infla el pool.
+   */
+  public function testA11ElPoolDeclaradoSeCuadraConLasCuentasNombradas(): void {
+    $resultado = $this->validar([
+      'pool_declared' => 10,
+      'accounts' => [
+        ['name' => 'Grupo MexAmerik'],
+        ['name' => 'Olympic Transport'],
+        // Sin nombre: no es auditable y no cuenta.
+        ['name' => '   '],
+      ],
+    ]);
+
+    $this->assertSame(2, $resultado['pool_declared'], 'Solo dos cuentas se pueden auditar.');
+    $this->assertSame(10, $resultado['pool_claimed'], 'Lo que declaró se conserva.');
+  }
+
+  /**
+   * Un pool honesto no se toca.
+   *
+   * Va junto a A11 porque una corrección que se dispara siempre no corrige
+   * nada: deja de distinguir el caso bueno del malo.
+   */
+  public function testUnPoolQueCuadraNoSeToca(): void {
+    $resultado = $this->validar([
+      'pool_declared' => 2,
+      'accounts' => [['name' => 'Grupo MexAmerik'], ['name' => 'Olympic Transport']],
+    ]);
+
+    $this->assertSame(2, $resultado['pool_declared']);
+    $this->assertArrayNotHasKey('pool_claimed', $resultado, 'No hubo nada que cuadrar.');
+  }
+
+  /**
+   * Pasa un resultado por el validador y devuelve lo que quedó.
+   *
+   * @param array<string, mixed> $result
+   *   La parte estructurada, tal como la devolvería el motor.
+   *
+   * @return array<string, mixed>
+   *   El resultado ya validado.
+   */
+  private function validar(array $result): array {
+    $turno = $this->container->get(DiagnosticResponseValidator::class)->validate([
+      'type' => 'diagnostic_result',
+      'status' => 'completed',
+      'message' => 'El Weekly GOLD Pack.',
+      'result' => $result,
+    ]);
+
+    $this->assertIsArray($turno->result);
+
+    return $turno->result;
   }
 
   /**

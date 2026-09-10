@@ -161,6 +161,12 @@ final class ResultsController extends ControllerBase {
       '#maturity' => $result->getMaturity(),
       '#confidence' => $result->getConfidence(),
       '#dimensions' => $result->getDimensions(),
+      // El Weekly GOLD Pack, cuenta por cuenta. Hasta el 10-09-2026 esto se
+      // leía solo dentro de la conversación, como prosa: no se podía hojear,
+      // ni saber de un vistazo cuáles se pueden enviar hoy, ni copiar un
+      // mensaje sin seleccionarlo a mano.
+      '#accounts' => $result->getAccounts(),
+      '#pool' => $this->buildPool($result),
       '#sections' => $this->buildSections($payload),
       '#version' => $result->getDiagnosticVersion(),
       // A dónde vuelve quien mira. El alumno, a su panel; el gestor, al
@@ -175,6 +181,31 @@ final class ResultsController extends ControllerBase {
         'contexts' => ['user'],
         'tags' => ['sld_diagnostic_result:' . $result->id()],
       ],
+    ];
+  }
+
+  /**
+   * El pool cribado, y si el agente declaró más de lo que sostiene.
+   *
+   * La discrepancia se ENSEÑA en vez de callarse. Es la única señal de que un
+   * Pack venía inflado, y quien lee el informe es quien debe saberlo: si se
+   * queda solo en el registro del sistema, no la ve nadie.
+   *
+   * @return array<string, mixed>|null
+   *   Las cifras, o NULL si el agente no declaró pool.
+   */
+  private function buildPool(DiagnosticResultInterface $result): ?array {
+    $auditables = $result->getPoolDeclared();
+
+    if ($auditables === 0) {
+      return NULL;
+    }
+
+    $declaradas = $result->getPoolClaimed();
+
+    return [
+      'audited' => $auditables,
+      'claimed' => $declaradas > $auditables ? $declaradas : 0,
     ];
   }
 

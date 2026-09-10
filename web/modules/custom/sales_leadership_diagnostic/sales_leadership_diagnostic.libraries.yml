@@ -25,6 +25,11 @@ result:
     theme:
       css/sld-base.css: {}
       css/sld-result.css: {}
+  js:
+    js/sld-copiar.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
 
 welcome:
   version: 1.x

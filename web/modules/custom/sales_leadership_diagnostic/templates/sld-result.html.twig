@@ -113,6 +113,121 @@
     </section>
   {% endif %}
 
+  {% if accounts is not empty %}
+    <section class="sld-pack" aria-labelledby="sld-pack-label">
+      <div class="sld-pack__head">
+        <h2 class="sld-result__section-title" id="sld-pack-label">{{ 'Cuentas del Pack'|t }}</h2>
+        {% if pool %}
+          <p class="sld-pack__pool">
+            {{ 'Cribadas @n cuentas'|t({'@n': pool.audited}) }}
+            {% if pool.claimed %}
+              <span class="sld-pack__discrepancy">
+                {{ 'el agente declaró @n; solo estas se pueden auditar'|t({'@n': pool.claimed}) }}
+              </span>
+            {% endif %}
+          </p>
+        {% endif %}
+      </div>
+
+      <ol class="sld-pack__list">
+        {% for a in accounts %}
+          <li class="sld-pack__account">
+            <div class="sld-pack__bar sld-pack__bar--{{ a.outreach_status|lower|default('sin') }}" aria-hidden="true"></div>
+
+            <div class="sld-pack__body">
+              <div class="sld-pack__title-row">
+                {% if a.rank %}<span class="sld-pack__rank">{{ a.rank }}</span>{% endif %}
+                <h3 class="sld-pack__name">{{ a.name }}</h3>
+                {% if a.disposition %}
+                  <span class="sld-pack__chip sld-pack__chip--{{ a.disposition|lower }}">{{ a.disposition }}</span>
+                {% endif %}
+                {% if a.outreach_status %}
+                  <span class="sld-pack__status sld-pack__status--{{ a.outreach_status|lower }}">
+                    {%- if a.outreach_status == 'RELEASED' -%}{{ 'Se puede enviar'|t }}
+                    {%- elseif a.outreach_status == 'PREPARED' -%}{{ 'Mensaje listo, falta comprobar'|t }}
+                    {%- else -%}{{ 'Bloqueada'|t }}{%- endif -%}
+                  </span>
+                {% endif %}
+              </div>
+
+              {% if a.outreach_status == 'BLOCKED' and a.blocked_reason %}
+                <p class="sld-pack__blocked">{{ a.blocked_reason }}</p>
+              {% endif %}
+
+              <dl class="sld-pack__fields">
+                {% if a.why_now %}
+                  <dt>{{ 'Por qué ahora'|t }}</dt>
+                  <dd>
+                    {{ a.why_now }}
+                    {% if a.sources is not empty %}
+                      <ul class="sld-pack__sources">
+                        {% for s in a.sources %}
+                          <li>
+                            <a href="{{ s.url }}" rel="noopener noreferrer" target="_blank">{{ s.label }}</a>
+                            {% if s.published %}<span class="sld-pack__date">{{ s.published }}</span>{% endif %}
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                  </dd>
+                {% endif %}
+
+                {% if a.gap_hypothesis %}
+                  <dt>{{ 'Hipótesis GAP'|t }}</dt>
+                  <dd>{{ a.gap_hypothesis }}</dd>
+                {% endif %}
+
+                {% if a.competing_alternative %}
+                  <dt>{{ 'La alternativa que compite'|t }}</dt>
+                  <dd class="sld-pack__alt">{{ a.competing_alternative }}</dd>
+                {% endif %}
+
+                {% if a.buyer %}
+                  <dt>{{ 'Buyer'|t }}</dt>
+                  <dd>
+                    {{ a.buyer }}
+                    <span class="sld-pack__verified sld-pack__verified--{{ a.buyer_verified ? 'si' : 'no' }}">
+                      {{ a.buyer_verified ? 'verificado'|t : 'sin verificar'|t }}
+                    </span>
+                  </dd>
+                {% endif %}
+
+                {% if a.routing %}
+                  <dt>{{ 'Routing'|t }}</dt>
+                  <dd>{{ a.routing }}</dd>
+                {% endif %}
+
+                {% if a.next_step %}
+                  <dt>{{ 'Siguiente paso'|t }}</dt>
+                  <dd>{{ a.next_step }}</dd>
+                {% endif %}
+              </dl>
+
+              {% if a.do_not_claim is not empty %}
+                <div class="sld-pack__warn">
+                  <p class="sld-pack__warn-title">{{ 'Qué NO afirmar'|t }}</p>
+                  <ul>
+                    {% for d in a.do_not_claim %}<li>{{ d }}</li>{% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+
+              {% if a.outreach_message %}
+                <div class="sld-pack__message">
+                  <div class="sld-pack__message-head">
+                    <span>{{ 'Mensaje preparado'|t }}</span>
+                    <button type="button" class="sld-pack__copy" data-sld-copy>{{ 'Copiar'|t }}</button>
+                  </div>
+                  <pre class="sld-pack__message-body">{{ a.outreach_message }}</pre>
+                </div>
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ol>
+    </section>
+  {% endif %}
+
   {% for section in sections %}
     <section class="sld-result__section" aria-labelledby="sld-sec-{{ section.key }}">
       <h2 class="sld-result__section-title" id="sld-sec-{{ section.key }}">

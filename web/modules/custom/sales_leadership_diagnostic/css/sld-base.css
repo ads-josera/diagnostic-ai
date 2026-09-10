@@ -131,6 +131,17 @@
     --sld-color-primary: #6f9bea;
     --sld-color-primary-hover: #8db0f0;
     --sld-color-primary-contrast: #0f1114;
+
+    /* Los semanticos tambien. Se quedaron sin version oscura hasta el
+       10-09-2026, y no se noto porque casi nada los usaba: un verde #1a7f4b
+       sobre un gris #1f2228 son 2,1:1, por debajo del minimo legible. Lo
+       destapo el Weekly GOLD Pack, que apoya en ellos el estado de cada
+       cuenta. Estos valores estan medidos sobre la superficie oscura. */
+    --sld-color-success: #5fd39b;
+    --sld-color-warning: #e3b34f;
+    --sld-color-danger: #ff8b7e;
+    --sld-color-info: #8db0f0;
+
     --sld-shadow: none;
   }
 }

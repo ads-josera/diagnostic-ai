@@ -232,4 +232,138 @@ class DiagnosticResult extends ContentEntityBase implements DiagnosticResultInte
     return $dimensiones;
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function getPoolDeclared(): int {
+    return max(0, (int) ($this->getPayload()['pool_declared'] ?? 0));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getPoolClaimed(): int {
+    return max(0, (int) ($this->getPayload()['pool_claimed'] ?? 0));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getAccounts(): array {
+    $crudas = $this->getPayload()['accounts'] ?? [];
+
+    if (!is_array($crudas)) {
+      return [];
+    }
+
+    $cuentas = [];
+
+    foreach ($crudas as $cruda) {
+      if (!is_array($cruda)) {
+        continue;
+      }
+
+      $nombre = trim((string) ($cruda['name'] ?? ''));
+
+      // Una cuenta sin nombre no se puede consultar, ni buscar en el CRM, ni
+      // seguir la semana que viene. Se descarta esa y se siguen leyendo las
+      // demás, igual que con las dimensiones: perder el Pack entero porque una
+      // entrada viniera mal sería peor.
+      if ($nombre === '') {
+        continue;
+      }
+
+      $cuentas[] = [
+        'name' => $nombre,
+        'disposition' => strtoupper(trim((string) ($cruda['disposition'] ?? ''))),
+        'rank' => max(0, (int) ($cruda['rank'] ?? 0)),
+        'outreach_status' => strtoupper(trim((string) ($cruda['outreach_status'] ?? ''))),
+        'blocked_reason' => trim((string) ($cruda['blocked_reason'] ?? '')),
+        'why_now' => trim((string) ($cruda['why_now'] ?? '')),
+        'gap_hypothesis' => trim((string) ($cruda['gap_hypothesis'] ?? '')),
+        'competing_alternative' => trim((string) ($cruda['competing_alternative'] ?? '')),
+        'buyer' => trim((string) ($cruda['buyer'] ?? '')),
+        'buyer_verified' => (bool) ($cruda['buyer_verified'] ?? FALSE),
+        'do_not_claim' => $this->listaDeTextos($cruda['do_not_claim'] ?? []),
+        'routing' => trim((string) ($cruda['routing'] ?? '')),
+        'outreach_message' => trim((string) ($cruda['outreach_message'] ?? '')),
+        'next_step' => trim((string) ($cruda['next_step'] ?? '')),
+        'sources' => $this->fuentesDe($cruda['sources'] ?? []),
+      ];
+    }
+
+    // Por el ranking que declaró el agente, y las que no entran en él al
+    // final. Es el orden en que su metodología quiere que se trabajen, y
+    // reordenar al pintar dejaría cada pantalla decidiendo el suyo.
+    usort($cuentas, static function (array $a, array $b): int {
+      $sinRango = static fn (array $c): int => $c['rank'] > 0 ? 0 : 1;
+
+      return [$sinRango($a), $a['rank']] <=> [$sinRango($b), $b['rank']];
+    });
+
+    return $cuentas;
+  }
+
+  /**
+   * Normaliza una lista de textos, descartando lo vacío.
+   *
+   * @param mixed $crudo
+   *   Lo que viniera en el campo.
+   *
+   * @return string[]
+   *   Textos limpios.
+   */
+  private function listaDeTextos(mixed $crudo): array {
+    if (!is_array($crudo)) {
+      return [];
+    }
+
+    return array_values(array_filter(array_map(
+      static fn ($v): string => trim((string) (is_scalar($v) ? $v : '')),
+      $crudo,
+    )));
+  }
+
+  /**
+   * Normaliza las fuentes de una cuenta.
+   *
+   * Una fuente sin URL no es comprobable, que es lo único para lo que sirve
+   * una fuente. Se descarta.
+   *
+   * @param mixed $crudo
+   *   Lo que viniera en el campo.
+   *
+   * @return array<int, array{url: string, label: string, published: string}>
+   *   Fuentes utilizables.
+   */
+  private function fuentesDe(mixed $crudo): array {
+    if (!is_array($crudo)) {
+      return [];
+    }
+
+    $fuentes = [];
+
+    foreach ($crudo as $fuente) {
+      if (!is_array($fuente)) {
+        continue;
+      }
+
+      $url = trim((string) ($fuente['url'] ?? ''));
+
+      if ($url === '') {
+        continue;
+      }
+
+      $etiqueta = trim((string) ($fuente['label'] ?? ''));
+
+      $fuentes[] = [
+        'url' => $url,
+        'label' => $etiqueta !== '' ? $etiqueta : $url,
+        'published' => trim((string) ($fuente['published'] ?? '')),
+      ];
+    }
+
+    return $fuentes;
+  }
+
 }

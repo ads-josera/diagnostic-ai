@@ -203,6 +203,11 @@ final class DiagnosticThemeHooks {
           'maturity' => '',
           'confidence' => '',
           'dimensions' => [],
+          // El Weekly GOLD Pack, cuenta por cuenta, y el pool cribado. Vacíos
+          // en los resultados anteriores al 10-09-2026 y en los del agente de
+          // diagnóstico, que no produce cuentas.
+          'accounts' => [],
+          'pool' => NULL,
           'sections' => [],
           'version' => '',
           'created' => '',

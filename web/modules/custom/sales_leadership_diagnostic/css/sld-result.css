@@ -300,3 +300,294 @@
     border-bottom: 0;
   }
 }
+
+/* Weekly GOLD Pack ------------------------------------------------------
+ *
+ * Una tarjeta por cuenta y no una tabla: una cuenta tiene catorce campos y
+ * varios son parrafos. En una tabla habria que elegir cuatro y esconder el
+ * resto, y los escondidos —la alternativa que compite, que NO afirmar— son
+ * justo los que impiden que alguien salga a decir algo no verificado.
+ *
+ * El color semantico va SOLO en el estado de envio y en los avisos. La
+ * clasificacion de la cuenta usa peso y borde, no color: si todo tiene color,
+ * el color deja de significar nada y lo urgente no destaca.
+ */
+
+.sld-pack__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sld-space-sm);
+  margin-bottom: var(--sld-space-md);
+}
+
+.sld-pack__pool {
+  margin: 0;
+  color: var(--sld-color-text-muted);
+  font-size: 0.88rem;
+}
+
+/* La discrepancia entre lo declarado y lo auditable se ENSEÑA. Es la unica
+   senal de que un Pack venia inflado, y quien lee el informe es quien tiene
+   que verla. */
+.sld-pack__discrepancy {
+  display: inline-block;
+  margin-left: var(--sld-space-xs);
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--sld-color-warning);
+  border-radius: var(--sld-radius-sm);
+  color: var(--sld-color-warning);
+  font-size: 0.8rem;
+}
+
+.sld-pack__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sld-pack__account {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-bg);
+}
+
+/* La franja lateral dice el estado de envio de un vistazo, sin leer. Es lo
+   unico que alguien necesita saber para decidir si esta cuenta le sirve hoy. */
+.sld-pack__bar {
+  flex: 0 0 4px;
+  background: var(--sld-color-border);
+}
+
+.sld-pack__bar--released { background: var(--sld-color-success); }
+.sld-pack__bar--prepared { background: var(--sld-color-warning); }
+.sld-pack__bar--blocked { background: var(--sld-color-danger); }
+
+.sld-pack__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--sld-space-md);
+}
+
+.sld-pack__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sld-space-sm);
+}
+
+.sld-pack__rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: var(--sld-color-surface);
+  color: var(--sld-color-text-muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.sld-pack__name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.sld-pack__chip {
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--sld-color-border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Las dos que piden accion llevan mas peso; las demas se quedan quietas. */
+.sld-pack__chip--gold,
+.sld-pack__chip--silver {
+  border-color: var(--sld-color-text);
+  color: var(--sld-color-text);
+}
+
+.sld-pack__status {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.sld-pack__status--released { color: var(--sld-color-success); }
+.sld-pack__status--prepared { color: var(--sld-color-warning); }
+.sld-pack__status--blocked { color: var(--sld-color-danger); }
+
+.sld-pack__blocked {
+  margin: var(--sld-space-sm) 0 0;
+  color: var(--sld-color-danger);
+  font-size: 0.88rem;
+}
+
+.sld-pack__fields {
+  display: grid;
+  grid-template-columns: minmax(8rem, 11rem) 1fr;
+  gap: var(--sld-space-xs) var(--sld-space-md);
+  margin: var(--sld-space-md) 0 0;
+}
+
+.sld-pack__fields dt {
+  color: var(--sld-color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.sld-pack__fields dd {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+/* La alternativa que compite con la tesis. Va en cursiva y apagada a
+   proposito: es el contrapeso de la hipotesis, no una conclusion mas. */
+.sld-pack__alt {
+  color: var(--sld-color-text-muted);
+  font-style: italic;
+}
+
+.sld-pack__sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sld-space-xs) var(--sld-space-md);
+  margin: var(--sld-space-xs) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+}
+
+/* La fecha va pegada a SU fuente y separada de la siguiente. Sin esto, dos
+   fuentes seguidas se leen como una sola cadena: «T21 14 may 2026 Sitio
+   oficial». Una fecha que parece pertenecer a otra fuente es peor que no
+   ponerla, porque un why-now se fecha con ella. */
+.sld-pack__sources li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.sld-pack__date {
+  color: var(--sld-color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sld-pack__verified {
+  margin-left: var(--sld-space-xs);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.sld-pack__verified--si { color: var(--sld-color-success); }
+.sld-pack__verified--no { color: var(--sld-color-warning); }
+
+.sld-pack__warn {
+  margin-top: var(--sld-space-md);
+  padding: var(--sld-space-sm) var(--sld-space-md);
+  border-left: 3px solid var(--sld-color-warning);
+  background: var(--sld-color-surface);
+  border-radius: 0 var(--sld-radius-sm) var(--sld-radius-sm) 0;
+}
+
+.sld-pack__warn-title {
+  margin: 0 0 var(--sld-space-xs);
+  color: var(--sld-color-warning);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.sld-pack__warn ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+}
+
+.sld-pack__message {
+  margin-top: var(--sld-space-md);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius-sm);
+  overflow: hidden;
+}
+
+.sld-pack__message-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sld-space-sm);
+  padding: var(--sld-space-xs) var(--sld-space-sm);
+  background: var(--sld-color-surface);
+  color: var(--sld-color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sld-pack__copy {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-bg);
+  color: var(--sld-color-text);
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.sld-pack__copy:hover { border-color: var(--sld-color-primary); }
+
+.sld-pack__copy:focus-visible {
+  outline: 2px solid var(--sld-color-primary);
+  outline-offset: 2px;
+}
+
+.sld-pack__copy[data-sld-copied] {
+  border-color: var(--sld-color-success);
+  color: var(--sld-color-success);
+}
+
+/* El mensaje se conserva TAL CUAL, con sus saltos de linea: se va a pegar en
+   un correo y el formato es parte de el. */
+.sld-pack__message-body {
+  margin: 0;
+  padding: var(--sld-space-md);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 32rem) {
+  .sld-pack__fields {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .sld-pack__fields dd {
+    margin-bottom: var(--sld-space-sm);
+  }
+
+  .sld-pack__status {
+    margin-left: 0;
+  }
+}

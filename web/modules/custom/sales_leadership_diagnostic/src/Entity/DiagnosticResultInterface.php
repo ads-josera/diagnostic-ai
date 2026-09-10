@@ -84,4 +84,33 @@ interface DiagnosticResultInterface extends ContentEntityInterface, EntityOwnerI
    */
   public function getDimensions(): array;
 
+  /**
+   * Cuántas cuentas candidatas se cribaron, de las que se pueden auditar.
+   *
+   * Si el agente declaró más de las que nombró, esta cifra es la sostenible y
+   * la declarada queda en getPoolClaimed(). Su metodología pide un «pool
+   * auditable», y auditable significa contrastable con la lista de cuentas.
+   */
+  public function getPoolDeclared(): int;
+
+  /**
+   * Lo que el agente declaró antes de cuadrarlo. Cero si no hubo que cuadrar.
+   *
+   * La diferencia entre esta cifra y la anterior es el dato que dice si el
+   * agente está inflando el pool, y por eso no se descarta.
+   */
+  public function getPoolClaimed(): int;
+
+  /**
+   * El Weekly GOLD Pack, cuenta por cuenta.
+   *
+   * Ordenadas por el ranking que declaró el agente; las que no entran en él,
+   * al final. Las que vengan sin nombre se descartan: no se pueden consultar
+   * ni seguir de una semana a otra.
+   *
+   * @return array<int, array<string, mixed>>
+   *   Una entrada por cuenta.
+   */
+  public function getAccounts(): array;
+
 }
