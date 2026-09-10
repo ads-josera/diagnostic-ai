@@ -100,6 +100,26 @@ es uno por persona y semana— y **una sola persona las corre todas**, lo que
 mantiene la caché caliente y no representa el primer turno de alguien que llega
 de cero.
 
+## El cron, en local
+
+DDEV no ejecuta cron por su cuenta, y desde que los turnos que investigan corren
+en segundo plano **el cron es quien los saca de la cola**. Sin él, un mensaje
+deja la pantalla en «procesando» para siempre, porque el trabajo nunca empieza.
+
+Va montado en `.ddev/config.cron.yaml` como demonio del contenedor, cada minuto,
+igual que en producción. No hay que hacer nada: arranca con `ddev start`.
+
+Para comprobar que corre:
+
+```
+ddev drush php:eval 'printf("hace %d s\n", \Drupal::time()->getRequestTime() - (int) \Drupal::state()->get("system.cron_last", 0));'
+```
+
+Si pasa de 120 segundos, no está corriendo. **Importa saberlo antes de dar por
+roto un turno lento**: el 10-09-2026 se perdió un rato buscando un fallo en el
+código que era el cron parado, y desde fuera «está pensando» y «está muerto» se
+ven exactamente igual.
+
 ## Antes de dar algo por terminado
 
 Las tres primeras, y además abrir en el navegador la pantalla que se tocó. Una

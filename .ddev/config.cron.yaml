@@ -1,0 +1,23 @@
+# El cron de Drupal, corriendo solo en local.
+#
+# DDEV no ejecuta cron por su cuenta. En este modulo eso no es un detalle: desde
+# que los turnos que investigan corren en segundo plano, el cron es QUIEN los
+# saca de la cola. Sin el, un alumno manda su mensaje, la pantalla dice
+# «procesando» y se queda ahi para siempre, porque el trabajo nunca empieza.
+#
+# Paso el 10-09-2026 con el cron parado 2 horas y 44 minutos, y el sintoma es
+# indistinguible de un sistema roto: desde fuera, «esta pensando» y «esta
+# muerto» se ven igual.
+#
+# En el servidor esto va en WHM como una tarea programada cada minuto, y esta
+# documentado en docs/DESPLIEGUE.md. Este archivo es SOLO para local.
+#
+# DDEV fusiona todo .ddev/config.*.yaml, asi que esto se suma a config.yaml sin
+# tocarlo.
+web_extra_daemons:
+  - name: drupal-cron
+    # Cada minuto, como en produccion. Los errores se tragan a proposito: un
+    # fallo puntual del cron no debe tumbar el demonio y dejar el sitio sin
+    # cron el resto del dia.
+    command: "while true; do sleep 60; /var/www/html/vendor/bin/drush cron --quiet || true; done"
+    directory: /var/www/html
