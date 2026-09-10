@@ -39,10 +39,43 @@ final class DiagnosticAgentForm extends EntityForm {
    */
   private const ICON_MAX_SIZE = '512 KB';
 
+  /**
+   * Gestor de tipos de entidad.
+   *
+   * NO va promocionada ni readonly, y no es estilo: es lo que hace que el
+   * formulario sobreviva a una subida de archivo.
+   *
+   * Un `managed_file` sube por AJAX, y en cada vuelta Drupal serializa el
+   * objeto del formulario y lo despierta despues. Los servicios inyectados
+   * **no vuelven solos**, y una propiedad readonly no se puede reponer desde
+   * fuera de su clase: se queda sin inicializar y el siguiente que la toque
+   * revienta. Se reponen en __wakeup(), mas abajo.
+   *
+   * Fallaba al pulsar Guardar tras subir el icono, con «Typed property must
+   * not be accessed before initialization». Lo encontro el cliente el
+   * 10-09-2026, y no lo veia ninguna prueba porque solo ocurre despues de una
+   * peticion AJAX de verdad.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  private EntityTypeManagerInterface $entityTypes;
+
+  /**
+   * Registro de uso de archivos.
+   *
+   * Por el mismo motivo que la anterior.
+   *
+   * @var \Drupal\file\FileUsage\FileUsageInterface
+   */
+  private FileUsageInterface $fileUsage;
+
   public function __construct(
-    private readonly EntityTypeManagerInterface $entityTypes,
-    private readonly FileUsageInterface $fileUsage,
-  ) {}
+    EntityTypeManagerInterface $entityTypes,
+    FileUsageInterface $fileUsage,
+  ) {
+    $this->entityTypes = $entityTypes;
+    $this->fileUsage = $fileUsage;
+  }
 
   /**
    * {@inheritdoc}
@@ -52,6 +85,36 @@ final class DiagnosticAgentForm extends EntityForm {
       $container->get('entity_type.manager'),
       $container->get('file.usage'),
     );
+  }
+
+  /**
+   * Vuelve a inyectar los servicios tras recuperar el formulario de la cache.
+   *
+   * Esta pantalla sube un archivo por AJAX, y eso hace que Drupal guarde el
+   * objeto del formulario serializado entre la construcción y el envío. Al
+   * recuperarlo, los servicios inyectados por el contenedor **no vuelven
+   * solos**: medido, serializar y deserializar dejaba las dos propiedades sin
+   * inicializar.
+   *
+   * El síntoma es de los que no se ven venir: la página carga bien, el archivo
+   * sube bien, y el error fatal salta al pulsar «Guardar». Lo encontró el
+   * cliente el 10-09-2026 subiendo el icono de un agente.
+   *
+   * `KnowledgeDocumentsForm` ya lo había resuelto así; a estos dos formularios
+   * se les pasó, y comparten la misma causa exacta.
+   */
+  public function __wakeup(): void {
+    parent::__wakeup();
+
+    // Es la excepción en la que el contenedor SÍ se pide de forma estática:
+    // __wakeup() no recibe argumentos, así que no hay ningún otro sitio por
+    // donde inyectarlo. El propio Drupal lo resuelve igual en
+    // DependencySerializationTrait.
+    // phpcs:ignore DrupalPractice.Objects.GlobalDrupal.GlobalDrupal
+    $container = \Drupal::getContainer();
+
+    $this->entityTypes = $container->get('entity_type.manager');
+    $this->fileUsage = $container->get('file.usage');
   }
 
   /**

@@ -48,13 +48,36 @@ final class HomePageForm extends ConfigFormBase {
    */
   private const LOGO_MAX_SIZE = '512 KB';
 
+  /**
+   * Gestor de tipos de entidad.
+   *
+   * NO va promocionada ni readonly, por el mismo motivo que en el formulario
+   * del agente: esta pantalla sube imágenes con `managed_file`, cada subida es
+   * una petición AJAX, y en cada una Drupal duerme y despierta el objeto del
+   * formulario. Los servicios se reponen al despertar, y una propiedad
+   * readonly no se puede reponer: se queda sin inicializar y revienta al
+   * guardar.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  private EntityTypeManagerInterface $entityTypes;
+
+  /**
+   * Registro de uso de archivos.
+   *
+   * @var \Drupal\file\FileUsage\FileUsageInterface
+   */
+  private FileUsageInterface $fileUsage;
+
   public function __construct(
     ConfigFactoryInterface $config_factory,
     TypedConfigManagerInterface $typedConfigManager,
-    private readonly EntityTypeManagerInterface $entityTypes,
-    private readonly FileUsageInterface $fileUsage,
+    EntityTypeManagerInterface $entityTypes,
+    FileUsageInterface $fileUsage,
   ) {
     parent::__construct($config_factory, $typedConfigManager);
+    $this->entityTypes = $entityTypes;
+    $this->fileUsage = $fileUsage;
   }
 
   /**
@@ -67,6 +90,36 @@ final class HomePageForm extends ConfigFormBase {
       $container->get('entity_type.manager'),
       $container->get('file.usage'),
     );
+  }
+
+  /**
+   * Vuelve a inyectar los servicios tras recuperar el formulario de la cache.
+   *
+   * Esta pantalla sube un archivo por AJAX, y eso hace que Drupal guarde el
+   * objeto del formulario serializado entre la construcción y el envío. Al
+   * recuperarlo, los servicios inyectados por el contenedor **no vuelven
+   * solos**: medido, serializar y deserializar dejaba las dos propiedades sin
+   * inicializar.
+   *
+   * El síntoma es de los que no se ven venir: la página carga bien, el archivo
+   * sube bien, y el error fatal salta al pulsar «Guardar». Lo encontró el
+   * cliente el 10-09-2026 subiendo el icono de un agente.
+   *
+   * `KnowledgeDocumentsForm` ya lo había resuelto así; a estos dos formularios
+   * se les pasó, y comparten la misma causa exacta.
+   */
+  public function __wakeup(): void {
+    parent::__wakeup();
+
+    // Es la excepción en la que el contenedor SÍ se pide de forma estática:
+    // __wakeup() no recibe argumentos, así que no hay ningún otro sitio por
+    // donde inyectarlo. El propio Drupal lo resuelve igual en
+    // DependencySerializationTrait.
+    // phpcs:ignore DrupalPractice.Objects.GlobalDrupal.GlobalDrupal
+    $container = \Drupal::getContainer();
+
+    $this->entityTypes = $container->get('entity_type.manager');
+    $this->fileUsage = $container->get('file.usage');
   }
 
   /**
