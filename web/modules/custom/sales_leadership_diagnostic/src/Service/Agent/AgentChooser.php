@@ -68,11 +68,32 @@ final class AgentChooser {
         continue;
       }
 
+      // Una tarjeta y no un botón.
+      //
+      // Con un solo agente daba igual; con dos, dos botones con dos nombres
+      // largos obligan a leerlos enteros para elegir, y no dicen nada más. La
+      // descripción del agente ya existe y no se estaba usando en ningún
+      // sitio: es exactamente lo que hace falta aquí para decidir sin entrar.
       $opciones[$agent->id()] = [
         '#type' => 'link',
-        '#title' => $agent->label(),
         '#url' => Url::fromRoute($ruta, ['sld_agent' => $agent->id()]),
-        '#attributes' => ['class' => ['sld__button', 'sld__button--secondary']],
+        '#attributes' => ['class' => ['sld-chooser__card']],
+        '#title' => [
+          'nombre' => [
+            '#type' => 'html_tag',
+            '#tag' => 'span',
+            '#attributes' => ['class' => ['sld-chooser__name']],
+            '#value' => $agent->label(),
+          ],
+          // Solo si la tiene: una tarjeta con un hueco donde debería ir la
+          // descripción se lee como que falta algo.
+          'descripcion' => $agent->getDescription() !== '' ? [
+            '#type' => 'html_tag',
+            '#tag' => 'span',
+            '#attributes' => ['class' => ['sld-chooser__desc']],
+            '#value' => $agent->getDescription(),
+          ] : [],
+        ],
       ];
     }
 

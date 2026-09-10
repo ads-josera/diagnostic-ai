@@ -59,3 +59,12 @@ usage:
     theme:
       css/sld-base.css: {}
       css/sld-usage.css: {}
+
+# Las pantallas de trabajo del gestor. Sube el contenido del tema de
+# administracion al lenguaje de la pantalla de consumo, acotado a .sld-manager.
+manager:
+  version: 1.x
+  css:
+    theme:
+      css/sld-base.css: {}
+      css/sld-manager.css: {}

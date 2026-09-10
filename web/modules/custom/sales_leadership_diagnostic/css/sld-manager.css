@@ -1,0 +1,311 @@
+/**
+ * Las pantallas de trabajo del gestor, a nivel de producto.
+ *
+ * Hasta el 10-09-2026 el marco del gestor SOLO enmarcaba: las tablas y los
+ * formularios se dejaban tal cual los pinta el tema de administracion. Era una
+ * decision deliberada —«se enmarca, no se redisena»— y duro lo que tardo el
+ * cliente en ver la pantalla de Consumo al lado de las demas: una parecia un
+ * producto y el resto un panel de administracion.
+ *
+ * Esto lo corrige sin reescribir los formularios. Se toma el mismo lenguaje
+ * que ya usa Consumo —superficie, hairlines, cabeceras en versalitas, cifras
+ * tabulares— y se aplica a lo que el tema ya pinta. La accesibilidad y el
+ * comportamiento siguen siendo los del tema, que estan resueltos.
+ *
+ * TODO va acotado a `.sld-manager`. Fuera de ahi, la administracion de Drupal
+ * se queda exactamente como estaba: este modulo no es el dueno de ese tema y
+ * romperlo afectaria a pantallas que no son suyas.
+ */
+
+/* Encabezado de pagina -------------------------------------------------- */
+
+/*
+ * El titulo respira y se separa del contenido con una linea, como en Consumo.
+ * Antes empezaba pegado a la tabla y las dos cosas se leian como un bloque.
+ */
+.sld-manager__main .page-title,
+.sld-manager__main h1 {
+  /* El tema lo pinta `inline-block`, asi que la linea de abajo llegaba solo
+     hasta donde acababa el texto y parecia a medio dibujar. */
+  display: block;
+  margin: 0 0 var(--sld-space-lg);
+  padding-bottom: var(--sld-space-md);
+  border-bottom: 1px solid var(--sld-color-border);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+/* Tablas ---------------------------------------------------------------- */
+
+/*
+ * Mismo tratamiento que la tabla de Consumo: cabecera en versalitas apagadas,
+ * filas separadas por una linea fina y sin cebra. La cebra pinta la mitad de
+ * las filas de gris y compite con lo unico que deberia destacar, que es el
+ * estado de cada fila.
+ */
+.sld-manager__main table {
+  width: 100%;
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--sld-color-bg);
+  font-size: 0.9rem;
+  overflow: hidden;
+}
+
+.sld-manager__main thead th {
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--sld-color-border);
+  background: var(--sld-color-surface);
+  color: var(--sld-color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: start;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sld-manager__main tbody td,
+.sld-manager__main tbody th {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--sld-color-border) 55%, transparent);
+  vertical-align: middle;
+}
+
+.sld-manager__main tbody tr:last-child td,
+.sld-manager__main tbody tr:last-child th {
+  border-bottom: none;
+}
+
+.sld-manager__main tbody tr:hover td,
+.sld-manager__main tbody tr:hover th {
+  background: color-mix(in srgb, var(--sld-color-surface) 60%, transparent);
+}
+
+/* Se anula la cebra del tema, que compite con el estado de la fila. */
+.sld-manager__main tbody tr.odd,
+.sld-manager__main tbody tr.even,
+.sld-manager__main tbody tr:nth-child(odd),
+.sld-manager__main tbody tr:nth-child(even) {
+  background: transparent;
+}
+
+/* La primera columna es el nombre de la cosa: manda sobre el resto. */
+.sld-manager__main tbody td:first-child,
+.sld-manager__main tbody th:first-child {
+  font-weight: 600;
+}
+
+/* Botones --------------------------------------------------------------- */
+
+/*
+ * El azul de Claro no es el azul de la marca, y se notaba al lado de la barra.
+ * Se toman los tokens del modulo, que son los mismos que ve el alumno.
+ */
+.sld-manager__main .button--primary,
+.sld-manager__main .button--action {
+  border: 1px solid var(--sld-color-primary);
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-primary);
+  color: var(--sld-color-primary-contrast);
+  font-weight: 600;
+}
+
+.sld-manager__main .button--primary:hover,
+.sld-manager__main .button--action:hover {
+  border-color: var(--sld-color-primary-hover);
+  background: var(--sld-color-primary-hover);
+}
+
+.sld-manager__main .button:not(.button--primary):not(.button--action):not(.button--danger) {
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-bg);
+  color: var(--sld-color-text);
+  font-weight: 600;
+}
+
+.sld-manager__main .button:not(.button--primary):hover {
+  border-color: var(--sld-color-primary);
+  color: var(--sld-color-primary);
+}
+
+.sld-manager__main .button:focus-visible {
+  outline: 2px solid var(--sld-color-primary);
+  outline-offset: 2px;
+}
+
+/*
+ * El boton de accion de una fila.
+ *
+ * Los enlaces del dropbutton del tema NO llevan clase: el gris sale de
+ * `.dropbutton__item`, asi que hay que ir a por el enlace directamente. Se
+ * comprobo mirando el marcado; con `.button` no se cogia nada y el boton
+ * seguia gris al lado de una tabla ya rehecha.
+ *
+ * No necesita gritar: la accion principal de la pantalla ya esta arriba.
+ */
+.sld-manager__main .dropbutton {
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-bg);
+  overflow: hidden;
+}
+
+.sld-manager__main .dropbutton .dropbutton__item,
+.sld-manager__main .dropbutton li {
+  background: transparent;
+}
+
+.sld-manager__main .dropbutton a,
+.sld-manager__main .dropbutton button,
+.sld-manager__main .dropbutton-wrapper .button {
+  padding: 0.32rem 0.8rem;
+  border: 0;
+  background: transparent;
+  color: var(--sld-color-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sld-manager__main .dropbutton a:hover,
+.sld-manager__main .dropbutton button:hover {
+  background: var(--sld-color-surface);
+  color: var(--sld-color-primary);
+}
+
+.sld-manager__main .dropbutton-toggle button {
+  border-inline-start: 1px solid var(--sld-color-border);
+}
+
+/* Formularios ----------------------------------------------------------- */
+
+/*
+ * Acotados en ancho. Un campo de texto de 1400 px es incomodo de leer y de
+ * rellenar, y hace que un formulario de doce campos parezca una hoja de
+ * calculo.
+ */
+.sld-manager__main .layout-region,
+.sld-manager__main form > .form-item,
+.sld-manager__main form > details,
+.sld-manager__main form > .form-actions {
+  max-width: 52rem;
+}
+
+.sld-manager__main .form-item {
+  margin-block: var(--sld-space-md);
+}
+
+.sld-manager__main label {
+  color: var(--sld-color-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.sld-manager__main .description,
+.sld-manager__main .form-item__description {
+  margin-top: 0.3rem;
+  color: var(--sld-color-text-muted);
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+
+.sld-manager__main input[type="text"],
+.sld-manager__main input[type="number"],
+.sld-manager__main input[type="email"],
+.sld-manager__main input[type="url"],
+.sld-manager__main input[type="password"],
+.sld-manager__main select,
+.sld-manager__main textarea {
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-bg);
+  color: var(--sld-color-text);
+  font-size: 0.95rem;
+}
+
+.sld-manager__main input:focus-visible,
+.sld-manager__main select:focus-visible,
+.sld-manager__main textarea:focus-visible {
+  outline: 2px solid var(--sld-color-primary);
+  outline-offset: 1px;
+}
+
+/* Paneles plegables ----------------------------------------------------- */
+
+/*
+ * Un `details` del tema es una linea con un triangulo. Como panel se lee como
+ * una seccion del formulario, que es lo que es.
+ */
+.sld-manager__main details {
+  margin-block: var(--sld-space-md);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-bg);
+  overflow: hidden;
+}
+
+.sld-manager__main summary {
+  /* El relleno de la izquierda deja sitio al triangulo, que el tema pinta en
+     posicion absoluta a 12 px y con 16 px de ancho. Con el relleno normal se
+     montaba encima del texto: «▾Metodologia». */
+  padding: 0.8rem 1rem 0.8rem 2.4rem;
+  background: var(--sld-color-surface);
+  color: var(--sld-color-text);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sld-manager__main details[open] > summary {
+  border-bottom: 1px solid var(--sld-color-border);
+}
+
+.sld-manager__main details > *:not(summary) {
+  padding-inline: 1rem;
+}
+
+.sld-manager__main details > *:last-child:not(summary) {
+  padding-bottom: 0.6rem;
+}
+
+/* Acciones del formulario ----------------------------------------------- */
+
+.sld-manager__main .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sld-space-sm);
+  margin-top: var(--sld-space-lg);
+  padding-top: var(--sld-space-md);
+  border-top: 1px solid var(--sld-color-border);
+}
+
+/* Enlace de borrar: es destructivo y se separa de las acciones normales. */
+.sld-manager__main .form-actions .button--danger,
+.sld-manager__main .form-actions a[href*="borrar"],
+.sld-manager__main .form-actions a[href*="delete"] {
+  margin-inline-start: auto;
+  color: var(--sld-color-danger);
+}
+
+/* Mensajes y vacios ------------------------------------------------------ */
+
+.sld-manager__main .messages {
+  border-radius: var(--sld-radius);
+}
+
+/* Movil ----------------------------------------------------------------- */
+
+@media (max-width: 48rem) {
+  .sld-manager__main table {
+    display: block;
+    overflow-x: auto;
+  }
+}

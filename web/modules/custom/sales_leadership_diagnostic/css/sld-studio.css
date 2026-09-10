@@ -138,7 +138,18 @@ h3.sld-knowledge__switch {
  */
 .sld.sld-studio--eligiendo {
   grid-template-columns: minmax(0, 1fr);
-  max-width: 42rem;
+  max-width: 46rem;
+  /* Alineada con el titulo de la pagina, no centrada. Centrada dejaba el
+     bloque empezando 360 px a la derecha del titulo, y dos margenes distintos
+     en la misma pantalla se notan aunque no se sepa por que. */
+  margin-inline: 0;
+}
+
+/* El tema de administracion parte palabras automaticamente. En una tarjeta
+   estrecha eso da «seña-les» y «diagnos-tico», que en texto tecnico en espanol
+   cuesta mas de lo que ahorra. Se desactiva solo aqui. */
+.sld-chooser {
+  hyphens: manual;
 }
 
 .sld-chooser {
@@ -152,12 +163,61 @@ h3.sld-knowledge__switch {
 }
 
 /*
- * Los botones necesitan su propio contenedor con separación: son elementos en
- * línea, y la clase de botón no los distancia por sí sola. Sin esto salían
- * pegados y se leían como un solo nombre.
+ * Las tarjetas de eleccion.
+ *
+ * Rejilla y no fila: con dos agentes de nombre largo, dos botones en linea se
+ * leian como un solo nombre y no decian nada mas que su titulo. La tarjeta
+ * lleva ademas la descripcion del agente, que ya existia y no se usaba en
+ * ningun sitio: es lo que permite elegir sin entrar a mirar.
  */
 .sld-chooser__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: var(--sld-space-md);
+  max-width: 46rem;
+}
+
+.sld-chooser__card {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--sld-space-sm);
+  flex-direction: column;
+  gap: var(--sld-space-xs);
+  padding: var(--sld-space-md) var(--sld-space-lg) var(--sld-space-md) var(--sld-space-md);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-bg);
+  color: var(--sld-color-text);
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sld-chooser__card:hover,
+.sld-chooser__card:focus-visible {
+  border-color: var(--sld-color-primary);
+  box-shadow: var(--sld-shadow);
+  text-decoration: none;
+}
+
+.sld-chooser__card:focus-visible {
+  outline: 2px solid var(--sld-color-primary);
+  outline-offset: 2px;
+}
+
+.sld-chooser__name {
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* La descripcion pesa menos que el nombre: se lee despues de haber decidido
+   cual es cual, no antes. */
+.sld-chooser__desc {
+  color: var(--sld-color-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sld-chooser__card {
+    transition: none;
+  }
 }

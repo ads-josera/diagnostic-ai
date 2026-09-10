@@ -359,6 +359,12 @@ final class DiagnosticThemeHooks {
       || ($this->routeMatch->getRouteName() === self::RESULT_ROUTE && $this->miraElGestor())
     ) {
       $variables['sld_manager_nav'] = $this->navegacion->secciones();
+
+      // La capa que sube el contenido del tema de administración al lenguaje
+      // de la pantalla de consumo. Va aquí y no en cada controlador porque
+      // varias de estas pantallas las pinta Drupal —el listado de agentes, el
+      // formulario de la entidad— y no pasan por código nuestro.
+      $variables['#attached']['library'][] = 'sales_leadership_diagnostic/manager';
     }
 
     if (!$this->usesHomeFrame()) {
