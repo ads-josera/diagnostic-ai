@@ -10,6 +10,7 @@ use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Url;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository;
+use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolGateway;
 use Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
@@ -216,7 +217,11 @@ final class UsageController extends ControllerBase {
    *   Las cifras, o NULL si no hubo búsquedas.
    */
   private function busquedas(int $desde): ?array {
-    $resumen = $this->toolCalls->summarySince($desde);
+    // Sin excluir el ledger, este bloque dice más búsquedas de las que hubo:
+    // consultar y anotar evidencia no sale a internet. En la primera misión
+    // medida habrían salido 32 donde hubo 27, y ese número acabó en un
+    // documento para el cliente antes de que nadie lo notara.
+    $resumen = $this->toolCalls->summarySince($desde, ToolGateway::EXENTAS_DE_TOPE);
 
     if ($resumen['allowed'] === 0 && $resumen['denied'] === 0) {
       return NULL;
@@ -224,7 +229,7 @@ final class UsageController extends ControllerBase {
 
     $motivos = [];
 
-    foreach ($this->toolCalls->denialsSince($desde) as $motivo => $veces) {
+    foreach ($this->toolCalls->denialsSince($desde, ToolGateway::EXENTAS_DE_TOPE) as $motivo => $veces) {
       $motivos[] = ['label' => $this->explicarMotivo($motivo), 'count' => $veces];
     }
 

@@ -6,6 +6,7 @@ namespace Drupal\sales_leadership_diagnostic\Service\Engine\Tool;
 
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Database\Connection;
+use Drupal\Core\Database\Query\SelectInterface;
 use Drupal\Core\Database\Statement\FetchAs;
 
 /**
@@ -65,16 +66,24 @@ final class ToolCallRepository {
    * dejaría al agente sin margen por haber intentado algo que no se le dejó
    * hacer.
    *
+   * @param int $sessionId
+   *   Conversación.
+   * @param string[] $excluding
+   *   Herramientas que no gastan cupo. Quien aplica el tope pasa aquí las que
+   *   exime, para que eximir y contar no puedan decir cosas distintas.
+   *
    * @return array{calls: int, chars: int}
    *   Llamadas concedidas y texto que entró al modelo.
    */
-  public function usedInMission(int $sessionId): array {
-    $fila = $this->database->query(
-      'SELECT COUNT(*) AS calls, COALESCE(SUM(retrieved_chars), 0) AS chars
-         FROM {' . self::TABLE . '}
-        WHERE session_id = :id AND allowed = 1',
-      [':id' => $sessionId],
-    )->fetchAssoc() ?: [];
+  public function usedInMission(int $sessionId, array $excluding = []): array {
+    $consulta = $this->database->select(self::TABLE, 't')
+      ->condition('session_id', $sessionId)
+      ->condition('allowed', 1);
+    $consulta->addExpression('COUNT(*)', 'calls');
+    $consulta->addExpression('COALESCE(SUM(retrieved_chars), 0)', 'chars');
+    $this->excluir($consulta, $excluding);
+
+    $fila = $consulta->execute()->fetchAssoc() ?: [];
 
     return [
       'calls' => (int) ($fila['calls'] ?? 0),
@@ -93,33 +102,40 @@ final class ToolCallRepository {
    * Los ensayos del estudio quedan fuera, por el mismo motivo que en el gasto:
    * los hace quien administra y no deben comerse el cupo de nadie.
    */
-  public function usedByUserSince(int $uid, int $since): int {
-    return (int) $this->database->select(self::TABLE, 't')
+  public function usedByUserSince(int $uid, int $since, array $excluding = []): int {
+    $consulta = $this->database->select(self::TABLE, 't')
       ->condition('uid', $uid)
       ->condition('created', $since, '>=')
       ->condition('allowed', 1)
-      ->condition('is_sandbox', 0)
-      ->countQuery()
-      ->execute()
-      ->fetchField();
+      ->condition('is_sandbox', 0);
+    $this->excluir($consulta, $excluding);
+
+    return (int) $consulta->countQuery()->execute()->fetchField();
   }
 
   /**
    * Resumen de un periodo.
    *
+   * @param int $since
+   *   Desde cuándo.
+   * @param string[] $excluding
+   *   Herramientas que no cuentan. La pantalla titula este bloque «Búsquedas
+   *   externas», así que sin excluir el ledger diría más búsquedas de las que
+   *   hubo: en la primera misión medida, 32 en vez de 27.
+   *
    * @return array{allowed: int, denied: int, chars: int, results: int}
    *   Concedidas, denegadas, texto que entró y resultados traídos.
    */
-  public function summarySince(int $since): array {
-    $fila = $this->database->query(
-      'SELECT COALESCE(SUM(allowed), 0) AS allowed,
-              COALESCE(SUM(1 - allowed), 0) AS denied,
-              COALESCE(SUM(retrieved_chars), 0) AS chars,
-              COALESCE(SUM(results), 0) AS results
-         FROM {' . self::TABLE . '}
-        WHERE created >= :desde',
-      [':desde' => $since],
-    )->fetchAssoc() ?: [];
+  public function summarySince(int $since, array $excluding = []): array {
+    $consulta = $this->database->select(self::TABLE, 't')
+      ->condition('created', $since, '>=');
+    $consulta->addExpression('COALESCE(SUM(allowed), 0)', 'allowed');
+    $consulta->addExpression('COALESCE(SUM(1 - allowed), 0)', 'denied');
+    $consulta->addExpression('COALESCE(SUM(retrieved_chars), 0)', 'chars');
+    $consulta->addExpression('COALESCE(SUM(results), 0)', 'results');
+    $this->excluir($consulta, $excluding);
+
+    $fila = $consulta->execute()->fetchAssoc() ?: [];
 
     return [
       'allowed' => (int) ($fila['allowed'] ?? 0),
@@ -150,15 +166,17 @@ final class ToolCallRepository {
    * @return array<string, int>
    *   Motivo => cuántas veces.
    */
-  public function denialsSince(int $since): array {
-    $filas = $this->database->query(
-      'SELECT denial_reason, COUNT(*) AS total
-         FROM {' . self::TABLE . '}
-        WHERE created >= :desde AND allowed = 0
-        GROUP BY denial_reason
-        ORDER BY total DESC',
-      [':desde' => $since],
-    )->fetchAll(FetchAs::Associative);
+  public function denialsSince(int $since, array $excluding = []): array {
+    $consulta = $this->database->select(self::TABLE, 't')
+      ->fields('t', ['denial_reason'])
+      ->condition('created', $since, '>=')
+      ->condition('allowed', 0)
+      ->groupBy('denial_reason');
+    $consulta->addExpression('COUNT(*)', 'total');
+    $consulta->orderBy('total', 'DESC');
+    $this->excluir($consulta, $excluding);
+
+    $filas = $consulta->execute()->fetchAll(FetchAs::Associative);
 
     $salida = [];
 
@@ -167,6 +185,23 @@ final class ToolCallRepository {
     }
 
     return $salida;
+  }
+
+  /**
+   * Quita de la cuenta las herramientas que no cuentan.
+   *
+   * Vive aquí y no en cada consulta para que las cuatro excluyan igual. Una
+   * lista vacía no toca nada, que es lo que quiere quien pide el total crudo.
+   *
+   * @param \Drupal\Core\Database\Query\SelectInterface $consulta
+   *   Consulta a acotar.
+   * @param string[] $excluding
+   *   Nombres de herramienta que no deben contarse.
+   */
+  private function excluir(SelectInterface $consulta, array $excluding): void {
+    if ($excluding !== []) {
+      $consulta->condition('tool', $excluding, 'NOT IN');
+    }
   }
 
 }

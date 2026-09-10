@@ -55,6 +55,24 @@ final class ToolGateway implements ToolRunnerInterface {
   private const SIN_ENTITLEMENT = 'sin_entitlement';
 
   /**
+   * Herramientas que NO gastan cupo de investigación.
+   *
+   * Es pública porque quien exime y quien cuenta tienen que usar la MISMA
+   * lista. Estuvieron separadas hasta el 10-09-2026 y se desincronizaron sin
+   * que se notara: el gateway eximía al ledger de los topes y el contador lo
+   * sumaba igual, así que cada consulta a lo ya guardado le quitaba en
+   * silencio una búsqueda a la misión. Con 50 de tope y 5 usos del ledger, el
+   * presupuesto real eran 45.
+   *
+   * Quien añada aquí una herramienta la exime y la descuenta de los contadores
+   * de una sola vez. Ese es el punto.
+   */
+  public const EXENTAS_DE_TOPE = [
+    LedgerReadTool::NAME,
+    LedgerWriteTool::NAME,
+  ];
+
+  /**
    * Canal de log del módulo.
    */
   private LoggerChannelInterface $logger;
@@ -179,7 +197,7 @@ final class ToolGateway implements ToolRunnerInterface {
       return self::SIN_ENTITLEMENT;
     }
 
-    $usado = $this->calls->usedInMission($this->turn->sessionId());
+    $usado = $this->calls->usedInMission($this->turn->sessionId(), self::EXENTAS_DE_TOPE);
     $topeLlamadas = $this->cap('max_calls_per_mission');
     $topeTexto = $this->cap('max_retrieved_chars_per_mission');
 
@@ -196,7 +214,11 @@ final class ToolGateway implements ToolRunnerInterface {
     $topePeriodo = $this->cap('max_calls_per_user_period');
 
     if ($topePeriodo > 0 && !$this->turn->isSandbox()) {
-      $usadas = $this->calls->usedByUserSince($this->turn->uid(), $this->spend->periodStart());
+      $usadas = $this->calls->usedByUserSince(
+        $this->turn->uid(),
+        $this->spend->periodStart(),
+        self::EXENTAS_DE_TOPE,
+      );
 
       if ($usadas >= $topePeriodo) {
         return self::TOPE_PERIODO;
@@ -288,7 +310,7 @@ final class ToolGateway implements ToolRunnerInterface {
    * Si la herramienta solo mira lo que ya está guardado.
    */
   private function isLedgerTool(string $name): bool {
-    return in_array($name, [LedgerReadTool::NAME, LedgerWriteTool::NAME], TRUE);
+    return in_array($name, self::EXENTAS_DE_TOPE, TRUE);
   }
 
   /**

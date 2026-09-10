@@ -10,6 +10,7 @@ use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\LedgerReadTool;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\LedgerWriteTool;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository;
+use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolGateway;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\WebSearchTool;
 use Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger;
 use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
@@ -266,10 +267,44 @@ final class EvidenceLedgerTest extends KernelTestBase {
 
     $repositorio = $this->container->get(ToolCallRepository::class);
 
-    // Cuenta como llamada concedida, pero sin texto externo: no trajo nada de
-    // fuera, así que no consume el tope de contenido de la misión.
-    $this->assertSame(2, $repositorio->usedInMission(42)['calls']);
-    $this->assertSame(0, $repositorio->usedInMission(42)['chars'], 'No trae texto de fuera.');
+    // Queda anotado: el total crudo las ve. Es lo que hace medible el
+    // `ledger_reads` del §10.
+    $this->assertSame(2, $repositorio->usedInMission(42)['calls'], 'Las dos lecturas quedan registradas.');
+
+    // Y NO gasta cupo: contado como lo cuenta el gateway —excluyendo lo que él
+    // mismo exime— son cero.
+    //
+    // Hasta el 10-09-2026 esta prueba afirmaba lo contrario y daba el fallo por
+    // bueno. El gateway eximía al ledger de los topes y el contador lo sumaba
+    // igual, así que cada consulta le quitaba en silencio una búsqueda a la
+    // misión: con 50 de tope y 5 usos del ledger, el presupuesto real eran 45.
+    $comoCuentaElGateway = $repositorio->usedInMission(42, ToolGateway::EXENTAS_DE_TOPE);
+
+    $this->assertSame(0, $comoCuentaElGateway['calls'], 'Mirar lo ya guardado no gasta búsquedas.');
+    $this->assertSame(0, $comoCuentaElGateway['chars'], 'No trae texto de fuera.');
+  }
+
+  /**
+   * El ledger tampoco cuenta como búsqueda en la pantalla del gestor.
+   *
+   * El bloque se titula «Búsquedas externas». Si suma consultas al ledger,
+   * dice más búsquedas de las que hubo, y de ahí salen cifras que acaban en
+   * documentos para el cliente: en la primera misión medida habrían salido 32
+   * donde hubo 27.
+   */
+  public function testLaPantallaNoCuentaElLedgerComoBusqueda(): void {
+    $this->anotar('Cemex', 'Un dato.');
+    $this->leerPorElGateway('Cemex');
+    $this->leerPorElGateway('Cemex');
+
+    $repositorio = $this->container->get(ToolCallRepository::class);
+
+    $this->assertSame(2, $repositorio->summarySince(0)['allowed'], 'El total crudo las ve.');
+    $this->assertSame(
+      0,
+      $repositorio->summarySince(0, ToolGateway::EXENTAS_DE_TOPE)['allowed'],
+      'Como búsquedas externas, ninguna.',
+    );
   }
 
   /**

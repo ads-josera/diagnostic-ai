@@ -6,6 +6,8 @@ namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn;
+use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\LedgerReadTool;
+use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\LedgerWriteTool;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBox;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolGateway;
@@ -228,6 +230,51 @@ final class ToolGatewayTest extends KernelTestBase {
     $gateway->run('buscar_web', ['consulta' => 'c']);
 
     $this->assertSame(3, $this->espia->veces, 'Un ensayo no debe toparse con el cupo del periodo.');
+  }
+
+  /**
+   * Usar el ledger NO encoge el presupuesto de búsquedas de la misión.
+   *
+   * Es el fallo que se encontró el 10-09-2026, y la razón de que no se viera
+   * en meses: el gateway eximía correctamente al ledger de los topes, pero el
+   * contador que aplica esos topes lo sumaba igual. Cada consulta a lo ya
+   * guardado le quitaba en silencio una búsqueda a la misión.
+   *
+   * No fallaba de forma visible. El agente se quedaba sin margen antes de
+   * tiempo y lo declaraba honestamente —«no verificado»—, que es exactamente
+   * lo que hace cuando el tope se agota de verdad. Indistinguible desde fuera.
+   */
+  public function testUsarElLedgerNoEncogeElCupoDeBusquedas(): void {
+    $this->fijarTopes(porMision: 2);
+    $this->turno();
+
+    // Dos usos del ledger antes de buscar. Con el fallo, se comían el tope
+    // entero y la primera búsqueda ya salía denegada.
+    $this->container->get(ToolCallRepository::class)->record(
+      uid: self::ALUMNO,
+      sessionId: self::MISION,
+      tool: LedgerReadTool::NAME,
+      query: 'Cemex',
+      allowed: TRUE,
+    );
+    $this->container->get(ToolCallRepository::class)->record(
+      uid: self::ALUMNO,
+      sessionId: self::MISION,
+      tool: LedgerWriteTool::NAME,
+      query: 'Cemex',
+      allowed: TRUE,
+    );
+
+    $this->gateway()->run('buscar_web', ['consulta' => 'cemex']);
+    $this->gateway()->run('buscar_web', ['consulta' => 'lala']);
+
+    $this->assertSame(2, $this->espia->veces, 'Las dos búsquedas del tope tienen que caber.');
+
+    // Y la tercera sí topa: el tope sigue existiendo, solo que ahora cuenta
+    // búsquedas y no cualquier cosa.
+    $this->gateway()->run('buscar_web', ['consulta' => 'bimbo']);
+
+    $this->assertSame(2, $this->espia->veces, 'La tercera sí se pasa del tope.');
   }
 
   /**
