@@ -355,6 +355,22 @@
   color: var(--sld-color-danger);
 }
 
+/* Escala del listado ------------------------------------------------------ */
+
+/*
+ * Cuantos hay. Sin esta linea, un filtro que no casa con nadie y uno que casa
+ * con todo se ven igual —una tabla— y hay que contar filas a ojo.
+ *
+ * Va pegada a la tabla y no al titulo: pertenece a lo que se esta mirando, no
+ * a la pantalla.
+ */
+.sld-admin-results__escala {
+  margin: 0 0 var(--sld-space-sm);
+  color: var(--sld-color-text-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Mensajes y vacios ------------------------------------------------------ */
 
 .sld-manager__main .messages {

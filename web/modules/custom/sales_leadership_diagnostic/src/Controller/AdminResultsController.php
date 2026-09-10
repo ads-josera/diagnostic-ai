@@ -6,6 +6,7 @@ namespace Drupal\sales_leadership_diagnostic\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
+use Drupal\Core\Entity\Query\QueryInterface;
 use Drupal\Core\Url;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
@@ -94,6 +95,23 @@ final class AdminResultsController extends ControllerBase {
     $build['filtros'] = $this->formBuilder()->getForm(ResultsFilterForm::class);
 
     $ids = $this->querySessionIds($filters);
+
+    // Cuántos hay. Es lo que dice si el filtro hizo algo: sin esta línea, un
+    // filtro que no casa con nadie y uno que casa con todo se ven igual —una
+    // tabla— y hay que contar filas a ojo para saber cuál es cuál.
+    $cuenta = $this->countSessions($filters);
+
+    $build['escala'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#attributes' => ['class' => ['sld-admin-results__escala']],
+      '#value' => $cuenta['filtradas'] === $cuenta['todas']
+        ? $this->formatPlural($cuenta['todas'], '1 diagnóstico', '@count diagnósticos')
+        : $this->t('@n de @total diagnósticos', [
+          '@n' => $cuenta['filtradas'],
+          '@total' => $cuenta['todas'],
+        ]),
+    ];
 
     $build['tabla'] = [
       '#type' => 'table',
@@ -187,6 +205,69 @@ final class AdminResultsController extends ControllerBase {
    *   Identificadores de la página actual, del más reciente al más antiguo.
    */
   private function querySessionIds(array $filters): array {
+    $query = $this->filteredQuery($filters);
+
+    if ($query === NULL) {
+      return [];
+    }
+
+    return array_map('intval', array_values($query->pager(self::PER_PAGE)->execute()));
+  }
+
+  /**
+   * Cuántas conversaciones hay, con y sin el filtro puesto.
+   *
+   * Las dos cifras salen de la MISMA consulta que la tabla, sin el paginador.
+   * Escribir una segunda consulta «igual» es como acaban un contador y su
+   * listado diciendo cosas distintas, y entonces el que se cree es el que
+   * confunde.
+   *
+   * @param array<string, mixed> $filters
+   *   Filtros en vigor.
+   *
+   * @return array{filtradas: int, todas: int}
+   *   Lo que cumple el filtro y el total sin filtrar.
+   */
+  private function countSessions(array $filters): array {
+    $filtrada = $this->filteredQuery($filters);
+
+    return [
+      'filtradas' => $filtrada === NULL ? 0 : (int) $filtrada->count()->execute(),
+      'todas' => (int) $this->filteredQuery($this->emptyFilters())->count()->execute(),
+    ];
+  }
+
+  /**
+   * Filtros vacíos: lo que se ve al entrar sin filtrar nada.
+   *
+   * @return array<string, mixed>
+   *   La misma forma que devuelve currentFilters().
+   */
+  private function emptyFilters(): array {
+    return [
+      'desde' => NULL,
+      'hasta' => NULL,
+      'agente' => '',
+      'estado' => '',
+      'alumno' => '',
+    ];
+  }
+
+  /**
+   * La consulta con los filtros aplicados, sin paginar ni ejecutar.
+   *
+   * Vive aparte porque la usan DOS: la tabla y el contador. Tenerla duplicada
+   * es como acaban diciendo cosas distintas.
+   *
+   * @param array<string, mixed> $filters
+   *   Filtros en vigor.
+   *
+   * @return \Drupal\Core\Entity\Query\QueryInterface|null
+   *   La consulta, o NULL si el filtro de alumno no casa con nadie: en ese
+   *   caso no hay nada que consultar y devolver una consulta sin condición
+   *   daría el listado entero.
+   */
+  private function filteredQuery(array $filters): ?QueryInterface {
     $query = $this->entityTypeManager()
       ->getStorage('sld_diagnostic_session')
       ->getQuery()
@@ -198,8 +279,7 @@ final class AdminResultsController extends ControllerBase {
       // Los ensayos del gestor no son diagnósticos de nadie: mezclarlos aquí
       // daría un listado en el que no se puede confiar para dar soporte.
       ->condition('is_sandbox', FALSE)
-      ->sort('created', 'DESC')
-      ->pager(self::PER_PAGE);
+      ->sort('created', 'DESC');
 
     if ($filters['desde'] !== NULL) {
       $query->condition('created', $filters['desde'], '>=');
@@ -230,14 +310,17 @@ final class AdminResultsController extends ControllerBase {
     if ($filters['alumno'] !== '') {
       $uids = $this->matchingUserIds($filters['alumno']);
 
+      // Nadie se llama así: no hay nada que consultar. Devolver la consulta
+      // sin esta condición daría el listado ENTERO, que es justo lo contrario
+      // de lo que se pidió.
       if ($uids === []) {
-        return [];
+        return NULL;
       }
 
       $query->condition('uid', $uids, 'IN');
     }
 
-    return array_map('intval', array_values($query->execute()));
+    return $query;
   }
 
   /**

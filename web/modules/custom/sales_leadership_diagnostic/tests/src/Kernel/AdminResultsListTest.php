@@ -174,6 +174,41 @@ final class AdminResultsListTest extends KernelTestBase {
    * @return array<int, array<string, mixed>>
    *   Filas construidas.
    */
+  private function escala(array $filtros = []): string {
+    return (string) $this->pantalla($filtros)['escala']['#value'];
+  }
+
+  /**
+   * La pantalla entera, para poder mirar algo que no sean las filas.
+   *
+   * @param array<string, string> $filtros
+   *   Filtros de la petición.
+   *
+   * @return array<string, mixed>
+   *   El array de construcción del listado.
+   */
+  private function pantalla(array $filtros = []): array {
+    $peticion = Request::create('/admin/content/sales-diagnostic', 'GET', $filtros);
+    $peticion->setSession(new Session(new MockArraySessionStorage()));
+    $this->container->get('request_stack')->push($peticion);
+
+    try {
+      return AdminResultsController::create($this->container)->view();
+    }
+    finally {
+      $this->container->get('request_stack')->pop();
+    }
+  }
+
+  /**
+   * Las filas del listado.
+   *
+   * @param array<string, string> $filtros
+   *   Filtros de la petición.
+   *
+   * @return array<int, mixed>
+   *   Filas de la tabla.
+   */
   private function filas(array $filtros = []): array {
     $peticion = Request::create('/admin/content/sales-diagnostic', 'GET', $filtros);
     // El controlador construye el formulario de filtros, y la Form API exige
@@ -189,6 +224,54 @@ final class AdminResultsListTest extends KernelTestBase {
     finally {
       $this->container->get('request_stack')->pop();
     }
+  }
+
+  /**
+   * Un filtro que no casa con nadie no revienta la pantalla.
+   *
+   * Daba un error 500. La consulta devolvía una lista vacía donde su firma
+   * prometía una consulta, y el listado entero se caía con un TypeError. Lo
+   * encontró el recorrido de caminos el 10-09-2026, no una prueba: la
+   * pantalla sin filtro cargaba perfectamente.
+   *
+   * Y lo que NO puede pasar es lo contrario: que al no encontrar a nadie se
+   * ignore el filtro y salga el listado completo. Sería peor que el error,
+   * porque parece una respuesta.
+   */
+  public function testUnFiltroQueNoCasaConNadieNoRevienta(): void {
+    $this->crearSesion('agente_gap', DiagnosticStatus::Completed);
+
+    $this->assertSame([], $this->filas(['alumno' => 'nadie_se_llama_asi']));
+    $this->assertStringContainsString('0 de', $this->escala(['alumno' => 'nadie_se_llama_asi']));
+  }
+
+  /**
+   * La escala dice cuántos hay, y cuántos de cuántos al filtrar.
+   *
+   * Sin ella, un filtro que casa con todo y uno que casa con la mitad se ven
+   * igual —una tabla— y hay que contar filas a ojo para saber cuál es cuál.
+   */
+  public function testLaEscalaDiceCuantosHay(): void {
+    $this->crearSesion('agente_gap', DiagnosticStatus::Completed);
+    $this->crearSesion('agente_gap', DiagnosticStatus::Completed);
+    $this->crearSesion('agente_prospeccion', DiagnosticStatus::Completed);
+
+    $this->assertSame('3 diagnósticos', $this->escala());
+    $this->assertSame('2 de 3 diagnósticos', $this->escala(['agente' => 'agente_gap']));
+  }
+
+  /**
+   * Los ensayos tampoco cuentan en la escala.
+   *
+   * Van junto a la prueba de que no salen en la tabla: si la cifra los contara
+   * y la tabla no los enseñara, el gestor leería un número que no cuadra con
+   * lo que tiene delante y no sabría cuál de los dos creer.
+   */
+  public function testLosEnsayosNoCuentanEnLaEscala(): void {
+    $this->crearSesion('agente_gap', DiagnosticStatus::Completed);
+    $this->crearSesion('agente_gap', DiagnosticStatus::Completed, ensayo: TRUE);
+
+    $this->assertSame('1 diagnóstico', $this->escala());
   }
 
   /**
