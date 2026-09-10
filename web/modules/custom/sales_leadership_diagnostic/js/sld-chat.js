@@ -155,6 +155,100 @@
   /**
    * Inicializa un chat.
    */
+  /**
+   * Cada cuanto se pregunta como va, y cuanto se espera como maximo.
+   *
+   * Dos segundos es lo bastante frecuente para que la cuenta de busquedas se
+   * mueva a la vista, y lo bastante espaciado para no castigar al servidor
+   * durante una mision de veinte minutos.
+   *
+   * El maximo son treinta minutos. Mas alla, algo se rompio: es preferible
+   * decirlo a dejar a alguien mirando indefinidamente.
+   */
+  const INTERVALO_SONDEO = 2000;
+  const ESPERA_MAXIMA = 30 * 60 * 1000;
+
+  /**
+   * Espera a que termine un turno que corre en segundo plano.
+   *
+   * Vive FUERA de initChat porque hacen falta dos caminos y tienen que ser el
+   * mismo: el de quien acaba de enviar un mensaje, y el de quien carga la
+   * pagina con un turno ya corriendo —porque recargo, cerro la pestana y
+   * volvio, o entro desde otro sitio—.
+   *
+   * El segundo camino faltaba hasta el 10-09-2026, y el sintoma era el peor
+   * posible: la pantalla decia «se esta generando tu resultado» y NO volvia a
+   * preguntar nunca. El trabajo terminaba y nadie se enteraba. Desde fuera,
+   * «esta pensando» y «esta muerto» se ven exactamente igual.
+   *
+   * Mientras espera, ensena cuantas busquedas lleva hechas. No es un adorno:
+   * es la diferencia entre una espera y una espera que se entiende. Un
+   * indicador que no se mueve durante quince minutos se lee como «se colgo», y
+   * la persona cierra la pestana justo cuando el trabajo iba bien.
+   *
+   * @param {object} settings
+   *   Ajustes del modulo; hace falta statusEndpoint.
+   * @param {HTMLElement} log
+   *   Donde colgar el aviso de que se esta trabajando.
+   * @param {Function} onError
+   *   Que hacer si no se pudo terminar. Recibe el texto ya traducido.
+   *
+   * @return {Promise<object|null>}
+   *   El estado final, o null si no se pudo terminar.
+   */
+  const esperarTurno = async (settings, log, onError) => {
+    if (!settings.statusEndpoint) {
+      onError(GENERIC_ERROR);
+      return null;
+    }
+
+    const aviso = document.createElement('p');
+    aviso.className = 'sld-chat__working';
+    aviso.setAttribute('role', 'status');
+    aviso.textContent = Drupal.t('Investigando…');
+    log.appendChild(aviso);
+    scrollToEnd(log);
+
+    const hasta = Date.now() + ESPERA_MAXIMA;
+
+    while (Date.now() < hasta) {
+      await new Promise((resolver) => window.setTimeout(resolver, INTERVALO_SONDEO));
+
+      let estado;
+
+      try {
+        const respuesta = await fetch(settings.statusEndpoint, { credentials: 'same-origin' });
+
+        if (!respuesta.ok) {
+          aviso.remove();
+          onError(GENERIC_ERROR);
+          return null;
+        }
+
+        estado = await respuesta.json();
+      }
+      catch (error) {
+        // Un fallo de red suelto no cancela la espera: el trabajo sigue
+        // corriendo en el servidor y la siguiente vuelta puede funcionar.
+        continue;
+      }
+
+      if (!estado.processing) {
+        aviso.remove();
+        return estado;
+      }
+
+      aviso.textContent = estado.searches > 0
+        ? Drupal.formatPlural(estado.searches, 'Investigando… 1 búsqueda hecha', 'Investigando… @count búsquedas hechas')
+        : Drupal.t('Investigando…');
+    }
+
+    aviso.remove();
+    onError(Drupal.t('La investigación está tardando más de lo normal. Recarga la página en unos minutos: el trabajo sigue en marcha y no se ha perdido.'));
+
+    return null;
+  };
+
   function initChat(root) {
     const settings = drupalSettings.salesLeadershipDiagnostic || {};
     const log = root.querySelector('[data-sld-log]');
@@ -163,6 +257,40 @@
     const errorBox = root.querySelector('[data-sld-error]');
 
     scrollToEndWhenSettled(log);
+
+    /**
+     * La página cargó con un turno YA corriendo.
+     *
+     * Pasa cada vez que alguien recarga, cierra la pestaña y vuelve, o entra
+     * desde su panel mientras la misión se cocina. Sin esto, la pantalla se
+     * queda con un aviso fijo que no vuelve a cambiar nunca: el trabajo
+     * termina y nadie se entera.
+     *
+     * Se recarga al acabar en vez de pintar el mensaje a mano, porque en este
+     * camino hay que devolver también el compositor, y el servidor sabe
+     * montarlo mejor que nosotros.
+     */
+    if (settings.processing) {
+      const estatico = root.querySelector('[data-sld-processing]');
+
+      // El aviso vivo dice cuántas búsquedas lleva; el fijo no dice nada.
+      if (estatico) {
+        estatico.hidden = true;
+      }
+
+      esperarTurno(settings, log, (mensaje) => {
+        if (estatico) {
+          estatico.hidden = false;
+          estatico.textContent = mensaje;
+        }
+      }).then((estado) => {
+        if (estado) {
+          window.location.reload();
+        }
+      });
+
+      return;
+    }
 
     // Sesión cerrada: no hay compositor que inicializar.
     if (!composer) {
@@ -268,7 +396,7 @@
         // peticion web. En ese caso aqui no hay respuesta todavia: hay que
         // preguntar cada pocos segundos hasta que la haya.
         if (data.processing) {
-          const resultado = await esperarTurno(log);
+          const resultado = await esperarTurno(settings, log, showError);
 
           if (resultado === null) {
             return;
@@ -310,82 +438,6 @@
         scrollToEnd(log);
         input.focus();
       }
-    };
-
-    /**
-     * Cada cuanto se pregunta como va, y cuanto se espera como maximo.
-     *
-     * Dos segundos es lo bastante frecuente para que la cuenta de busquedas se
-     * mueva a la vista, y lo bastante espaciado para no castigar al servidor
-     * durante una mision de veinte minutos.
-     *
-     * El maximo son treinta minutos. Mas alla, algo se rompio: es preferible
-     * decirlo a dejar a alguien mirando indefinidamente.
-     */
-    const INTERVALO_SONDEO = 2000;
-    const ESPERA_MAXIMA = 30 * 60 * 1000;
-
-    /**
-     * Espera a que termine un turno que corre en segundo plano.
-     *
-     * Mientras espera, ensena cuantas busquedas lleva hechas. No es un adorno:
-     * es la diferencia entre una espera y una espera que se entiende. Un
-     * indicador que no se mueve durante quince minutos se lee como «se colgo»,
-     * y la persona cierra la pestana justo cuando el trabajo iba bien.
-     *
-     * Devuelve null si no se pudo terminar; en ese caso ya avisó por su cuenta.
-     */
-    const esperarTurno = async (log) => {
-      if (!settings.statusEndpoint) {
-        showError(GENERIC_ERROR);
-        return null;
-      }
-
-      const aviso = document.createElement('p');
-      aviso.className = 'sld-chat__working';
-      aviso.setAttribute('role', 'status');
-      aviso.textContent = Drupal.t('Investigando…');
-      log.appendChild(aviso);
-      scrollToEnd(log);
-
-      const hasta = Date.now() + ESPERA_MAXIMA;
-
-      while (Date.now() < hasta) {
-        await new Promise((resolver) => window.setTimeout(resolver, INTERVALO_SONDEO));
-
-        let estado;
-
-        try {
-          const respuesta = await fetch(settings.statusEndpoint, { credentials: 'same-origin' });
-
-          if (!respuesta.ok) {
-            aviso.remove();
-            showError(GENERIC_ERROR);
-            return null;
-          }
-
-          estado = await respuesta.json();
-        }
-        catch (error) {
-          // Un fallo de red suelto no cancela la espera: el trabajo sigue
-          // corriendo en el servidor y la siguiente vuelta puede funcionar.
-          continue;
-        }
-
-        if (!estado.processing) {
-          aviso.remove();
-          return estado;
-        }
-
-        aviso.textContent = estado.searches > 0
-          ? Drupal.formatPlural(estado.searches, 'Investigando… 1 búsqueda hecha', 'Investigando… @count búsquedas hechas')
-          : Drupal.t('Investigando…');
-      }
-
-      aviso.remove();
-      showError(Drupal.t('La investigación está tardando más de lo normal. Recarga la página en unos minutos: el trabajo sigue en marcha y no se ha perdido.'));
-
-      return null;
     };
 
     composer.addEventListener('submit', (event) => {

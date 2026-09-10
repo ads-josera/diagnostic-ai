@@ -147,7 +147,11 @@
     </p>
   {% else %}
     <div class="sld__notice" role="status">
-      <p>
+      {# El aviso de «procesando» lleva asidero porque el JavaScript lo
+         sustituye por uno vivo que cuenta las búsquedas. Sin ese relevo, la
+         pantalla se queda con un texto fijo que no cambia aunque el trabajo
+         termine. #}
+      <p{% if status == 'processing' %} data-sld-processing{% endif %}>
         {% if status == 'completed' %}
           {{ 'Este diagnóstico ya está completado.'|t }}
         {% elseif status == 'processing' %}

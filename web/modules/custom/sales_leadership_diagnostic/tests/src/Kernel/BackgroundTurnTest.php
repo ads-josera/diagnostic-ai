@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\sales_leadership_diagnostic\Controller\ChatController;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Hook\StuckTurnHooks;
 use Drupal\sales_leadership_diagnostic\Plugin\QueueWorker\DiagnosticTurnWorker;
@@ -106,6 +107,42 @@ final class BackgroundTurnTest extends KernelTestBase {
     $this->assertSame('', $salida['message_html'], 'Todavía no hay respuesta que pintar.');
     $this->assertSame(1, $this->cola()->numberOfItems());
     $this->assertSame(DiagnosticStatus::Processing, $this->recargar($sesion)->getStatus());
+  }
+
+  /**
+   * La pantalla que CARGA con un turno corriendo sabe que tiene que sondear.
+   *
+   * Es la mitad que faltaba de la ejecución en segundo plano, y falló en manos
+   * del cliente el 10-09-2026. El sondeo solo arrancaba al enviar un mensaje;
+   * quien recargaba, cerraba la pestaña y volvía, o entraba desde su panel, se
+   * quedaba con un aviso fijo que no volvía a cambiar nunca. El trabajo
+   * terminaba y nadie se enteraba.
+   *
+   * Se comprueba el ajuste que enciende el sondeo. Es el único hilo entre el
+   * servidor, que sabe que hay un turno corriendo, y el navegador, que es
+   * quien tiene que preguntar: si alguien lo quita, la pantalla se vuelve a
+   * quedar muda y no lo nota ninguna otra prueba.
+   */
+  public function testLaPantallaConTurnoCorriendoPideSondear(): void {
+    $sesion = $this->crearSesion();
+    $chat = ChatController::create($this->container);
+
+    $ajustes = static fn (array $construido): array => $construido['#attached']['drupalSettings']['salesLeadershipDiagnostic'];
+
+    $this->assertFalse(
+      $ajustes($chat->view($sesion))['processing'],
+      'Una conversación normal no debe ponerse a sondear.',
+    );
+
+    $sesion->setStatus(DiagnosticStatus::Processing)->save();
+
+    $construido = $chat->view($this->recargar($sesion));
+
+    $this->assertTrue($ajustes($construido)['processing']);
+    $this->assertNotEmpty(
+      $ajustes($construido)['statusEndpoint'],
+      'Y con a dónde preguntar: sin endpoint no hay sondeo posible.',
+    );
   }
 
   /**

@@ -102,6 +102,10 @@ final class ChatController extends ControllerBase {
             'statusEndpoint' => Url::fromRoute('sales_leadership_diagnostic.session_status', [
               'sld_diagnostic_session' => $session->id(),
             ])->toString(),
+            // Si la página CARGA con un turno ya corriendo. Sin esto, quien
+            // recarga o vuelve más tarde se queda con un aviso fijo que no
+            // vuelve a cambiar: el trabajo termina y nadie se entera.
+            'processing' => $status === DiagnosticStatus::Processing,
             'csrfTokenUrl' => Url::fromRoute('system.csrftoken')->toString(),
           ],
         ],

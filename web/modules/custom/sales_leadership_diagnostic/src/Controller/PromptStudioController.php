@@ -8,6 +8,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
+use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Form\PromptStudioForm;
 use Drupal\sales_leadership_diagnostic\MessageRole;
@@ -121,6 +122,10 @@ final class PromptStudioController extends ControllerBase {
               'sales_leadership_diagnostic.studio_status',
               ['sld_diagnostic_session' => $sessionId],
             )->toString(),
+            // Y si la página carga con el ensayo YA corriendo. El gestor
+            // recarga tanto como el alumno, y el síntoma sería el mismo:
+            // un aviso fijo que no vuelve a cambiar nunca.
+            'processing' => $session->getStatus() === DiagnosticStatus::Processing,
             // El nombre lo fija el JS, que es el mismo archivo que usa el
             // alumno: 'csrfTokenUrl', no otro.
             'csrfTokenUrl' => Url::fromRoute('system.csrftoken')->toString(),
