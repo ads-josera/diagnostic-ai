@@ -36,8 +36,9 @@ Fields of "result":
 - summary: EXECUTIVE READING, as one paragraph.
 - score: the Complete Diagnostic Global Score, 0-100, as an integer. Send null
   for a Partial Diagnostic, which must not produce a Global Score.
-- maturity: the maturity band of that Score, exactly as your methodology names
-  it (CRITICAL, DEVELOPING, MANAGED, PREDICTIVE or SALES EXCELLENCE).
+- maturity: the global maturity level, exactly as your Scoring Engine names
+  it (CRÍTICO, EN DESARROLLO, GESTIONADO, PREDICTIVO or SALES EXCELLENCE), in
+  the same words the participant reads in "message".
 - confidence: the global Confidence (HIGH, MEDIUM or LOW).
 - dimensions: MATURITY BY DIMENSION, one entry per dimension you evaluated,
   in the order of your methodology. Each entry carries:

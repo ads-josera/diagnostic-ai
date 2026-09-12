@@ -318,7 +318,12 @@ function sld_bateria_comprobar(array $caso, $sesion, array $mensajes, array $err
     $score < 90 => 'PREDICTIVE',
     default => 'SALES EXCELLENCE',
   };
-  $c['banda'] = [strtoupper((string) ($p['maturity'] ?? '')) === $banda, 'madurez ' . ($p['maturity'] ?? '') . ", esperada $banda"];
+  // El Scoring Engine v1.2.3 nombra las bandas en español y el prompt
+  // aprobado en inglés: se aceptan las dos formas de la misma banda.
+  $equivalentes = ['CRÍTICO' => 'CRITICAL', 'EN DESARROLLO' => 'DEVELOPING', 'GESTIONADO' => 'MANAGED', 'PREDICTIVO' => 'PREDICTIVE'];
+  $dicha = mb_strtoupper(trim((string) ($p['maturity'] ?? '')));
+  $dicha = $equivalentes[$dicha] ?? $dicha;
+  $c['banda'] = [$dicha === $banda, 'madurez ' . ($p['maturity'] ?? '') . ", esperada $banda"];
   $c['confianza'] = [in_array(strtoupper((string) ($p['confidence'] ?? '')), ['HIGH', 'MEDIUM', 'LOW'], TRUE), 'confianza ' . ($p['confidence'] ?? '')];
 
   $secciones = ['EXECUTIVE SNAPSHOT|RESUMEN EJECUTIVO|SNAPSHOT', 'DIMENSI', 'LECTURA EJECUTIVA|EXECUTIVE READING', 'FUGAS|LEAKS', 'FORTALEZAS|STRENGTHS', 'RIESGOS|RISKS', 'PRIORIDADES|PRIORITIES', '30 D'];
