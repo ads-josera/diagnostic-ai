@@ -158,6 +158,27 @@ También hay directorio privado que crear, para los documentos de conocimiento:
 
 Si falta, subir un documento falla con un error poco explícito.
 
+### El registro de Drupal tiene que durar días, no minutos
+
+Drupal guarda por defecto **las últimas 1 000 entradas** de su registro, y con
+el cron cada minuto el propio cron escribe unas once por pasada. Eso deja el
+registro en **hora y media**: un error de un alumno se borra antes de que nadie
+lo mire.
+
+Pasó en local el 11-09-2026. Un alumno vio «No hemos podido procesar tu
+solicitud» a las 22:24; a las 22:32 la entrada que explicaba por qué ya no
+existía, y hubo que reproducir el fallo a ciegas.
+
+Súbalo a 100 000 (unos seis días con el cron cada minuto):
+
+```bash
+drush config:set dblog.settings row_limit 100000 -y
+```
+
+Si el servidor ya envía el registro a syslog o a otro destino con retención
+propia, esto sobra: lo que importa es que un error se pueda leer al día
+siguiente.
+
 ### Conservación de las conversaciones
 
 En **Configuración → Salesbumm → Diagnostic AI → Reglas de uso** hay un plazo
@@ -549,6 +570,9 @@ proveedor de IA, así que no cuesta llamadas.
 - [ ] Directorio `sites/default/files-private` creado y con permisos de escritura
 - [ ] Cron programado y ejecutándose. Sin él la memoria del alumno no se
       escribe NUNCA, y no falla de forma visible
+- [ ] Registro de Drupal a 100 000 filas (`dblog.settings row_limit`). Con
+      las 1 000 de fábrica y el cron cada minuto, un error se borra en hora y
+      media
 
 ### Instalación
 

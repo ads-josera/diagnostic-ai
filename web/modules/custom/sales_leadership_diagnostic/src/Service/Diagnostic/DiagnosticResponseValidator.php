@@ -110,6 +110,27 @@ final class DiagnosticResponseValidator {
 
     if ($completed) {
       $result = $this->extractResult($raw);
+    }
+
+    // Dar la conversación por terminada SIN resultado es legítimo: el alumno
+    // escribe «cerrar» y el agente, correctamente, cierra sin inventarse un
+    // Score que no tiene con qué sostener. Lo hizo dos de cada tres veces al
+    // reproducir el caso del 11-09-2026.
+    //
+    // Antes esto era un error, y el error tiraba el mensaje del agente: el
+    // alumno veía «No hemos podido procesar tu solicitud» y su conversación
+    // quedaba sin respuesta. Ahora se guarda el mensaje y la sesión sigue
+    // abierta, que es lo que el propio agente ofrece —«cuando quieras
+    // retomarlo»—. Nada se pierde y no se crea un resultado vacío.
+    if ($completed && $result === NULL) {
+      // Solo el tipo: nunca contenido de la conversación (§43).
+      $this->logger->warning('El agente dio la conversación por terminada sin devolver resultado (tipo @type). Se guarda su mensaje y la sesión sigue abierta.', [
+        '@type' => $type,
+      ]);
+      $completed = FALSE;
+    }
+
+    if ($completed) {
       $this->comprobarAritmetica($result);
 
       // Estas dos SÍ modifican el resultado, al contrario que la aritmética.
@@ -294,12 +315,11 @@ final class DiagnosticResponseValidator {
    * entregue su formato, este es el punto donde añadir las comprobaciones
    * concretas.
    *
-   * @return array<string, mixed>
-   *   La estructura del resultado final, tal como la devolvió el motor.
-   *
-   * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
+   * @return array<string, mixed>|null
+   *   La estructura del resultado final, tal como la devolvió el motor, o NULL
+   *   si no trae ninguno.
    */
-  private function extractResult(array $raw): array {
+  private function extractResult(array $raw): ?array {
     // El resultado puede venir anidado en "result" o al mismo nivel que el
     // mensaje, según cómo lo formule el prompt del cliente. Se admiten ambos.
     if (isset($raw['result']) && is_array($raw['result']) && $raw['result'] !== []) {
@@ -319,7 +339,7 @@ final class DiagnosticResponseValidator {
       return $inline;
     }
 
-    throw new InvalidEngineResponseException('El motor declaró el diagnóstico completado pero no devolvió ningún resultado.');
+    return NULL;
   }
 
   /**

@@ -10,6 +10,7 @@ use Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * Comprueba la validación de lo que devuelve el motor de IA.
@@ -167,20 +168,40 @@ final class DiagnosticResponseValidatorTest extends UnitTestCase {
   }
 
   /**
-   * Declarar el diagnóstico completado sin resultado se rechaza.
+   * Cerrar sin resultado no es un error: se guarda el mensaje y sigue abierta.
    *
-   * Aceptarlo produciría una sesión cerrada cuyo resultado está vacío, que es
-   * peor que un error: el alumno vería un informe en blanco.
+   * Es el caso del 11-09-2026: el alumno escribió «cerrar» en un
+   * re-diagnóstico sin datos y el agente cerró, correctamente, sin inventarse
+   * un Score. Hasta entonces esto se rechazaba, y el rechazo tiraba su mensaje:
+   * el alumno veía un error genérico y la conversación se quedaba sin
+   * respuesta. Tampoco se da por completado, que dejaría una sesión cerrada con
+   * el informe en blanco.
    */
-  public function testRechazaCompletadoSinResultado(): void {
-    $this->expectException(InvalidEngineResponseException::class);
-
-    $this->validator->validate([
-      'type' => 'diagnostic_result',
-      'message' => 'Terminado.',
+  #[DataProvider('cierresSinResultado')]
+  public function testCerrarSinResultadoConservaElMensaje(string $tipo): void {
+    $turno = $this->validator->validate([
+      'type' => $tipo,
+      'message' => 'Entendido. Cierro aquí el re-diagnóstico sin emitir conclusiones ni Score.',
       'status' => 'completed',
       'result' => NULL,
     ]);
+
+    $this->assertFalse($turno->completed, 'La sesión no se da por completada.');
+    $this->assertNull($turno->result, 'No se inventa un resultado vacío.');
+    $this->assertSame('Entendido. Cierro aquí el re-diagnóstico sin emitir conclusiones ni Score.', $turno->message);
+  }
+
+  /**
+   * Los dos tipos de turno que pueden declarar un cierre.
+   *
+   * @return array<string, array{string}>
+   *   Tipo de turno.
+   */
+  public static function cierresSinResultado(): array {
+    return [
+      'respuesta que dice completed' => ['diagnostic_response'],
+      'resultado que llega sin resultado' => ['diagnostic_result'],
+    ];
   }
 
   /**
