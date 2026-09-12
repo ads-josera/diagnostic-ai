@@ -68,3 +68,11 @@ manager:
     theme:
       css/sld-base.css: {}
       css/sld-manager.css: {}
+
+# «Mis cuentas».
+accounts:
+  version: 1.x
+  css:
+    theme:
+      css/sld-base.css: {}
+      css/sld-accounts.css: {}

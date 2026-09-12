@@ -117,6 +117,9 @@
     <section class="sld-pack" aria-labelledby="sld-pack-label">
       <div class="sld-pack__head">
         <h2 class="sld-result__section-title" id="sld-pack-label">{{ 'Cuentas del Pack'|t }}</h2>
+        {% if accounts_url %}
+          <a class="sld-pack__track" href="{{ accounts_url }}">{{ 'Registrar qué pasó con cada cuenta →'|t }}</a>
+        {% endif %}
         {% if pool %}
           <p class="sld-pack__pool">
             {{ 'Cribadas @n cuentas'|t({'@n': pool.audited}) }}

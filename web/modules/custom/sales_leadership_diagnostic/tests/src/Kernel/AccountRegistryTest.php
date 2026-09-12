@@ -267,4 +267,22 @@ final class AccountRegistryTest extends KernelTestBase {
     return (int) $this->alumno->id();
   }
 
+  /**
+   * La clasificación se guarda entera aunque el agente escriba de más.
+   *
+   * El 10-09-2026 escribió «SILVER — HOLD FOR OWNERSHIP CHECK», 33
+   * caracteres, y con un tope de 32 se guardó cortada sin que nada avisara.
+   */
+  public function testLaClasificacionNoSeCorta(): void {
+    $larga = 'SILVER — HOLD FOR OWNERSHIP CHECK';
+
+    $this->registro()->ingestPack($this->uid(), 'prospeccion', 10, [
+      ['name' => 'Bilden', 'disposition' => $larga, 'outreach_status' => 'OUTREACH BLOCKED'],
+    ]);
+
+    $cuenta = $this->registro()->forUser($this->uid())[0];
+    $this->assertSame($larga, $cuenta['disposition']);
+    $this->assertSame('OUTREACH BLOCKED', $cuenta['outreach_status']);
+  }
+
 }

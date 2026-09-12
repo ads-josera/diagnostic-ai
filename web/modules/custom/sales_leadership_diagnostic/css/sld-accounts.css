@@ -1,0 +1,396 @@
+/**
+ * «Mis cuentas».
+ *
+ * Una tarjeta por cuenta y los estados a un clic, siguiendo el §11 del
+ * Documento 8 del cliente —«Feedback Without Forms»—. El color semantico va
+ * en el estado y en nada mas: si todo lleva color, el color deja de decir
+ * donde esta cada cuenta.
+ *
+ * Los chips llevan el texto MAS OSCURO que su color semantico. El color puro
+ * sobre su propio tinte se queda en torno a 4,5 a 1, y un chip de consumo ya
+ * cayo por debajo por eso. Aqui se deja margen de entrada.
+ */
+
+.sld-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-lg);
+  /* El tema parte palabras con guion, y aquí eso da «EN-RICH» o nombres de
+     empresa partidos. Se desactiva, como en el Estudio. */
+  hyphens: manual;
+}
+
+.sld-accounts__back {
+  align-self: flex-start;
+  font-size: 0.9rem;
+}
+
+.sld-accounts__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-xs);
+}
+
+/* Mismo tamaño que el saludo del panel: es la pantalla hermana. */
+.sld-accounts__title {
+  margin: 0;
+  color: var(--sld-color-text);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.sld-accounts__intro {
+  max-width: 64ch;
+  margin: 0;
+  color: var(--sld-color-text-muted);
+  line-height: 1.6;
+}
+
+/* Cifras ----------------------------------------------------------------- */
+
+.sld-accounts__figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--sld-space-sm);
+  margin: 0;
+}
+
+.sld-accounts__figure {
+  padding: var(--sld-space-md);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-bg);
+}
+
+.sld-accounts__figure dt {
+  color: var(--sld-color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sld-accounts__figure dd {
+  margin: 0.15rem 0 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.sld-accounts__figure--logro dd {
+  color: color-mix(in srgb, var(--sld-color-success) 85%, black);
+}
+
+/* Pestanas --------------------------------------------------------------- */
+
+.sld-accounts__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sld-space-xs);
+}
+
+.sld-accounts__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--sld-color-border);
+  border-radius: 999px;
+  color: var(--sld-color-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sld-accounts__tab:hover {
+  border-color: var(--sld-color-primary);
+}
+
+.sld-accounts__tab.is-active {
+  border-color: var(--sld-color-primary);
+  background: var(--sld-color-primary);
+  color: var(--sld-color-primary-contrast);
+}
+
+.sld-accounts__tab-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.sld-accounts__tab:focus-visible,
+.sld-account__state:focus-visible {
+  outline: 2px solid var(--sld-color-primary);
+  outline-offset: 2px;
+}
+
+/* Vacio ------------------------------------------------------------------ */
+
+.sld-accounts__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sld-space-sm);
+  padding: var(--sld-space-lg);
+  border: 1px dashed var(--sld-color-border);
+  border-radius: var(--sld-radius);
+}
+
+.sld-accounts__empty p {
+  margin: 0;
+}
+
+.sld-accounts__empty-title {
+  font-weight: 700;
+}
+
+/* La lista y cada cuenta ------------------------------------------------- */
+
+.sld-accounts__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sld-account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-sm);
+  padding: var(--sld-space-md) var(--sld-space-lg);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-bg);
+  /* El ancla lleva hasta aqui al volver de registrar: que no quede tapada por
+     el borde de la ventana. */
+  scroll-margin-top: var(--sld-space-lg);
+}
+
+.sld-account:target {
+  border-color: var(--sld-color-primary);
+  box-shadow: var(--sld-shadow);
+}
+
+.sld-account__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sld-space-sm);
+}
+
+.sld-account__who {
+  min-width: 0;
+}
+
+.sld-account__name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.sld-account__meta {
+  margin: 0.2rem 0 0;
+  color: var(--sld-color-text-muted);
+  font-size: 0.85rem;
+}
+
+.sld-account__disposition {
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.sld-account__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sld-account__chip {
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sld-account__chip--pendiente {
+  border: 1px dashed var(--sld-color-border);
+  color: var(--sld-color-text-muted);
+}
+
+.sld-account__chip--neutro {
+  background: var(--sld-color-surface);
+  color: var(--sld-color-text);
+}
+
+.sld-account__chip--avance {
+  background: color-mix(in srgb, var(--sld-color-primary) 12%, transparent);
+  color: color-mix(in srgb, var(--sld-color-primary) 80%, black);
+}
+
+.sld-account__chip--logro {
+  background: color-mix(in srgb, var(--sld-color-success) 14%, transparent);
+  color: color-mix(in srgb, var(--sld-color-success) 70%, black);
+}
+
+.sld-account__chip--cierre {
+  background: color-mix(in srgb, var(--sld-color-danger) 12%, transparent);
+  color: color-mix(in srgb, var(--sld-color-danger) 78%, black);
+}
+
+.sld-account__truth {
+  color: var(--sld-color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.sld-account__note {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--sld-color-border);
+  background: var(--sld-color-surface);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.sld-account__when {
+  color: var(--sld-color-text-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* El registro de un clic ------------------------------------------------- */
+
+.sld-account__form {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sld-space-xs);
+  padding-top: var(--sld-space-sm);
+  border-top: 1px solid color-mix(in srgb, var(--sld-color-border) 60%, transparent);
+}
+
+/* El botón por defecto del formulario: existe para que Intro no pulse el
+   primer estado rápido. Fuera de la vista pero no con display:none, que en
+   algunos navegadores lo saca del envío implícito. */
+.sld-account__default {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.sld-account__quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sld-account__quick legend {
+  float: left;
+  margin-right: 0.35rem;
+  padding: 0;
+  color: var(--sld-color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.sld-account__state {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--sld-color-border);
+  border-radius: 999px;
+  background: var(--sld-color-bg);
+  color: var(--sld-color-text);
+  font: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.sld-account__state:hover {
+  border-color: var(--sld-color-primary);
+}
+
+/* El estado en que ya esta la cuenta: se ve cual es sin leer el chip. */
+.sld-account__state.is-current {
+  border-color: var(--sld-color-primary);
+  background: color-mix(in srgb, var(--sld-color-primary) 10%, transparent);
+  font-weight: 700;
+}
+
+.sld-account__more summary,
+.sld-account__history summary {
+  color: var(--sld-color-text-muted);
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.sld-account__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  align-items: end;
+  gap: var(--sld-space-sm);
+  margin-top: var(--sld-space-sm);
+}
+
+.sld-account__fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.sld-account__note-field {
+  grid-column: 1 / -1;
+}
+
+.sld-account__fields select,
+.sld-account__fields input {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius-sm);
+  background: var(--sld-color-bg);
+  color: var(--sld-color-text);
+  font: inherit;
+  font-weight: 400;
+}
+
+.sld-account__save {
+  justify-self: start;
+}
+
+.sld-account__hint {
+  margin: 0.4rem 0 0;
+  color: var(--sld-color-text-muted);
+  font-size: 0.8rem;
+}
+
+.sld-account__history ol {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.86rem;
+}
+
+.sld-account__history li + li {
+  margin-top: 0.2rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sld-account__state {
+    transition: none;
+  }
+}

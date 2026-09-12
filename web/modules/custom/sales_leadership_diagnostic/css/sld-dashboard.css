@@ -29,6 +29,50 @@
   margin-bottom: var(--sld-space-xl);
 }
 
+/*
+ * La puerta a «Mis cuentas». Una franja y no una tarjeta más de agente: no es
+ * un diagnóstico que empezar, es el seguimiento de lo que ya entregó uno.
+ */
+.sld-dashboard__accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0 0 var(--sld-space-xl);
+  padding: var(--sld-space-md) var(--sld-space-lg);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-surface);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sld-dashboard__accounts:hover,
+.sld-dashboard__accounts:focus-visible {
+  border-color: var(--sld-color-primary);
+  box-shadow: var(--sld-shadow);
+}
+
+.sld-dashboard__accounts-title {
+  color: var(--sld-color-primary);
+  font-weight: 700;
+}
+
+.sld-dashboard__accounts-title::after {
+  content: " →";
+}
+
+.sld-dashboard__accounts-text {
+  color: var(--sld-color-text-muted);
+  font-size: 0.9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sld-dashboard__accounts {
+    transition: none;
+  }
+}
+
 .sld-dashboard__section-title {
   margin: 0 0 var(--sld-space-md);
   font-size: 1.15rem;

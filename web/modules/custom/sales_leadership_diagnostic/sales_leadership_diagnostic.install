@@ -11,6 +11,7 @@ use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\file\FileInterface;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
 use Drupal\sales_leadership_diagnostic\Service\Account\AccountRegistry;
 use Drupal\user\Entity\Role;
 
@@ -223,14 +224,14 @@ function sales_leadership_diagnostic_account_event_table(): array {
       ],
       'disposition' => [
         'type' => 'varchar',
-        'length' => 32,
+        'length' => AccountRegistry::DISPOSITION_MAX,
         'not null' => TRUE,
         'default' => '',
         'description' => 'Clasificación en ese Pack: GOLD, SILVER, NURTURE...',
       ],
       'outreach_status' => [
         'type' => 'varchar',
-        'length' => 32,
+        'length' => AccountRegistry::STATUS_MAX,
         'not null' => TRUE,
         'default' => '',
         'description' => 'Estado de envío en ese Pack.',
@@ -1485,4 +1486,69 @@ function sales_leadership_diagnostic_update_10019(): string {
   }
 
   return sprintf('Registro de cuentas creado. Se cargaron %d cuenta(s) de %d Pack(s) que ya existían.', $cuentas, $packs);
+}
+
+/**
+ * Ensancha la clasificación de cada Pack y repara las que se cortaron.
+ *
+ * La columna era de 32 caracteres y el agente no se ciñe a una palabra: el
+ * 10-09-2026 escribió «SILVER — HOLD FOR OWNERSHIP CHECK», 33, y se guardó
+ * cortada sin aviso. La pantalla del alumno enseñaba «...OWNERSHIP CHEC».
+ *
+ * Reparar edita eventos, que por regla solo crecen. La excepción es a
+ * sabiendas: no se cambia lo que dijo el Pack, se restituye lo que el
+ * almacenamiento le quitó, y el valor sale del propio Pack, que es inmutable.
+ */
+function sales_leadership_diagnostic_update_10020(): string {
+  $base = \Drupal::database();
+  $tabla = sales_leadership_diagnostic_account_event_table();
+
+  foreach (['disposition', 'outreach_status'] as $campo) {
+    $base->schema()->changeField('sld_account_event', $campo, $campo, $tabla['fields'][$campo]);
+  }
+
+  $registro = \Drupal::service(AccountRegistry::class);
+  $almacen = \Drupal::entityTypeManager()->getStorage('sld_diagnostic_result');
+  $filas = $base->select('sld_account_event', 'e');
+  $filas->join('sld_account', 'a', 'a.id = e.account_id');
+  $filas = $filas->fields('e', ['id', 'result_id', 'disposition', 'outreach_status'])
+    ->fields('a', ['name_key'])
+    ->condition('e.kind', 'pack')
+    ->execute();
+
+  $reparadas = 0;
+
+  foreach ($filas as $fila) {
+    // Solo las que llegaron justo al tope viejo pueden estar cortadas.
+    if (mb_strlen($fila->disposition) < 32 && mb_strlen($fila->outreach_status) < 32) {
+      continue;
+    }
+
+    $resultado = $almacen->load($fila->result_id);
+
+    if (!$resultado instanceof DiagnosticResultInterface) {
+      continue;
+    }
+
+    foreach ($resultado->getAccounts() as $cuenta) {
+      if ($registro->keyFor((string) ($cuenta['name'] ?? '')) !== $fila->name_key) {
+        continue;
+      }
+
+      $base->update('sld_account_event')
+        ->fields([
+          'disposition' => mb_substr((string) ($cuenta['disposition'] ?? ''), 0, AccountRegistry::DISPOSITION_MAX),
+          'outreach_status' => mb_substr((string) ($cuenta['outreach_status'] ?? ''), 0, AccountRegistry::STATUS_MAX),
+        ])
+        ->condition('id', $fila->id)
+        ->execute();
+      $reparadas++;
+      break;
+    }
+  }
+
+  return (string) t('Clasificación ensanchada a @d caracteres; se repararon @n evento(s) cortados.', [
+    '@d' => AccountRegistry::DISPOSITION_MAX,
+    '@n' => $reparadas,
+  ]);
 }

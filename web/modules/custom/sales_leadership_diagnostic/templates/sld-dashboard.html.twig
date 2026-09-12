@@ -169,6 +169,20 @@
     {% endif %}
   </div>
 
+  {#
+    La puerta a «Mis cuentas». Solo aparece cuando hay alguna: a quien nunca
+    ha recibido un Pack, un enlace a una lista vacía solo le haría dudar de
+    si le falta algo.
+  #}
+  {% if accounts %}
+    <a class="sld-dashboard__accounts" href="{{ accounts.url }}">
+      <span class="sld-dashboard__accounts-title">{{ 'Mis cuentas'|t }}</span>
+      <span class="sld-dashboard__accounts-text">
+        {% trans %}{{ accounts.count }} cuenta de tus Weekly GOLD Packs. Anota qué pasó con ella y el agente lo tendrá en cuenta la próxima semana.{% plural accounts.count %}{{ accounts.count }} cuentas de tus Weekly GOLD Packs. Anota qué pasó con cada una y el agente lo tendrá en cuenta la próxima semana.{% endtrans %}
+      </span>
+    </a>
+  {% endif %}
+
 {#
   El historial.
 

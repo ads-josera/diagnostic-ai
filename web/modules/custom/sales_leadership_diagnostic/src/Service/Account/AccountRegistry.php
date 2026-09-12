@@ -58,6 +58,20 @@ final class AccountRegistry {
    */
   public const NOTE_MAX = 280;
 
+  /**
+   * Largo máximo de la clasificación de una cuenta en un Pack.
+   *
+   * Holgado a propósito. El agente no se ciñe a una palabra: el 10-09-2026
+   * escribió «SILVER — HOLD FOR OWNERSHIP CHECK», 33 caracteres, y con 32 se
+   * guardó cortada sin que nada avisara.
+   */
+  public const DISPOSITION_MAX = 128;
+
+  /**
+   * Largo máximo del estado de envío de una cuenta en un Pack.
+   */
+  public const STATUS_MAX = 64;
+
   public function __construct(
     private readonly Connection $database,
     private readonly TimeInterface $time,
@@ -144,8 +158,8 @@ final class AccountRegistry {
           'uid' => $uid,
           'kind' => 'pack',
           'result_id' => $resultId,
-          'disposition' => mb_substr((string) ($cuenta['disposition'] ?? ''), 0, 32),
-          'outreach_status' => mb_substr((string) ($cuenta['outreach_status'] ?? ''), 0, 32),
+          'disposition' => mb_substr((string) ($cuenta['disposition'] ?? ''), 0, self::DISPOSITION_MAX),
+          'outreach_status' => mb_substr((string) ($cuenta['outreach_status'] ?? ''), 0, self::STATUS_MAX),
           'created' => $cuando,
         ])->execute();
 
@@ -312,6 +326,52 @@ final class AccountRegistry {
     }
 
     return $salida;
+  }
+
+  /**
+   * El historial de TODAS las cuentas de una persona, agrupado por cuenta.
+   *
+   * Una sola consulta. La pantalla enseña el historial de cada cuenta, y
+   * pedirlo cuenta por cuenta serían quinientas consultas para un alumno con
+   * un año de uso.
+   *
+   * @return array<int, array<int, array<string, mixed>>>
+   *   Identificador de cuenta => sus eventos, del más antiguo al más reciente.
+   */
+  public function eventsForUser(int $uid): array {
+    $filas = $this->database->select(self::EVENTOS, 'e')
+      ->fields('e')
+      ->condition('uid', $uid)
+      ->orderBy('id')
+      ->execute();
+
+    $salida = [];
+
+    foreach ($filas as $fila) {
+      $salida[(int) $fila->account_id][] = [
+        'kind' => (string) $fila->kind,
+        'result_id' => (int) $fila->result_id,
+        'disposition' => (string) $fila->disposition,
+        'outreach_status' => (string) $fila->outreach_status,
+        'state' => ExecutionState::tryFrom((string) $fila->state),
+        'truth' => BuyerTruth::tryFrom((string) $fila->truth),
+        'note' => (string) $fila->note,
+        'created' => (int) $fila->created,
+      ];
+    }
+
+    return $salida;
+  }
+
+  /**
+   * Cuántas cuentas tiene una persona.
+   */
+  public function countForUser(int $uid): int {
+    return (int) $this->database->select(self::CUENTAS, 'c')
+      ->condition('uid', $uid)
+      ->countQuery()
+      ->execute()
+      ->fetchField();
   }
 
   /**

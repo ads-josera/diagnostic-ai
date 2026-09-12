@@ -1,0 +1,180 @@
+{#
+/**
+ * @file
+ * «Mis cuentas»: las cuentas del alumno semana tras semana.
+ *
+ * Sigue el §11 del Documento 8 del cliente, «Feedback Without Forms»: un clic
+ * para el estado, y como mucho una etiqueta y una frase opcionales. Los cinco
+ * botones son las cinco preguntas de su §12; el resto de estados y la verdad
+ * del Buyer quedan plegados, a mano pero sin estorbar.
+ *
+ * Cada cuenta es un formulario propio con su token: registrar escribe datos, y
+ * con GET lo dispararía cualquier cosa que precargue enlaces.
+ *
+ * Variables:
+ * - accounts: las cuentas de la pestaña actual.
+ * - view: pestaña actual.
+ * - tabs: pestañas con su recuento.
+ * - figures: total, pendientes, avanzan, oportunidades.
+ * - quick_states, other_states, truths: opciones del registro.
+ * - note_max: largo máximo de la nota.
+ * - dashboard_url: vuelta al panel.
+ */
+#}
+<div class="sld sld-accounts">
+
+  {# La vuelta va arriba, como en la página de agente: sin ella esta pantalla
+     es un callejón y al alumno solo le queda el botón del navegador. #}
+  <a class="sld__link sld-accounts__back" href="{{ dashboard_url }}">
+    {{ '← Volver a mis diagnósticos'|t }}
+  </a>
+
+  <header class="sld-accounts__header">
+    <h1 class="sld-accounts__title">{{ 'Mis cuentas'|t }}</h1>
+    <p class="sld-accounts__intro">
+      {{ 'Las cuentas que el agente te ha ido proponiendo, semana tras semana. Anota qué pasó con cada una: el agente lo tiene en cuenta en tu próxima misión para no volver a proponerte lo que ya no funcionó.'|t }}
+    </p>
+  </header>
+
+  {% if figures.total > 0 %}
+    <dl class="sld-accounts__figures">
+      <div class="sld-accounts__figure">
+        <dt>{{ 'Cuentas'|t }}</dt>
+        <dd>{{ figures.total }}</dd>
+      </div>
+      <div class="sld-accounts__figure">
+        <dt>{{ 'Sin registrar'|t }}</dt>
+        <dd>{{ figures.pendientes }}</dd>
+      </div>
+      <div class="sld-accounts__figure">
+        <dt>{{ 'Avanzando'|t }}</dt>
+        <dd>{{ figures.avanzan }}</dd>
+      </div>
+      <div class="sld-accounts__figure sld-accounts__figure--logro">
+        <dt>{{ 'Oportunidad o ganada'|t }}</dt>
+        <dd>{{ figures.oportunidades }}</dd>
+      </div>
+    </dl>
+
+    <nav class="sld-accounts__tabs" aria-label="{{ 'Filtrar cuentas'|t }}">
+      {% for tab in tabs %}
+        <a class="sld-accounts__tab{{ tab.active ? ' is-active' : '' }}" href="{{ tab.url }}"{% if tab.active %} aria-current="page"{% endif %}>
+          {{ tab.label }} <span class="sld-accounts__tab-count">{{ tab.count }}</span>
+        </a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+
+  {% if accounts is empty %}
+    <div class="sld-accounts__empty">
+      {% if figures.total == 0 %}
+        <p class="sld-accounts__empty-title">{{ 'Todavía no tienes cuentas.'|t }}</p>
+        <p>{{ 'Aparecen aquí solas cuando el agente de prospección te entrega un Weekly GOLD Pack.'|t }}</p>
+        <a class="sld__button" href="{{ dashboard_url }}">{{ 'Ir a mis diagnósticos'|t }}</a>
+      {% else %}
+        <p class="sld-accounts__empty-title">{{ 'No hay cuentas en esta vista.'|t }}</p>
+      {% endif %}
+    </div>
+  {% else %}
+    <ol class="sld-accounts__list">
+      {% for a in accounts %}
+        <li class="sld-account" id="cuenta-{{ a.id }}">
+
+          <div class="sld-account__head">
+            <div class="sld-account__who">
+              <h2 class="sld-account__name">{{ a.name }}</h2>
+              <p class="sld-account__meta">
+                {% trans %}En {{ a.packs }} Pack{% plural a.packs %}En {{ a.packs }} Packs{% endtrans %}
+                · {{ 'desde el @d'|t({'@d': a.first_seen}) }}
+                {% if a.disposition %}· <span class="sld-account__disposition">{{ a.disposition }}</span>{% endif %}
+                {% if a.result_url %}· <a href="{{ a.result_url }}">{{ 'Ver en el Pack'|t }}</a>{% endif %}
+              </p>
+            </div>
+
+            <div class="sld-account__status">
+              {% if a.state %}
+                <span class="sld-account__chip sld-account__chip--{{ a.state.tone }}">{{ a.state.label }}</span>
+              {% else %}
+                <span class="sld-account__chip sld-account__chip--pendiente">{{ 'Sin registrar'|t }}</span>
+              {% endif %}
+              {% if a.truth %}
+                <span class="sld-account__truth">{{ a.truth }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if a.note %}
+            <p class="sld-account__note">«{{ a.note }}»{% if a.outcome_at %} <span class="sld-account__when">{{ a.outcome_at }}</span>{% endif %}</p>
+          {% endif %}
+
+          <form class="sld-account__form" action="{{ a.record_url }}" method="post">
+            <input type="hidden" name="ver" value="{{ a.view }}">
+            {#
+              Pulsar Intro en la frase envía el formulario con su PRIMER botón,
+              y el primero sería «No acción»: una nota escrita acabaría
+              anotando un estado que nadie eligió. Este va primero, no manda
+              estado, y usa lo elegido en el desplegable o avisa si no hay nada.
+            #}
+            <button type="submit" class="sld-account__default" tabindex="-1" aria-hidden="true">{{ 'Anotar'|t }}</button>
+
+            <fieldset class="sld-account__quick">
+              <legend>{{ '¿Qué pasó?'|t }}</legend>
+              {% for s in quick_states %}
+                <button type="submit" name="state" value="{{ s.code }}"
+                        class="sld-account__state{{ a.state and a.state.code == s.code ? ' is-current' : '' }}">
+                  {{ s.label }}
+                </button>
+              {% endfor %}
+            </fieldset>
+
+            <details class="sld-account__more">
+              <summary>{{ 'Más detalle: otro estado, qué dijo el Buyer o una nota'|t }}</summary>
+              <div class="sld-account__fields">
+                <label>
+                  <span>{{ 'Otro estado'|t }}</span>
+                  <select name="state_otro">
+                    <option value="">{{ '— Elige —'|t }}</option>
+                    {% for s in other_states %}
+                      <option value="{{ s.code }}">{{ s.label }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                <label>
+                  <span>{{ 'Qué dijo el Buyer (opcional)'|t }}</span>
+                  <select name="truth">
+                    <option value="">{{ '— Sin etiqueta —'|t }}</option>
+                    {% for v in truths %}
+                      <option value="{{ v.code }}">{{ v.label }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                <label class="sld-account__note-field">
+                  <span>{{ 'Una frase (opcional)'|t }}</span>
+                  <input type="text" name="note" maxlength="{{ note_max }}" placeholder="{{ 'Por ejemplo: nos pasó con el gerente de mantenimiento.'|t }}">
+                </label>
+                <button type="submit" class="sld__button sld-account__save">{{ 'Anotar'|t }}</button>
+              </div>
+              <p class="sld-account__hint">{{ 'Si pulsas uno de los botones de arriba, la etiqueta y la frase se guardan con él.'|t }}</p>
+            </details>
+          </form>
+
+          {% if a.history|length > 1 %}
+            <details class="sld-account__history">
+              <summary>{{ 'Historial (@n)'|t({'@n': a.history|length}) }}</summary>
+              <ol>
+                {% for h in a.history %}
+                  <li>
+                    <span class="sld-account__when">{{ h.when }}</span>
+                    {{ h.text }}{% if h.note %} — «{{ h.note }}»{% endif %}
+                  </li>
+                {% endfor %}
+              </ol>
+            </details>
+          {% endif %}
+
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+
+</div>

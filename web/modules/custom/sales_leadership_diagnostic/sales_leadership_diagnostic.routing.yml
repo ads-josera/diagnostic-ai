@@ -112,6 +112,28 @@ sales_leadership_diagnostic.memory_forget_all:
     _permission: 'access sales leadership diagnostic'
     _csrf_token: 'TRUE'
 
+# «Mis cuentas»: todas las cuentas del alumno semana tras semana y lo que
+# pasó con cada una. Sale del Documento 8 del cliente.
+sales_leadership_diagnostic.accounts:
+  path: '/sales-diagnostic/cuentas'
+  defaults:
+    _controller: '\Drupal\sales_leadership_diagnostic\Controller\AccountsController::view'
+    _title: 'Mis cuentas'
+  requirements:
+    _permission: 'access sales leadership diagnostic'
+
+# Registrar qué pasó con una cuenta. POST y token: escribe datos. Que la cuenta
+# sea de quien la registra lo comprueba el registro antes de escribir.
+sales_leadership_diagnostic.account_outcome:
+  path: '/sales-diagnostic/cuentas/{account}/resultado'
+  methods: [POST]
+  defaults:
+    _controller: '\Drupal\sales_leadership_diagnostic\Controller\AccountsController::record'
+  requirements:
+    _permission: 'access sales leadership diagnostic'
+    _csrf_token: 'TRUE'
+    account: '\d+'
+
 # Vista de conversación.
 #
 # El nombre del parámetro coincide con el ID del tipo de entidad, así que

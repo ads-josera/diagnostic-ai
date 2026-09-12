@@ -52,6 +52,7 @@ final class DiagnosticThemeHooks {
     'sales_leadership_diagnostic.dashboard',
     'sales_leadership_diagnostic.agent_page',
     'sales_leadership_diagnostic.result',
+    'sales_leadership_diagnostic.accounts',
   ];
 
   /**
@@ -130,6 +131,8 @@ final class DiagnosticThemeHooks {
           'unavailable_notice' => NULL,
           'expiry_notice' => NULL,
           'history' => [],
+          // Enlace y recuento de «Mis cuentas», o NULL si no tiene ninguna.
+          'accounts' => NULL,
           // Cierto cuando `history` no es el historial completo sino lo que
           // quedó sin página de agente donde salir. Lo normal es que entonces
           // esté vacío, y la sección desaparece.
@@ -221,6 +224,9 @@ final class DiagnosticThemeHooks {
           // diagnóstico, que no produce cuentas.
           'accounts' => [],
           'pool' => NULL,
+          // A dónde ir a registrar qué pasó con las cuentas. Solo para su
+          // dueño: el gestor que mira el Pack de otro no registra nada.
+          'accounts_url' => NULL,
           'sections' => [],
           'version' => '',
           'created' => '',
@@ -228,6 +234,20 @@ final class DiagnosticThemeHooks {
           // gestor al listado. Antes el enlace era fijo y dejaba al gestor en
           // una pantalla que no es suya.
           'back' => ['url' => '', 'label' => ''],
+        ],
+      ],
+      // «Mis cuentas». Ver AccountsController.
+      'sld_accounts' => [
+        'variables' => [
+          'accounts' => [],
+          'view' => 'todas',
+          'tabs' => [],
+          'figures' => [],
+          'quick_states' => [],
+          'other_states' => [],
+          'truths' => [],
+          'note_max' => 280,
+          'dashboard_url' => '',
         ],
       ],
       'sld_welcome' => [

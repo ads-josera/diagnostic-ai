@@ -62,10 +62,13 @@ const CAMINOS = [
   { url: '/admin/content/sales-diagnostic', que: 'Resultados', roles: ['admin', 'gestor'], espera: 200 },
   { url: '/sales-diagnostic', que: 'Panel del alumno', roles: ['alumno'], espera: 200 },
   { url: '/sales-diagnostic/agente/prospecting_diagnostic', que: 'Pagina de agente', roles: ['alumno'], espera: 200 },
+  { url: '/sales-diagnostic/cuentas', que: 'Mis cuentas', roles: ['alumno'], espera: 200 },
+  { url: '/sales-diagnostic/cuentas?ver=pendientes', que: 'Mis cuentas sin registrar', roles: ['alumno'], espera: 200 },
   { url: '/bienvenida', que: 'Bienvenida publica', roles: ['alumno', 'gestor', 'admin'], espera: 200, sinSalida: true },
   // Lo que NO debe abrirse. Sin esto, media comprobacion.
   { url: '/admin/config/salesbumm/diagnostic/marca', que: 'Marca (ajena)', roles: ['gestor'], espera: 403 },
   { url: '/admin/config/salesbumm/diagnostic/consumo', que: 'Consumo (ajeno)', roles: ['alumno'], espera: 403 },
+  { url: '/sales-diagnostic/cuentas', que: 'Mis cuentas (ajena)', roles: ['gestor'], espera: 403 },
 ];
 
 /**

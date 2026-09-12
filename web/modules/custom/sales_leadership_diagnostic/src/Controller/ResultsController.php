@@ -167,6 +167,11 @@ final class ResultsController extends ControllerBase {
       // mensaje sin seleccionarlo a mano.
       '#accounts' => $result->getAccounts(),
       '#pool' => $this->buildPool($result),
+      // Registrar qué pasó con estas cuentas. Solo para su dueño, y solo si el
+      // Pack tiene cuentas: el gestor que da soporte no registra por nadie.
+      '#accounts_url' => $this->esSuyo($result) && $result->getAccounts() !== []
+        ? Url::fromRoute('sales_leadership_diagnostic.accounts')->toString()
+        : NULL,
       '#sections' => $this->buildSections($payload),
       '#version' => $result->getDiagnosticVersion(),
       // A dónde vuelve quien mira. El alumno, a su panel; el gestor, al

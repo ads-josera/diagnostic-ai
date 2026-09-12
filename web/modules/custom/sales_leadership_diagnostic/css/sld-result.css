@@ -322,6 +322,24 @@
   margin-bottom: var(--sld-space-md);
 }
 
+/* El puente del Pack a «Mis cuentas». Va arriba de las cuentas porque es lo
+   que se hace DESPUES de leerlas: anotar que paso con cada una. */
+.sld-pack__track {
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--sld-color-primary);
+  border-radius: 999px;
+  color: var(--sld-color-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sld-pack__track:hover,
+.sld-pack__track:focus-visible {
+  background: var(--sld-color-primary);
+  color: var(--sld-color-primary-contrast);
+}
+
 .sld-pack__pool {
   margin: 0;
   color: var(--sld-color-text-muted);

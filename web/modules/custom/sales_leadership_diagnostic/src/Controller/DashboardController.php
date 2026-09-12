@@ -16,6 +16,7 @@ use Drupal\sales_leadership_diagnostic\ReadinessBlocker;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticResultRepository;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticSessionRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\Service\Account\AccountRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
 use Drupal\sales_leadership_diagnostic\Service\Branding\Branding;
@@ -56,6 +57,7 @@ final class DashboardController extends ControllerBase {
     private readonly CsrfTokenGenerator $csrfToken,
     private readonly StudentHistoryBuilder $history,
     private readonly ChatWelcome $welcome,
+    private readonly AccountRegistry $accounts,
   ) {}
 
   /**
@@ -77,6 +79,7 @@ final class DashboardController extends ControllerBase {
       $container->get('csrf_token'),
       $container->get(StudentHistoryBuilder::class),
       $container->get(ChatWelcome::class),
+      $container->get(AccountRegistry::class),
     );
   }
 
@@ -133,6 +136,10 @@ final class DashboardController extends ControllerBase {
         : $this->history->all($sessions, $results),
       '#history_is_leftover' => $varios,
       '#memory' => $this->buildMemory($uid),
+      // El recuento solo cambia cuando llega un Pack, y un Pack es un
+      // resultado nuevo: lo invalida la etiqueta de la lista de resultados,
+      // que ya está abajo. Registrar un estado no cambia el recuento.
+      '#accounts' => $this->buildAccounts($uid),
       '#memory_forget_all_url' => $this->buildForgetAllUrl(),
       '#attached' => [
         'library' => ['sales_leadership_diagnostic/dashboard'],
@@ -175,6 +182,28 @@ final class DashboardController extends ControllerBase {
     return $externalUserId === NULL
       ? NULL
       : $this->accessChecker->decide($externalUserId);
+  }
+
+  /**
+   * La entrada a «Mis cuentas», o NULL si todavía no tiene ninguna.
+   *
+   * @param int $uid
+   *   Alumno.
+   *
+   * @return array{url: string, count: int}|null
+   *   Destino y cuántas cuentas tiene.
+   */
+  private function buildAccounts(int $uid): ?array {
+    $cuantas = $this->accounts->countForUser($uid);
+
+    if ($cuantas === 0) {
+      return NULL;
+    }
+
+    return [
+      'url' => Url::fromRoute('sales_leadership_diagnostic.accounts')->toString(),
+      'count' => $cuantas,
+    ];
   }
 
   /**
