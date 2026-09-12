@@ -348,9 +348,16 @@ repositorio y los deja en su sitio:
 drush php:script bin/cargar-agentes.php
 ```
 
-Pone el prompt de cada agente desde `docs/knowledge-cliente/` y, en el de
-prospección, sus quince documentos de conocimiento en el orden del manifiesto
-del cliente.
+Pone el prompt de cada agente desde `docs/knowledge-cliente/`, su **contrato
+de salida** desde `docs/contratos-de-salida/` y, en el de prospección, sus
+quince documentos de conocimiento en el orden del manifiesto del cliente.
+
+El contrato de salida es la parte NUESTRA del prompt: le dice al modelo cómo
+entregar la respuesta a la plataforma —JSON, campos del resultado, qué hacer si
+la persona cierra antes del informe—. Hasta el 12-09-2026 solo existía en la
+base de datos local, así que una instalación limpia obligaba a pegarlo a mano.
+Si se cambia, se cambia en el archivo y se vuelve a pasar el cargador, que sube
+la versión del agente.
 
 Úselo en vez del textarea. Los prompts rondan los 8 000 caracteres y llevan
 guiones largos, flechas y comillas tipográficas; una copia manual los aplana

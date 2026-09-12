@@ -118,6 +118,42 @@ final class OpenAIClientTest extends UnitTestCase {
   }
 
   /**
+   * Una respuesta completa sin objeto JSON se repite una vez, y vale.
+   *
+   * Es lo que dejó a un alumno sin respuesta el 12-09-2026 en un
+   * re-diagnóstico: el fallo es raro y pasajero, y a la segunda sale bien. La
+   * negativa del modelo es la forma más clara de provocarlo: llega como una
+   * parte de tipo «refusal», sin texto.
+   */
+  public function testUnaRespuestaSinJsonSeRepiteUnaVez(): void {
+    $client = $this->client([
+      $this->respuestaSinJson(),
+      $this->respuestaCorrecta(['ok' => TRUE]),
+    ]);
+
+    $this->assertSame(['ok' => TRUE], $this->llamar($client));
+  }
+
+  /**
+   * Si la repetición también falla, se rinde: se repite UNA vez, no más.
+   *
+   * La tercera respuesta de la cola es correcta a propósito. Si el código
+   * repitiera dos veces la alcanzaría y la prueba no lanzaría nada.
+   */
+  public function testSiLaRepeticionTambienFallaSeRinde(): void {
+    $client = $this->client([
+      $this->respuestaSinJson(),
+      $this->respuestaSinJson(),
+      $this->respuestaCorrecta(['no' => 'deberia llegarse aqui']),
+    ]);
+
+    $this->expectException(InvalidEngineResponseException::class);
+    $this->expectExceptionMessage('objeto JSON válido');
+
+    $this->llamar($client);
+  }
+
+  /**
    * Sin modelo configurado se falla antes de salir a la red.
    */
   public function testSinModeloNoSeLlamaAlProveedor(): void {
@@ -169,6 +205,28 @@ final class OpenAIClientTest extends UnitTestCase {
         'input_tokens_details' => ['cached_tokens' => 0],
         'output_tokens' => 5,
         'output_tokens_details' => ['reasoning_tokens' => 2],
+      ],
+    ]));
+  }
+
+  /**
+   * Una respuesta completa cuyo mensaje es una negativa, sin JSON.
+   */
+  private function respuestaSinJson(): Response {
+    return new Response(200, [], (string) json_encode([
+      'status' => 'completed',
+      'output' => [
+        [
+          'type' => 'message',
+          'status' => 'completed',
+          'content' => [['type' => 'refusal', 'refusal' => 'No puedo ayudar con eso.']],
+        ],
+      ],
+      'usage' => [
+        'input_tokens' => 10,
+        'input_tokens_details' => ['cached_tokens' => 0],
+        'output_tokens' => 5,
+        'output_tokens_details' => ['reasoning_tokens' => 0],
       ],
     ]));
   }

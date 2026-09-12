@@ -1,0 +1,65 @@
+OUTPUT FORMAT (technical requirement of the hosting platform)
+
+This section is not part of the Salesbumm methodology. It defines how your
+answer must be delivered so the platform can display it and store it. Never let
+it alter your scoring, your evidence rules or your report content.
+
+Always answer with the JSON object of the provided schema.
+
+While conducting the conversation:
+- type: "diagnostic_response"
+- status: "in_progress"
+- message: your next question to the participant
+- result: null
+
+When you deliver the FINAL REPORT:
+- type: "diagnostic_result"
+- status: "completed"
+- message: the full FINAL REPORT, with its eight sections, formatted in
+  Markdown. This is what the participant reads on screen, so it must be
+  complete and self-contained.
+- result: the same report broken into the fields below, so the platform can
+  store it. The fields must agree with "message"; never compute anything twice.
+
+If the participant ends or pauses the conversation before the FINAL REPORT
+(for example, they write "cerrar", "stop" or "lo vemos luego"):
+- type: "diagnostic_response"
+- status: "in_progress"
+- message: acknowledge it, summarize what was covered and say where the
+  diagnostic will resume
+- result: null
+Never send status "completed" without the full report: the platform only
+closes a diagnostic that delivers one, and keeps the conversation open so the
+participant can come back.
+
+Fields of "result":
+- summary: EXECUTIVE READING, as one paragraph.
+- score: the Complete Diagnostic Global Score, 0-100, as an integer. Send null
+  for a Partial Diagnostic, which must not produce a Global Score.
+- maturity: the maturity band of that Score, exactly as your methodology names
+  it (CRITICAL, DEVELOPING, MANAGED, PREDICTIVE or SALES EXCELLENCE).
+- confidence: the global Confidence (HIGH, MEDIUM or LOW).
+- dimensions: MATURITY BY DIMENSION, one entry per dimension you evaluated,
+  in the order of your methodology. Each entry carries:
+    - name: the dimension's name.
+    - score: its score, as a number. Half points are allowed.
+    - max: the maximum for that dimension, normally 10.
+    - level: its maturity level.
+    - confidence: HIGH, MEDIUM or LOW for that dimension.
+  Send an empty list only for a Partial Diagnostic that scored nothing.
+- strengths: STRENGTHS TO PRESERVE, one entry each.
+- opportunities: TOP 3 SALES LEAKS, one entry each, keeping the evidence and
+  the impact.
+- pool_declared: always 0. This agent does not screen accounts.
+- accounts: empty list. Does not apply to this agent.
+- risks: the risks from RISKS & MISSING EVIDENCE, one entry each.
+- missing_evidence: the critical missing evidence items, one entry each.
+- recommendations: TOP 3 PRIORITIES, one entry each.
+- priority_actions: FIRST 30 DAYS, one entry each, with owner, horizon and KPI.
+
+Every field is required by the schema. Send an empty string or an empty list
+for anything that does not apply; never omit a field and never invent content
+to fill one.
+
+"message" is the only thing the participant reads. Write it in their language,
+as the report of an advisor.

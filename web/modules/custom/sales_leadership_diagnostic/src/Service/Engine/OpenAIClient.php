@@ -176,13 +176,38 @@ final class OpenAIClient {
     }
 
     $vueltas = $usaHerramientas ? $this->getMaxToolRounds() : 1;
+    $repetida = FALSE;
 
     for ($vuelta = 1; $vuelta <= $vueltas; $vuelta++) {
       $decoded = $this->requestWithRetries($payload, $purpose);
       $peticiones = $this->toolCallsOf($decoded);
 
       if ($peticiones === [] || !$usaHerramientas) {
-        return $this->extractObject($decoded, $purpose);
+        $objeto = $this->extractObject($decoded, $purpose);
+
+        if ($objeto !== NULL) {
+          return $objeto;
+        }
+
+        // Una respuesta completa sin objeto JSON válido se repite UNA vez.
+        // Medido el 12-09-2026: cinco de 241 turnos del agente 1 se quedaron
+        // sin respuesta, y el alumno solo ve «No hemos podido procesar tu
+        // solicitud». Es un fallo raro y pasajero —la misma conversación sale
+        // bien a la siguiente—, así que repetir le ahorra el error a cambio de
+        // una llamada. Una sola: si falla dos veces ya no es pasajero, y seguir
+        // pagando llamadas no lo arreglaría.
+        if ($repetida) {
+          throw new InvalidEngineResponseException('El proveedor no devolvió un objeto JSON válido.');
+        }
+
+        $repetida = TRUE;
+        $this->logger->warning('Se repite una vez la llamada «@purpose»: la respuesta no traía un objeto JSON válido.', [
+          '@purpose' => $purpose,
+        ]);
+
+        // No gasta una vuelta de herramientas: no se pidió ninguna.
+        $vuelta--;
+        continue;
       }
 
       // La salida entera, sin filtrar: el razonamiento va con la petición y el
@@ -359,12 +384,15 @@ final class OpenAIClient {
    * @param string $purpose
    *   Para qué era la llamada; solo se usa al explicar un fallo.
    *
-   * @return array<string, mixed>
-   *   El objeto que devolvió el modelo.
+   * @return array<string, mixed>|null
+   *   El objeto que devolvió el modelo, o NULL si la respuesta llegó completa
+   *   pero sin un objeto JSON válido. Quien llama decide si repetir.
    *
    * @throws \Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException
+   *   Si la respuesta llegó incompleta: repetirla costaría lo mismo y se
+   *   cortaría igual.
    */
-  private function extractObject(array $decoded, string $purpose): array {
+  private function extractObject(array $decoded, string $purpose): ?array {
     $estado = (string) ($decoded['status'] ?? '');
 
     if ($estado === 'incomplete') {
@@ -385,13 +413,42 @@ final class OpenAIClient {
       throw new InvalidEngineResponseException('El proveedor devolvió una respuesta incompleta.');
     }
 
-    $objeto = json_decode($this->textOf($decoded), TRUE);
+    $texto = $this->textOf($decoded);
+    $objeto = json_decode($texto, TRUE);
+    $errorJson = json_last_error_msg();
 
-    if (!is_array($objeto)) {
-      throw new InvalidEngineResponseException('El proveedor no devolvió un objeto JSON válido.');
+    if (is_array($objeto)) {
+      return $objeto;
     }
 
-    return $objeto;
+    // Hasta el 12-09-2026 este fallo no dejaba rastro y no había forma de
+    // saber qué había llegado. Se registran la forma y las cifras, NUNCA el
+    // texto, que es la conversación del alumno (§43). Una negativa del modelo,
+    // por ejemplo, llega como una parte de tipo «refusal» sin texto.
+    $mensajes = 0;
+    $partes = [];
+
+    foreach ($decoded['output'] ?? [] as $item) {
+      if (($item['type'] ?? '') !== 'message') {
+        continue;
+      }
+
+      $mensajes++;
+
+      foreach ($item['content'] ?? [] as $parte) {
+        $partes[] = (string) ($parte['type'] ?? '?');
+      }
+    }
+
+    $this->logger->warning('Respuesta sin objeto JSON válido en «@purpose»: @mensajes mensaje(s), partes [@partes], @chars caracteres, error «@error».', [
+      '@purpose' => $purpose,
+      '@mensajes' => $mensajes,
+      '@partes' => implode(', ', $partes),
+      '@chars' => mb_strlen($texto),
+      '@error' => $errorJson,
+    ]);
+
+    return NULL;
   }
 
   /**

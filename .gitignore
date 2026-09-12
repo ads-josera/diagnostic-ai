@@ -95,3 +95,6 @@ Thumbs.db
 
 # Cache de PHPUnit: cambia en cada ejecución y no aporta nada al repositorio.
 .phpunit.cache/
+
+# Transcripciones de bin/bateria-agente1.php: conversaciones simuladas, no código.
+/.bateria/

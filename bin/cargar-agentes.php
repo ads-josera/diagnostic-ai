@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Carga los prompts y los documentos de conocimiento de los agentes.
+ * Carga los prompts, los contratos de salida y los documentos de los agentes.
  *
  * Se ejecuta con:
  *   ddev drush php:script bin/cargar-agentes.php
@@ -17,7 +17,12 @@
  * Por eso este script lee los archivos del repositorio TAL CUAL y se niega a
  * cargar uno que haya perdido sus caracteres por el camino.
  *
- * Es idempotente: si el prompt no cambió, no sube la versión. Esa versión
+ * El contrato de salida —la parte NUESTRA del prompt, que dice cómo entregar la
+ * respuesta a la plataforma— sale de `docs/contratos-de-salida/`. Hasta el
+ * 12-09-2026 solo existía en la base de datos local: una instalación limpia
+ * obligaba a pegarlo a mano, que es justo la trampa de arriba.
+ *
+ * Es idempotente: si nada cambió, no sube la versión. Esa versión
  * queda escrita en cada sesión, y subirla sin motivo estropea justo la
  * trazabilidad para la que existe (§57).
  */
@@ -27,6 +32,7 @@ use Drupal\Core\File\FileSystemInterface;
 use Drupal\sales_leadership_diagnostic\Service\Knowledge\KnowledgeLibrary;
 
 $raiz = dirname(__DIR__) . '/docs/knowledge-cliente/';
+$contratos = dirname(__DIR__) . '/docs/contratos-de-salida/';
 
 /**
  * Qué se carga en cada agente.
@@ -136,16 +142,51 @@ foreach ($plan as $id => $datos) {
 
   $anterior = (string) $agente->get('system_prompt');
   $version = (string) $agente->get('version');
+  $cambio = FALSE;
 
   if (trim($texto) === trim($anterior)) {
-    printf("  prompt: sin cambios (%s caracteres), sigue en v%s\n", number_format(strlen($texto)), $version);
+    printf("  prompt: sin cambios (%s caracteres)\n", number_format(strlen($texto)));
   }
   else {
-    $nueva = siguiente_version($version);
     $agente->set('system_prompt', $texto);
+    $cambio = TRUE;
+    printf("  prompt: %s -> %s caracteres\n", number_format(strlen($anterior)), number_format(strlen($texto)));
+  }
+
+  // --- El contrato de salida ---
+  $rutaContrato = $contratos . $id . '.txt';
+
+  if (!is_file($rutaContrato)) {
+    $problemas[] = "Falta el contrato de salida de «$id» en docs/contratos-de-salida/.";
+  }
+  else {
+    $contrato = rtrim(file_get_contents($rutaContrato));
+    $contratoAnterior = trim((string) $agente->get('output_contract'));
+
+    // El carácter de sustitución delata un archivo que perdió su codificación.
+    if ($contrato === '' || str_contains($contrato, "\u{FFFD}")) {
+      $problemas[] = "El contrato de «$id» está vacío o dañado. NO se cargó.";
+    }
+    elseif (trim($contrato) === $contratoAnterior) {
+      printf("  contrato: sin cambios (%s caracteres)\n", number_format(strlen($contrato)));
+    }
+    else {
+      $agente->set('output_contract', $contrato);
+      $cambio = TRUE;
+      printf("  contrato: %s -> %s caracteres\n", number_format(strlen($contratoAnterior)), number_format(strlen($contrato)));
+    }
+  }
+
+  // Una sola subida de versión por pasada, cambie lo que cambie: la versión
+  // dice «las instrucciones de esta sesión no son las de la anterior», y eso
+  // es igual de cierto si cambió el prompt, el contrato o los dos.
+  if ($cambio) {
+    $nueva = siguiente_version($version);
     $agente->set('version', $nueva);
-    printf("  prompt: %s -> %s caracteres, v%s -> v%s\n",
-      number_format(strlen($anterior)), number_format(strlen($texto)), $version, $nueva);
+    printf("  versión: v%s -> v%s\n", $version, $nueva);
+  }
+  else {
+    printf("  versión: sigue en v%s\n", $version);
   }
 
   // --- Los documentos ---
