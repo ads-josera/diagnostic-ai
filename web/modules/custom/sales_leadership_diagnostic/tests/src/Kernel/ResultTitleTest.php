@@ -162,6 +162,65 @@ final class ResultTitleTest extends KernelTestBase {
   }
 
   /**
+   * El título propio del agente tampoco le dice «tu» al gestor.
+   *
+   * «Tu Weekly GOLD Pack» es correcto para el alumno, pero el gestor que abre
+   * ese Pack desde su listado lo leía como suyo. El título por defecto ya lo
+   * distinguía desde el 04-09-2026; el propio seguía sin hacerlo.
+   */
+  public function testElTituloPropioTampocoLeDiceTuAlGestor(): void {
+    $this->crearAgente('prospeccion', 'Tu Weekly GOLD Pack');
+    $resultado = $this->crearResultado('prospeccion');
+
+    $this->mirarComo($this->dueno);
+    $this->assertSame('Tu Weekly GOLD Pack', ResultsController::create($this->container)->title($resultado));
+
+    $this->mirarComo($this->ajeno);
+    $this->assertSame('Weekly GOLD Pack', ResultsController::create($this->container)->title($resultado));
+  }
+
+  /**
+   * «Tus» también, y la mayúscula inicial se recompone.
+   */
+  public function testTusTambienSeQuitaConMayuscula(): void {
+    $this->crearAgente('cuentas', 'Tus cuentas de la semana');
+    $this->mirarComo($this->ajeno);
+
+    $this->assertSame('Cuentas de la semana', $this->tituloDe('cuentas'));
+  }
+
+  /**
+   * Un título sin posesivo se enseña igual a todos.
+   *
+   * Solo se quita el «tu» inicial: no se reescribe lo que haya elegido quien
+   * configura el agente. «Tutorial» empieza por «tu» y no es un posesivo.
+   */
+  public function testUnTituloSinPosesivoNoSeToca(): void {
+    $this->crearAgente('informe', 'Informe semanal');
+    $this->crearAgente('tutorial', 'Tutorial de prospección');
+    $this->mirarComo($this->ajeno);
+
+    $this->assertSame('Informe semanal', $this->tituloDe('informe'));
+    $this->assertSame('Tutorial de prospección', $this->tituloDe('tutorial'));
+  }
+
+  /**
+   * El pie solo le habla de tú al dueño.
+   *
+   * Decía «a partir de tus respuestas» también al gestor, que no respondió
+   * nada: es el mismo fallo que el del título, en el otro extremo de la página.
+   */
+  public function testElPieSoloTuteaAlDueno(): void {
+    $resultado = $this->crearResultado('');
+
+    $this->mirarComo($this->dueno);
+    $this->assertTrue(ResultsController::create($this->container)->view($resultado)['#own']);
+
+    $this->mirarComo($this->ajeno);
+    $this->assertFalse(ResultsController::create($this->container)->view($resultado)['#own']);
+  }
+
+  /**
    * Cada uno vuelve a SU pantalla.
    *
    * Antes el enlace llevaba siempre al panel del alumno, así que el gestor

@@ -17,6 +17,7 @@
  * - sections: lista de secciones con label e items.
  * - summary_label: título del resumen según la clase de informe, o NULL.
  * - partial: cierto en un diagnóstico parcial, que no lleva Score global.
+ * - own: cierto si quien mira es el dueño; el pie solo le habla de tú a él.
  * - version: versión del diagnóstico con la que se generó.
  * - created: fecha de generación.
  *
@@ -276,7 +277,11 @@
       {{ back.label }}
     </a>
     <p class="sld__muted sld-result__disclaimer">
-      {{ 'Este análisis se ha generado a partir de tus respuestas durante la conversación.'|t }}
+      {% if own %}
+        {{ 'Este análisis se ha generado a partir de tus respuestas durante la conversación.'|t }}
+      {% else %}
+        {{ 'Este análisis se ha generado a partir de las respuestas del alumno durante la conversación.'|t }}
+      {% endif %}
     </p>
   </footer>
 

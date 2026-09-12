@@ -83,7 +83,11 @@ final class ResultsController extends ControllerBase {
     $propio = $this->agenteDe($sld_diagnostic_result)?->getResultTitle() ?? '';
 
     if ($propio !== '') {
-      return $propio;
+      // El título propio también le habla al dueño —«Tu Weekly GOLD Pack»—, y
+      // el gestor que abre el Pack de un alumno lo leía como suyo. Es el mismo
+      // fallo que se corrigió el 04-09-2026 para el título por defecto, que
+      // seguía abierto por este camino. Lo vio la verificación del 12-09-2026.
+      return $this->esSuyo($sld_diagnostic_result) ? $propio : $this->sinPosesivo($propio);
     }
 
     // A quien NO es su dueño no se le puede decir «tu diagnóstico»: el gestor
@@ -92,6 +96,24 @@ final class ResultsController extends ControllerBase {
     return $this->esSuyo($sld_diagnostic_result)
       ? (string) $this->t('Resultado de tu diagnóstico')
       : (string) $this->t('Resultado del diagnóstico');
+  }
+
+  /**
+   * Un título sin el «tu» o «tus» del principio.
+   *
+   * El título lo escribe quien configura el agente, así que no se puede saber
+   * cómo vendrá. Solo se quita el posesivo inicial, que es lo que convierte en
+   * «tuyo» algo ajeno; cualquier otro título se enseña tal cual. Si no quedara
+   * nada, se deja el original: mejor un «tu» de más que una página sin título.
+   */
+  private function sinPosesivo(string $titulo): string {
+    $resto = trim((string) preg_replace('/^tus?\s+/iu', '', $titulo));
+
+    if ($resto === '' || $resto === $titulo) {
+      return $titulo;
+    }
+
+    return mb_strtoupper(mb_substr($resto, 0, 1)) . mb_substr($resto, 1);
   }
 
   /**
@@ -191,6 +213,9 @@ final class ResultsController extends ControllerBase {
       // listado del que vino. Sin esto se quedaba encerrado: desde aquí no
       // había ninguna salida hacia su propia sección.
       '#back' => $this->buildBack($result),
+      // Si quien mira es el dueño. El pie decía «a partir de tus respuestas»
+      // también al gestor que abre el resultado de un alumno.
+      '#own' => $this->esSuyo($result),
       '#created' => $this->dateFormatter->format((int) $result->get('created')->value, 'long'),
       '#attached' => [
         'library' => ['sales_leadership_diagnostic/result'],

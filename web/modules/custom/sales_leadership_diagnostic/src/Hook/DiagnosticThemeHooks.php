@@ -212,8 +212,8 @@ final class DiagnosticThemeHooks {
           // pinta. Sin esta variable la pagina se quedaba sin encabezado.
           'title' => '',
           'summary' => NULL,
-          // Título del resumen: «Lectura ejecutiva» en el diagnóstico, la misión
-          // en el Pack. NULL deja el genérico.
+          // Título del resumen: «Lectura ejecutiva» en el diagnóstico, la
+          // misión en el Pack. NULL deja el genérico.
           'summary_label' => NULL,
           'score' => NULL,
           // Banda de madurez, confianza global y tabla por dimensión. Vacías
@@ -225,6 +225,9 @@ final class DiagnosticThemeHooks {
           // Cierto en un diagnóstico parcial: sin Score global, pero con
           // confianza y con el aviso que exige su metodología.
           'partial' => FALSE,
+          // Si quien mira es el dueño: decide si el pie le habla de tú.
+          // Por defecto NO: una pantalla que no lo diga no tutea a nadie.
+          'own' => FALSE,
           // El Weekly GOLD Pack, cuenta por cuenta, y el pool cribado. Vacíos
           // en los resultados anteriores al 10-09-2026 y en los del agente de
           // diagnóstico, que no produce cuentas.
