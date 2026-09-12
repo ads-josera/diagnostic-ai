@@ -609,3 +609,19 @@
     margin-left: 0;
   }
 }
+
+/* El aviso del diagnóstico parcial, encima de su tabla. Su metodología exige
+   decir que no representa la madurez global, y es además donde se ve su
+   confianza, porque no tiene bloque de Score. */
+.sld-result__partial {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sld-space-xs) var(--sld-space-md);
+  margin: 0 0 var(--sld-space-md);
+  padding: var(--sld-space-sm) var(--sld-space-md);
+  border-left: 3px solid var(--sld-color-primary);
+  background: var(--sld-color-surface);
+  color: var(--sld-color-text);
+  font-size: 0.92rem;
+}

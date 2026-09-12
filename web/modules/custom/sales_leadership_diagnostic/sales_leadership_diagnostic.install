@@ -1552,3 +1552,28 @@ function sales_leadership_diagnostic_update_10020(): string {
     '@n' => $reparadas,
   ]);
 }
+
+/**
+ * Sube el tope de turnos de 40 a 60.
+ *
+ * Medido el 12-09-2026 con conversaciones reales: un diagnóstico completo con
+ * un alumno que coopera usa entre 27 y 33 turnos. Al llegar al tope, el agente
+ * cierra con lo que tiene y, honestamente, lo entrega como PARCIAL: el alumno
+ * que pidió un diagnóstico completo se queda con uno que no lo es. Con 40, un
+ * alumno que pregunta o se extiende un poco llega ahí.
+ *
+ * Solo se toca si sigue en el 40 de fábrica: un tope que alguien fijó a
+ * propósito es una decisión suya, no un valor por defecto que corregir.
+ */
+function sales_leadership_diagnostic_update_10021(): string {
+  $config = \Drupal::configFactory()->getEditable('sales_leadership_diagnostic.settings');
+  $actual = (int) $config->get('security.max_turns');
+
+  if ($actual !== 40) {
+    return (string) t('El tope de turnos está en @n, fijado a propósito: no se cambia.', ['@n' => $actual]);
+  }
+
+  $config->set('security.max_turns', 60)->save();
+
+  return (string) t('Tope de turnos subido de 40 a 60.');
+}

@@ -23,7 +23,7 @@ security:
   messages_per_window: 20
   window_seconds: 300
   max_diagnostics_per_day: 3
-  max_turns: 40
+  max_turns: 60
   session_timeout: 3600
   sso_token_ttl: 90
   sso_token_leeway: 30

@@ -15,6 +15,8 @@
  *   level y confidence. Vacía en los diagnósticos anteriores al 26-08-2026,
  *   que no la guardaban.
  * - sections: lista de secciones con label e items.
+ * - summary_label: título del resumen según la clase de informe, o NULL.
+ * - partial: cierto en un diagnóstico parcial, que no lleva Score global.
  * - version: versión del diagnóstico con la que se generó.
  * - created: fecha de generación.
  *
@@ -75,6 +77,20 @@
         {{ 'Madurez por dimensión'|t }}
       </h2>
 
+      {#
+        El parcial no tiene bloque de Score, y la confianza vivía ahí: se
+        quedaba sin mostrar. Su metodología exige además decir que no
+        representa la madurez global.
+      #}
+      {% if partial %}
+        <p class="sld-result__partial">
+          {{ 'Evaluación parcial: no representa la madurez comercial global.'|t }}
+          {% if confidence %}
+            <span class="sld-score__confidence">{{ 'Confianza: @c'|t({'@c': confidence}) }}</span>
+          {% endif %}
+        </p>
+      {% endif %}
+
       <div class="sld-result__table-wrapper">
         <table class="sld-dimensions">
           <thead>
@@ -108,7 +124,7 @@
 
   {% if summary %}
     <section class="sld-result__summary" aria-labelledby="sld-summary-label">
-      <h2 class="sld-result__section-title" id="sld-summary-label">{{ 'Resumen'|t }}</h2>
+      <h2 class="sld-result__section-title" id="sld-summary-label">{{ summary_label|default('Resumen'|t) }}</h2>
       <div class="sld-result__prose">{{ summary }}</div>
     </section>
   {% endif %}

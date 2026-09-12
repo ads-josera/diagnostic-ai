@@ -145,6 +145,8 @@ final class ResultsController extends ControllerBase {
   public function view(DiagnosticResultInterface $sld_diagnostic_result): array {
     $result = $sld_diagnostic_result;
     $payload = $result->getPayload();
+    $tipo = $this->tipoDe($result);
+    $dimensiones = $result->getDimensions();
 
     $this->logForeignAccess($result);
 
@@ -155,12 +157,23 @@ final class ResultsController extends ControllerBase {
       // coloca su bloque de título, así que lo imprime la plantilla.
       '#title' => $this->title($result),
       '#summary' => Markup::create($this->markdown->render($result->getSummary())),
+      '#summary_label' => $this->summaryLabel($tipo),
       '#score' => $result->getScore(),
       // Banda de madurez y confianza global. Hasta el 26-08-2026 no tenían
       // sitio y se colaban dentro del resumen en prosa.
       '#maturity' => $result->getMaturity(),
-      '#confidence' => $result->getConfidence(),
-      '#dimensions' => $result->getDimensions(),
+      // En castellano, la global y la de cada dimensión. El agente la escribe
+      // como su metodología —HIGH, MEDIUM, LOW— y la pantalla decía
+      // «Confianza: MEDIUM» en mitad de un texto en español.
+      '#confidence' => $this->confianza($result->getConfidence()),
+      '#dimensions' => array_map(
+        fn (array $d): array => array_merge($d, ['confidence' => $this->confianza((string) ($d['confidence'] ?? ''))]),
+        array_filter($dimensiones, 'is_array'),
+      ),
+      // Un diagnóstico parcial no tiene Score global, y su confianza se
+      // pintaba dentro del bloque del Score: desaparecía con él. Su metodología
+      // exige además decir que no representa la madurez global.
+      '#partial' => $tipo === 'diagnostico' && $result->getScore() === NULL && $dimensiones !== [],
       // El Weekly GOLD Pack, cuenta por cuenta. Hasta el 10-09-2026 esto se
       // leía solo dentro de la conversación, como prosa: no se podía hojear,
       // ni saber de un vistazo cuáles se pueden enviar hoy, ni copiar un
@@ -172,7 +185,7 @@ final class ResultsController extends ControllerBase {
       '#accounts_url' => $this->esSuyo($result) && $result->getAccounts() !== []
         ? Url::fromRoute('sales_leadership_diagnostic.accounts')->toString()
         : NULL,
-      '#sections' => $this->buildSections($payload),
+      '#sections' => $this->buildSections($payload, $tipo),
       '#version' => $result->getDiagnosticVersion(),
       // A dónde vuelve quien mira. El alumno, a su panel; el gestor, al
       // listado del que vino. Sin esto se quedaba encerrado: desde aquí no
@@ -251,8 +264,10 @@ final class ResultsController extends ControllerBase {
    *
    * @param array<string, mixed> $payload
    *   Estructura completa del resultado, tal como la guardó el motor.
+   * @param string $tipo
+   *   Clase de informe, según tipoDe().
    */
-  private function buildSections(array $payload): array {
+  private function buildSections(array $payload, string $tipo): array {
     $sections = [];
 
     foreach (self::SECTION_KEYS as $key) {
@@ -264,7 +279,7 @@ final class ResultsController extends ControllerBase {
 
       $sections[] = [
         'key' => $key,
-        'label' => $this->sectionLabel($key),
+        'label' => $this->sectionLabel($key, $tipo),
         'items' => array_values(array_filter(
           array_map(static fn ($item): string => is_scalar($item) ? trim((string) $item) : '', $items),
           static fn (string $item): bool => $item !== '',
@@ -276,25 +291,107 @@ final class ResultsController extends ControllerBase {
   }
 
   /**
-   * Etiqueta traducible de una sección.
+   * Qué clase de informe es: por su forma, no por el agente.
+   *
+   * Las etiquetas genéricas describían mal los dos informes que existen. La
+   * lista `opportunities` son las fugas comerciales en el diagnóstico y las
+   * cuentas GOLD en el Pack, y ninguna de las dos es una «oportunidad de
+   * mejora». Lo vio José Raúl el 12-09-2026.
+   *
+   * Se decide por la forma porque el identificador del agente es configurable
+   * y la forma no: la fija su contrato de salida. Un informe que no encaje en
+   * ninguno de los dos conserva las etiquetas genéricas de siempre.
+   *
+   * @return string
+   *   'pack', 'diagnostico' o 'generico'.
+   */
+  private function tipoDe(DiagnosticResultInterface $result): string {
+    if ($result->getAccounts() !== [] || $result->getPoolDeclared() > 0) {
+      return 'pack';
+    }
+
+    if ($result->getDimensions() !== [] || $result->getScore() !== NULL) {
+      return 'diagnostico';
+    }
+
+    return 'generico';
+  }
+
+  /**
+   * Título del resumen, con el nombre que le da cada informe.
+   */
+  private function summaryLabel(string $tipo): TranslatableMarkup {
+    return match ($tipo) {
+      // El EXECUTIVE READING de su informe final.
+      'diagnostico' => $this->t('Lectura ejecutiva'),
+      // Su contrato lo define como la misión y su cobertura de investigación.
+      'pack' => $this->t('La misión y su cobertura'),
+      default => $this->t('Resumen'),
+    };
+  }
+
+  /**
+   * La confianza en castellano.
+   *
+   * Lo que no sea uno de los tres niveles se deja tal cual: mejor un valor
+   * raro a la vista que uno inventado.
+   *
+   * Llevan CONTEXTO de traducción, y no es adorno. Nuestras cadenas ya están
+   * en español, y Drupal busca su traducción al español como si fueran
+   * inglés: «Media» existe en el núcleo —el módulo de archivos multimedia— con
+   * traducción «Multimedia», y la pantalla decía «Confianza: Multimedia». Lo
+   * vio la verificación en el navegador el 12-09-2026; la prueba no, porque
+   * corre sin traducciones. El contexto separa nuestra cadena de la suya.
+   */
+  private function confianza(string $valor): string {
+    $contexto = ['context' => 'Nivel de confianza'];
+
+    return match (mb_strtoupper(trim($valor))) {
+      'HIGH', 'ALTA' => (string) $this->t('Alta', [], $contexto),
+      'MEDIUM', 'MEDIA' => (string) $this->t('Media', [], $contexto),
+      'LOW', 'BAJA' => (string) $this->t('Baja', [], $contexto),
+      default => $valor,
+    };
+  }
+
+  /**
+   * Etiqueta traducible de una sección, según la clase de informe.
    *
    * Cada rama contiene un literal para que el extractor de traducciones pueda
    * encontrarlas al analizar el código.
    *
+   * El diagnóstico usa el vocabulario de su FINAL REPORT; el Pack, el de su
+   * contrato de salida. «Prioridades» y no «Tres prioridades»: si el agente
+   * da menos, la cifra del título mentiría.
+   *
    * @param string $key
    *   Clave de la sección.
+   * @param string $tipo
+   *   Clase de informe, según tipoDe().
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   Etiqueta lista para mostrar.
    */
-  private function sectionLabel(string $key): TranslatableMarkup {
-    return match ($key) {
-      'strengths' => $this->t('Fortalezas'),
-      'opportunities' => $this->t('Oportunidades de mejora'),
-      'risks' => $this->t('Riesgos'),
-      'missing_evidence' => $this->t('Evidencia que falta'),
-      'recommendations' => $this->t('Recomendaciones'),
-      'priority_actions' => $this->t('Acciones prioritarias'),
+  private function sectionLabel(string $key, string $tipo): TranslatableMarkup {
+    return match ($tipo . ':' . $key) {
+      'diagnostico:strengths' => $this->t('Fortalezas a preservar'),
+      'diagnostico:opportunities' => $this->t('Principales fugas comerciales'),
+      'diagnostico:risks' => $this->t('Riesgos'),
+      'diagnostico:missing_evidence' => $this->t('Evidencia crítica que falta'),
+      'diagnostico:recommendations' => $this->t('Prioridades'),
+      'diagnostico:priority_actions' => $this->t('Primeros 30 días'),
+      'pack:strengths' => $this->t('Fortalezas del territorio'),
+      'pack:opportunities' => $this->t('Cuentas GOLD liberadas'),
+      'pack:risks' => $this->t('Qué no afirmar y cuentas en espera'),
+      'pack:missing_evidence' => $this->t('Comprobaciones pendientes'),
+      'pack:recommendations' => $this->t('Routing recomendado'),
+      'pack:priority_actions' => $this->t('Siguientes pasos por cuenta'),
+      'generico:strengths' => $this->t('Fortalezas'),
+      'generico:opportunities' => $this->t('Oportunidades de mejora'),
+      'generico:risks' => $this->t('Riesgos'),
+      'generico:missing_evidence' => $this->t('Evidencia que falta'),
+      'generico:recommendations' => $this->t('Recomendaciones'),
+      'generico:priority_actions' => $this->t('Acciones prioritarias'),
       default => $this->t('Otros hallazgos'),
     };
   }

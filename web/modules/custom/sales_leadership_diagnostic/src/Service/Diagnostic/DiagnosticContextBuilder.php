@@ -97,7 +97,7 @@ final class DiagnosticContextBuilder {
       ->get('sales_leadership_diagnostic.settings')
       ->get('security.max_turns');
 
-    return $value > 0 ? $value : 40;
+    return $value > 0 ? $value : 60;
   }
 
 }
