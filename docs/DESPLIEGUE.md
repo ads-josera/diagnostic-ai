@@ -349,8 +349,21 @@ drush php:script bin/cargar-agentes.php
 ```
 
 Pone el prompt de cada agente desde `docs/knowledge-cliente/`, su **contrato
-de salida** desde `docs/contratos-de-salida/` y, en el de prospección, sus
-quince documentos de conocimiento en el orden del manifiesto del cliente.
+de salida** desde `docs/contratos-de-salida/` y sus documentos de conocimiento:
+los quince del de prospección, en el orden del manifiesto del cliente, y los
+nueve del de diagnóstico, desde `docs/Knowledge documents/`, en el orden de
+autoridad de su Orchestrator. El «Documento Maestro Interno» del Framework NO
+se carga: es de uso interno de Salesbumm.
+
+**Los documentos van a la carpeta PRIVADA.** Son la metodología propietaria
+del cliente. Hasta el 12-09-2026 el cargador los escribía en la pública
+(`sites/default/files/knowledge/`), desde donde se descargaban sin iniciar
+sesión con solo acertar la URL. Si en este servidor se ejecutó el cargador
+antes de esa fecha, `drush updb` los mueve a la privada
+(`sales_leadership_diagnostic_update_10022`) y borra las copias públicas.
+Compruébelo después en el informe de estado: la línea «Diagnostic AI:
+documentos de conocimiento» debe decir **Protegidos**. Si dice «a la vista», no
+abra el diagnóstico a nadie hasta resolverlo.
 
 El contrato de salida es la parte NUESTRA del prompt: le dice al modelo cómo
 entregar la respuesta a la plataforma —JSON, campos del resultado, qué hacer si
@@ -577,6 +590,9 @@ proveedor de IA, así que no cuesta llamadas.
 - [ ] Directorio `sites/default/files-private` creado y con permisos de escritura
 - [ ] Cron programado y ejecutándose. Sin él la memoria del alumno no se
       escribe NUNCA, y no falla de forma visible
+- [ ] Informe de estado: «documentos de conocimiento» dice **Protegidos**. Si
+      dice «a la vista», la metodología del cliente se puede descargar sin
+      sesión
 - [ ] Registro de Drupal a 100 000 filas (`dblog.settings row_limit`). Con
       las 1 000 de fábrica y el cron cada minuto, un error se borra en hora y
       media

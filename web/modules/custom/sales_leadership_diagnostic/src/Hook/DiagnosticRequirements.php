@@ -6,6 +6,7 @@ namespace Drupal\sales_leadership_diagnostic\Hook;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -39,6 +40,7 @@ final class DiagnosticRequirements {
     private readonly DiagnosticEngineFactory $engineFactory,
     private readonly PluginVersionTracker $pluginVersions,
     private readonly DateFormatterInterface $dateFormatter,
+    private readonly EntityTypeManagerInterface $entityTypeManager,
   ) {}
 
   /**
@@ -51,6 +53,7 @@ final class DiagnosticRequirements {
       'sales_leadership_diagnostic_wordpress' => $this->checkWordPress(),
       'sales_leadership_diagnostic_agent' => $this->checkAgent(),
       'sales_leadership_diagnostic_plugin' => $this->checkPluginVersion(),
+      'sales_leadership_diagnostic_knowledge_privacy' => $this->checkKnowledgePrivacy(),
     ];
 
     if ($this->engineFactory->isMockActive()) {
@@ -117,6 +120,60 @@ final class DiagnosticRequirements {
         '@fecha' => $seenAt === NULL
           ? $this->t('(desconocido)')
           : $this->dateFormatter->format($seenAt, 'short'),
+      ]),
+    ];
+  }
+
+  /**
+   * Comprueba que ningún documento de conocimiento esté en la carpeta pública.
+   *
+   * Son la metodología propietaria del cliente. Hasta el 12-09-2026 el
+   * cargador de agentes los escribía en `public://`, y se descargaban sin
+   * iniciar sesión con solo acertar la URL; nadie lo vio en semanas porque
+   * nada lo delataba. Este aviso es la red: si vuelve a pasar, sea por el
+   * cargador o por cualquier otra vía, el informe de estado lo dice.
+   *
+   * Se miran TODOS los agentes, no solo los utilizables: el documento de un
+   * agente desactivado se descarga igual.
+   */
+  private function checkKnowledgePrivacy(): array {
+    $title = $this->t('Diagnostic AI: documentos de conocimiento');
+    $fids = [];
+
+    foreach ($this->entityTypeManager->getStorage('sld_agent')->loadMultiple() as $agente) {
+      if ($agente instanceof DiagnosticAgentInterface) {
+        foreach ($agente->getKnowledgeFids() as $fid) {
+          $fids[] = (int) $fid;
+        }
+      }
+    }
+
+    $publicos = [];
+
+    foreach ($this->entityTypeManager->getStorage('file')->loadMultiple(array_unique($fids)) as $archivo) {
+      if (str_starts_with((string) $archivo->get('uri')->value, 'public://')) {
+        $publicos[] = (string) $archivo->label();
+      }
+    }
+
+    if ($publicos === []) {
+      return [
+        'title' => $title,
+        'value' => $this->t('Protegidos'),
+        'severity' => RequirementSeverity::OK,
+      ];
+    }
+
+    return [
+      'title' => $title,
+      'value' => $this->formatPlural(
+        count($publicos),
+        '1 documento a la vista',
+        '@count documentos a la vista',
+      ),
+      'severity' => RequirementSeverity::Error,
+      'description' => $this->t('Están en la carpeta pública: cualquiera que acierte la URL puede descargar la metodología del cliente sin iniciar sesión. Ejecute las actualizaciones pendientes o vuelva a cargarlos con bin/cargar-agentes.php, que ya escribe en privado. Afectados: @lista.', [
+        '@lista' => implode(', ', $publicos),
       ]),
     ];
   }

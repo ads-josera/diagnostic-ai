@@ -44,6 +44,7 @@ $contratos = dirname(__DIR__) . '/docs/contratos-de-salida/';
 $plan = [
   'prospecting_diagnostic' => [
     'prompt' => 'GAP_Prospecting_AI_CORE_INSTRUCTIONS_v1.4.3_COMPACT.txt',
+    'carpeta' => 'docs/knowledge-cliente/',
     'documentos' => [
       'GAP_Prospecting_AI_01_Orchestrator_v1.3.docx',
       'GAP_Prospecting_AI_02_Orchestrator_Control_Contract_v1.3.docx',
@@ -64,9 +65,29 @@ $plan = [
   ],
   'sales_leadership_diagnostic' => [
     'prompt' => 'Sales_Leadership_Diagnostic_AI_prompt_final_aprobado.txt',
-    // Su biblioteca se administra desde la interfaz y no se toca aquí: pasarle
-    // una lista vacía borraría los documentos que ya tiene.
-    'documentos' => NULL,
+    'carpeta' => 'docs/Knowledge documents/',
+    // El juego completo que mandó el cliente el 12-09-2026. Para este agente no
+    // hay manifiesto como el del Documento 13, así que el orden sigue la
+    // arquitectura de autoridad de su Orchestrator: qué es el agente, quién
+    // gobierna la secuencia, y luego cada motor en el orden en que actúa
+    // —conversación, evidencia, scoring, informe—; la capa de protección, que
+    // cruza todo; y al final lo que habla de probar y montar el agente.
+    //
+    // NO va el «Documento Maestro Interno» del Framework, que está en
+    // interno-no-se-carga/: es el marco de los seis agentes de la suite, trae
+    // un formato de salida universal que choca con el FINAL REPORT de este, y
+    // las propias Build Instructions (§64) lo dejan como documento interno.
+    'documentos' => [
+      'Agent 01 — Sales Leadership Diagnostic AI — Specification v1.0.docx',
+      'Sales Leadership Diagnostic Orchestrator v1.0.docx',
+      'Agent 01 — Conversation Engine v1.0.docx',
+      'Evidence Handoff v1.0.docx',
+      'Agent 01 — Scoring Engine v1.2.3.docx',
+      'Agent 01 — Final Report Engine v1.2.docx',
+      'IP Protection v1.0.docx',
+      'Agent 01 — Testing & Validation Cases v1.0.docx',
+      'Agent 01 — GPT Build Instructions v1.0.docx',
+    ],
   ],
 ];
 
@@ -108,8 +129,38 @@ function siguiente_version(string $actual): string {
 $etm = \Drupal::entityTypeManager();
 $biblioteca = \Drupal::service(KnowledgeLibrary::class);
 $fs = \Drupal::service('file_system');
-$destino = 'public://knowledge';
-$fs->prepareDirectory($destino, FileSystemInterface::CREATE_DIRECTORY);
+// PRIVADO. Son la metodología propietaria del cliente y en `public://` se
+// descargaban sin iniciar sesión con solo acertar la URL: pasó hasta el
+// 12-09-2026, cuando esta línea decía `public://knowledge`. El formulario de
+// documentos ya guardaba en privado; el cargador era el que no.
+$destino = 'private://sales-diagnostic/knowledge';
+
+if (!$fs->realpath('private://')) {
+  print "No hay carpeta privada configurada: NO se carga ningún documento. Configure \$settings['file_private_path'].\n";
+  return;
+}
+
+$fs->prepareDirectory($destino, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+
+/**
+ * Huella del CONTENIDO de una lista de documentos, en su orden.
+ *
+ * Es lo que decide si la versión sube. No sirven los identificadores: mover un
+ * documento de carpeta, o volver a escribirlo igual, no cambia lo que el agente
+ * lee, y subir la versión por eso estropearía la trazabilidad (§57).
+ */
+function huella_documentos(array $fids): string {
+  $sistema = \Drupal::service('file_system');
+  $partes = [];
+
+  foreach ($fids as $fid) {
+    $archivo = \Drupal::entityTypeManager()->getStorage('file')->load($fid);
+    $real = $archivo ? $sistema->realpath($archivo->getFileUri()) : FALSE;
+    $partes[] = $real && is_file($real) ? sha1_file($real) : 'falta-' . $fid;
+  }
+
+  return sha1(implode('|', $partes));
+}
 
 $problemas = [];
 
@@ -177,9 +228,47 @@ foreach ($plan as $id => $datos) {
     }
   }
 
+  // --- Los documentos ---
+  if ($datos['documentos'] !== NULL) {
+    $antes = huella_documentos($agente->getKnowledgeFids());
+    $fids = [];
+
+    foreach ($datos['documentos'] as $nombre) {
+      $origen = dirname(__DIR__) . '/' . $datos['carpeta'] . $nombre;
+
+      if (!is_file($origen)) {
+        $problemas[] = "Falta el documento $nombre.";
+        continue;
+      }
+
+      $archivo = \Drupal::service('file.repository')
+        ->writeData(file_get_contents($origen), $destino . '/' . $nombre, FileExists::Replace);
+      $archivo->setPermanent();
+      $archivo->save();
+
+      $resultado = $biblioteca->remember($archivo);
+      $fids[] = (int) $archivo->id();
+
+      if (!$resultado->correcto) {
+        $problemas[] = "$nombre: no se pudo extraer el texto ({$resultado->motivo}).";
+      }
+    }
+
+    $agente->setKnowledgeFids($fids);
+
+    if (huella_documentos($fids) !== $antes) {
+      $cambio = TRUE;
+      printf("  documentos: %d cargados, CAMBIARON\n", count($fids));
+    }
+    else {
+      printf("  documentos: %d, sin cambios de contenido\n", count($fids));
+    }
+  }
+
   // Una sola subida de versión por pasada, cambie lo que cambie: la versión
   // dice «las instrucciones de esta sesión no son las de la anterior», y eso
-  // es igual de cierto si cambió el prompt, el contrato o los dos.
+  // es igual de cierto si cambió el prompt, el contrato, los documentos o
+  // todo a la vez.
   if ($cambio) {
     $nueva = siguiente_version($version);
     $agente->set('version', $nueva);
@@ -189,41 +278,9 @@ foreach ($plan as $id => $datos) {
     printf("  versión: sigue en v%s\n", $version);
   }
 
-  // --- Los documentos ---
-  if ($datos['documentos'] === NULL) {
-    printf("  documentos: no se tocan (%d ya presentes)\n", count($agente->getKnowledgeFids()));
-    $agente->save();
-    continue;
-  }
-
-  $fids = [];
-
-  foreach ($datos['documentos'] as $nombre) {
-    $origen = $raiz . $nombre;
-
-    if (!is_file($origen)) {
-      $problemas[] = "Falta el documento $nombre.";
-      continue;
-    }
-
-    $archivo = \Drupal::service('file.repository')
-      ->writeData(file_get_contents($origen), $destino . '/' . $nombre, FileExists::Replace);
-    $archivo->setPermanent();
-    $archivo->save();
-
-    $resultado = $biblioteca->remember($archivo);
-    $fids[] = (int) $archivo->id();
-
-    if (!$resultado->correcto) {
-      $problemas[] = "$nombre: no se pudo extraer el texto ({$resultado->motivo}).";
-    }
-  }
-
-  $agente->setKnowledgeFids($fids);
   $agente->save();
 
-  printf("  documentos: %d cargados, %s tokens estimados\n",
-    count($fids), number_format($biblioteca->getTotalTokens($agente)));
+  printf("  conocimiento: %s tokens estimados\n", number_format($biblioteca->getTotalTokens($agente)));
 }
 
 if ($problemas !== []) {

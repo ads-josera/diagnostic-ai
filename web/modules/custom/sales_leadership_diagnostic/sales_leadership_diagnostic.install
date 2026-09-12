@@ -8,6 +8,9 @@
 declare(strict_types=1);
 
 use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\File\FileExists;
+use Drupal\Core\File\FileSystemInterface;
+use Drupal\Core\Utility\UpdateException;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\file\FileInterface;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
@@ -1576,4 +1579,54 @@ function sales_leadership_diagnostic_update_10021(): string {
   $config->set('security.max_turns', 60)->save();
 
   return (string) t('Tope de turnos subido de 40 a 60.');
+}
+
+/**
+ * Saca de la carpeta pública los documentos de conocimiento de los agentes.
+ *
+ * Son la metodología propietaria del cliente. El formulario de documentos los
+ * guardaba en privado desde el principio, pero bin/cargar-agentes.php los
+ * escribía en `public://knowledge`, donde se descargaban sin iniciar sesión
+ * con solo acertar la URL. Comprobado el 12-09-2026: HTTP 200 y el archivo
+ * entero, los quince del agente de prospección.
+ *
+ * Se mueven, no se copian: la copia pública es justo lo que hay que quitar. El
+ * identificador del archivo se conserva, así que el agente sigue apuntando a
+ * ellos y el texto ya extraído sigue valiendo.
+ *
+ * Sin carpeta privada configurada NO se da por hecha: falla y queda pendiente.
+ * Darla por buena sin mover nada dejaría la metodología a la vista y la
+ * actualización ya no volvería a ejecutarse.
+ */
+function sales_leadership_diagnostic_update_10022(): string {
+  $sistema = \Drupal::service('file_system');
+
+  if (!$sistema->realpath('private://')) {
+    throw new UpdateException('No hay carpeta privada configurada ($settings[\'file_private_path\']). Los documentos de conocimiento siguen en la carpeta pública: configúrela y vuelva a ejecutar las actualizaciones.');
+  }
+
+  $destino = 'private://sales-diagnostic/knowledge';
+  $sistema->prepareDirectory($destino, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+
+  $fids = [];
+
+  foreach (\Drupal::entityTypeManager()->getStorage('sld_agent')->loadMultiple() as $agente) {
+    foreach ($agente->getKnowledgeFids() as $fid) {
+      $fids[] = (int) $fid;
+    }
+  }
+
+  $movidos = 0;
+  $repositorio = \Drupal::service('file.repository');
+
+  foreach (\Drupal::entityTypeManager()->getStorage('file')->loadMultiple(array_unique($fids)) as $archivo) {
+    if (!$archivo instanceof FileInterface || !str_starts_with($archivo->getFileUri(), 'public://')) {
+      continue;
+    }
+
+    $repositorio->move($archivo, $destino . '/' . $archivo->getFilename(), FileExists::Rename);
+    $movidos++;
+  }
+
+  return (string) t('Se movieron @n documento(s) de conocimiento de la carpeta pública a la privada.', ['@n' => $movidos]);
 }
