@@ -10,6 +10,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Lock\LockBackendInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
+use Drupal\sales_leadership_diagnostic\Service\Account\AccountHistory;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
@@ -69,6 +70,7 @@ final class DiagnosticStarter {
     private readonly LockBackendInterface $lock,
     private readonly TimeInterface $time,
     private readonly SpendGuard $spendGuard,
+    private readonly AccountHistory $accountHistory,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -303,6 +305,21 @@ final class DiagnosticStarter {
 
     if ($memoria !== '') {
       $prompt .= "\n\n" . $memoria;
+    }
+
+    // El historial de cuentas, también DESPUÉS de la huella y por lo mismo:
+    // es distinto para cada alumno.
+    //
+    // Va aquí, al abrir la misión, y no en cada turno. Así se congela con la
+    // sesión: la caché del prompt lo reutiliza durante toda la conversación, y
+    // la copia guardada dice exactamente qué sabía el agente de las cuentas
+    // cuando empezó. Si se recalculara en cada turno, registrar un resultado
+    // en otra pestaña a mitad de conversación cambiaría el prompt y tiraría la
+    // caché sin que nadie supiera por qué.
+    $historial = $this->accountHistory->compose((int) $account->id(), (string) $agent->id());
+
+    if ($historial !== '') {
+      $prompt .= "\n\n" . $historial;
     }
 
     $session = $this->entityTypeManager

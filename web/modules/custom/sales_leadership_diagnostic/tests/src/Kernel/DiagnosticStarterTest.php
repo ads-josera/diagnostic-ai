@@ -103,6 +103,8 @@ final class DiagnosticStarterTest extends KernelTestBase {
       'sld_diagnostic_message',
       'sld_research_entitlement',
       'sld_evidence',
+      'sld_account',
+      'sld_account_event',
     ]);
     $this->installSchema('externalauth', ['authmap']);
     $this->installConfig(['sales_leadership_diagnostic']);

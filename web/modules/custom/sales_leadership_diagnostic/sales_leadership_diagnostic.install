@@ -11,6 +11,7 @@ use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\file\FileInterface;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\Service\Account\AccountRegistry;
 use Drupal\user\Entity\Role;
 
 /**
@@ -85,6 +86,188 @@ function sales_leadership_diagnostic_schema(): array {
     'sld_tool_call' => sales_leadership_diagnostic_tool_call_table(),
     'sld_research_entitlement' => sales_leadership_diagnostic_entitlement_table(),
     'sld_evidence' => sales_leadership_diagnostic_evidence_table(),
+    'sld_account' => sales_leadership_diagnostic_account_table(),
+    'sld_account_event' => sales_leadership_diagnostic_account_event_table(),
+  ];
+}
+
+/**
+ * Las cuentas de cada alumno. Solo identidad y fechas.
+ *
+ * El estado NO va aquí: se deduce del último evento al leer. Ver
+ * AccountRegistry para el motivo.
+ */
+function sales_leadership_diagnostic_account_table(): array {
+  return [
+    'description' => 'Cuentas de prospección de cada alumno, a lo largo de las semanas.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Identificador de la cuenta.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Alumno al que pertenece.',
+      ],
+      'agent' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Agente que la propuso por primera vez.',
+      ],
+      'name' => [
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Nombre visible, el del Pack más reciente.',
+      ],
+      'name_key' => [
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Nombre normalizado: reconoce la misma cuenta escrita distinto.',
+      ],
+      'first_result_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Primer Pack en que apareció.',
+      ],
+      'last_result_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Último Pack en que apareció.',
+      ],
+      'times_in_pack' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'En cuántos Packs ha salido.',
+      ],
+      'first_seen' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cuándo apareció por primera vez.',
+      ],
+      'last_seen' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cuándo apareció por última vez.',
+      ],
+    ],
+    'primary key' => ['id'],
+    // Una fila por cuenta y alumno: es lo que impide que la misma empresa
+    // acumule dos historias paralelas.
+    'unique keys' => [
+      'uid_name_key' => ['uid', 'name_key'],
+    ],
+    'indexes' => [
+      'uid_last_seen' => ['uid', 'last_seen'],
+    ],
+  ];
+}
+
+/**
+ * Lo que ha ido pasando con cada cuenta. Solo crece.
+ *
+ * Es la regla del §4 del Documento 8: la evidencia nueva se AÑADE, nunca
+ * reescribe la tesis original.
+ */
+function sales_leadership_diagnostic_account_event_table(): array {
+  return [
+    'description' => 'Historial de cada cuenta: Packs en que salió y resultados registrados.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Identificador del evento. Da el orden.',
+      ],
+      'account_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Cuenta a la que pertenece.',
+      ],
+      'uid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Alumno. Repetido a propósito para filtrar y borrar sin cruzar tablas.',
+      ],
+      'kind' => [
+        'type' => 'varchar',
+        'length' => 16,
+        'not null' => TRUE,
+        'description' => 'pack: salió en un Pack. outcome: el alumno registró qué pasó.',
+      ],
+      'result_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Pack donde vive la tesis original. Cero en los resultados.',
+      ],
+      'disposition' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Clasificación en ese Pack: GOLD, SILVER, NURTURE...',
+      ],
+      'outreach_status' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Estado de envío en ese Pack.',
+      ],
+      'state' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Estado de ejecución del §5 del Documento 8.',
+      ],
+      'truth' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Verdad del Buyer del §7 del Documento 8. Opcional.',
+      ],
+      'note' => [
+        'type' => 'varchar',
+        'length' => 300,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Una frase del alumno. Opcional.',
+      ],
+      'created' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Cuándo ocurrió.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'indexes' => [
+      'account' => ['account_id', 'id'],
+      'uid' => ['uid'],
+    ],
   ];
 }
 
@@ -1251,4 +1434,55 @@ function sales_leadership_diagnostic_update_10018(): string {
     'La búsqueda se concede ahora por agente. La tienen: %s. El resto queda sin ella.',
     implode(', ', $tocados),
   );
+}
+
+/**
+ * Crea el registro de cuentas y carga los Packs que ya existían.
+ *
+ * Sin la carga, «Mis cuentas» nacería vacía para quien ya hizo misiones, y el
+ * agente arrancaría la próxima sin saber nada de ellas. Es idempotente: se
+ * puede volver a correr sin duplicar.
+ */
+function sales_leadership_diagnostic_update_10019(): string {
+  $esquema = \Drupal::database()->schema();
+
+  foreach ([
+    'sld_account' => sales_leadership_diagnostic_account_table(),
+    'sld_account_event' => sales_leadership_diagnostic_account_event_table(),
+  ] as $tabla => $definicion) {
+    if (!$esquema->tableExists($tabla)) {
+      $esquema->createTable($tabla, $definicion);
+    }
+  }
+
+  $almacen = \Drupal::entityTypeManager()->getStorage('sld_diagnostic_result');
+  $ids = $almacen->getQuery()
+    ->accessCheck(FALSE)
+    // Los ensayos del gestor no son cuentas de nadie.
+    ->condition('is_sandbox', FALSE)
+    ->sort('created', 'ASC')
+    ->execute();
+
+  $registro = \Drupal::service(AccountRegistry::class);
+  $packs = 0;
+  $cuentas = 0;
+
+  foreach ($almacen->loadMultiple($ids) as $resultado) {
+    $delPack = $resultado->getAccounts();
+
+    if ($delPack === []) {
+      continue;
+    }
+
+    $cuentas += $registro->ingestPack(
+      (int) $resultado->getOwnerId(),
+      $resultado->getAgentId(),
+      (int) $resultado->id(),
+      $delPack,
+      (int) $resultado->get('created')->value,
+    );
+    $packs++;
+  }
+
+  return sprintf('Registro de cuentas creado. Se cargaron %d cuenta(s) de %d Pack(s) que ya existían.', $cuentas, $packs);
 }

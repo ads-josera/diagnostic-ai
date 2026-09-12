@@ -67,6 +67,8 @@ final class StudentMemoryTest extends KernelTestBase {
     parent::setUp();
 
     $this->installEntitySchema('user');
+    // Borrar un usuario también limpia su registro de cuentas.
+    $this->installSchema('sales_leadership_diagnostic', ['sld_account', 'sld_account_event']);
     $this->installEntitySchema('sld_diagnostic_session');
     // Borrar una cuenta arrastra también sus diagnósticos desde el 26-08-2026,
     // así que su tabla tiene que existir aunque esta prueba no la use.

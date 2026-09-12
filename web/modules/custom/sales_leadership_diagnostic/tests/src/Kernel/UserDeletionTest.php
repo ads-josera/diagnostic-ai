@@ -60,6 +60,9 @@ final class UserDeletionTest extends KernelTestBase {
       'sld_diagnostic_message',
       'sld_research_entitlement',
       'sld_evidence',
+      // Borrar un usuario también limpia su registro de cuentas.
+      'sld_account',
+      'sld_account_event',
     ]);
     // Borrar una cuenta limpia sus datos de usuario y su vínculo con
     // WordPress; sin estas tablas fallaría por algo ajeno a lo que se prueba.

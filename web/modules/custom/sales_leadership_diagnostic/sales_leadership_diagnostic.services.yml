@@ -257,6 +257,7 @@ services:
       - '@lock'
       - '@datetime.time'
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard'
+      - '@Drupal\sales_leadership_diagnostic\Service\Account\AccountHistory'
       - '@logger.factory'
 
   # Recuerda qué versión del plugin de WordPress respondió por última vez, para
@@ -471,6 +472,20 @@ services:
   Drupal\sales_leadership_diagnostic\Service\Manager\ManagerNavigation:
     arguments:
       - '@current_route_match'
+
+  # Las cuentas de cada alumno semana tras semana y lo que paso con ellas.
+  # Sale del Documento 8 del cliente: un registro que solo crece (§4).
+  Drupal\sales_leadership_diagnostic\Service\Account\AccountRegistry:
+    arguments:
+      - '@database'
+      - '@datetime.time'
+      - '@transliteration'
+
+  # El historial de cuentas que recibe el agente al empezar cada mision. Le da
+  # los datos para que aplique SU regla de reciclaje (§26 del Documento 8).
+  Drupal\sales_leadership_diagnostic\Service\Account\AccountHistory:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Account\AccountRegistry'
 
   Drupal\sales_leadership_diagnostic\Hook\StuckTurnHooks:
     arguments:
