@@ -25,8 +25,8 @@
 
   {# La vuelta va arriba, como en la página de agente: sin ella esta pantalla
      es un callejón y al alumno solo le queda el botón del navegador. #}
-  <a class="sld__link sld-accounts__back" href="{{ dashboard_url }}">
-    {{ '← Volver a mis diagnósticos'|t }}
+  <a class="sld__link sld-accounts__back" href="{{ back.url|default(dashboard_url) }}">
+    {{ back.label|default('← Volver a mis diagnósticos'|t) }}
   </a>
 
   <header class="sld-accounts__header">
@@ -109,6 +109,7 @@
 
           <form class="sld-account__form" action="{{ a.record_url }}" method="post">
             <input type="hidden" name="ver" value="{{ a.view }}">
+            {% if a.desde %}<input type="hidden" name="desde" value="{{ a.desde }}">{% endif %}
             {#
               Pulsar Intro en la frase envía el formulario con su PRIMER botón,
               y el primero sería «No acción»: una nota escrita acabaría

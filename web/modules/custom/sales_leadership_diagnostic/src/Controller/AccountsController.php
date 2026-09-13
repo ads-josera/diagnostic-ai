@@ -58,6 +58,7 @@ final class AccountsController extends ControllerBase {
     $uid = (int) $this->currentUser()->id();
     $vista = (string) $request->query->get('ver', 'todas');
     $vista = in_array($vista, self::VISTAS, TRUE) ? $vista : 'todas';
+    $desde = $this->agenteDesde((string) $request->query->get('desde', ''));
 
     $todas = $this->registry->forUser($uid);
     $eventos = $this->registry->eventsForUser($uid);
@@ -74,20 +75,22 @@ final class AccountsController extends ControllerBase {
     $filas = [];
 
     foreach ($visibles as $cuenta) {
-      $filas[] = $this->fila($cuenta, $eventos[$cuenta['id']] ?? [], $vista);
+      $filas[] = $this->fila($cuenta, $eventos[$cuenta['id']] ?? [], $vista, $desde);
     }
 
     return [
       '#theme' => 'sld_accounts',
       '#accounts' => $filas,
       '#view' => $vista,
-      '#tabs' => $this->pestanas($vista, count($todas), count($pendientes), count($registradas)),
+      '#tabs' => $this->pestanas($vista, count($todas), count($pendientes), count($registradas), $desde),
       '#figures' => $this->cifras($todas),
       '#quick_states' => $this->estadosRapidos(),
       '#other_states' => $this->otrosEstados(),
       '#truths' => $this->verdades(),
       '#note_max' => AccountRegistry::NOTE_MAX,
       '#dashboard_url' => Url::fromRoute('sales_leadership_diagnostic.dashboard')->toString(),
+      // A dónde vuelve: al agente del que vino, si se sabe; si no, al panel.
+      '#back' => $this->vuelta($desde),
       '#attached' => [
         'library' => ['sales_leadership_diagnostic/accounts'],
       ],
@@ -115,11 +118,12 @@ final class AccountsController extends ControllerBase {
     $verdad = BuyerTruth::tryFrom((string) $request->request->get('truth', ''));
     $nota = (string) $request->request->get('note', '');
     $vista = (string) $request->request->get('ver', 'todas');
+    $desde = $this->agenteDesde((string) $request->request->get('desde', ''));
 
     if ($estado === NULL) {
       $this->messenger()->addWarning($this->t('Elige qué pasó con la cuenta para poder anotarlo.'));
 
-      return $this->volver($vista, $account);
+      return $this->volver($vista, $account, $desde);
     }
 
     if (!$this->registry->recordOutcome($uid, $account, $estado, $verdad, $nota)) {
@@ -130,7 +134,7 @@ final class AccountsController extends ControllerBase {
 
     $this->messenger()->addStatus($this->t('Anotado: @estado.', ['@estado' => $estado->label()]));
 
-    return $this->volver($vista, $account);
+    return $this->volver($vista, $account, $desde);
   }
 
   /**
@@ -142,11 +146,13 @@ final class AccountsController extends ControllerBase {
    *   Su historial.
    * @param string $vista
    *   Pestaña en la que se está, para volver a ella al registrar.
+   * @param string|null $desde
+   *   Agente del que se vino, para no perderlo al registrar.
    *
    * @return array<string, mixed>
    *   Las variables de la plantilla.
    */
-  private function fila(array $cuenta, array $eventos, string $vista): array {
+  private function fila(array $cuenta, array $eventos, string $vista, ?string $desde = NULL): array {
     $estado = $cuenta['state'];
     $verdad = $cuenta['truth'];
     $agente = $this->agents->get((string) $cuenta['agent']);
@@ -173,6 +179,7 @@ final class AccountsController extends ControllerBase {
       'history' => $this->historial($eventos),
       'record_url' => $this->urlConToken('sales_leadership_diagnostic.account_outcome', ['account' => $cuenta['id']]),
       'view' => $vista,
+      'desde' => $desde ?? '',
     ];
   }
 
@@ -216,7 +223,7 @@ final class AccountsController extends ControllerBase {
    * @return array<int, array<string, mixed>>
    *   Una por pestaña.
    */
-  private function pestanas(string $actual, int $todas, int $pendientes, int $registradas): array {
+  private function pestanas(string $actual, int $todas, int $pendientes, int $registradas, ?string $desde = NULL): array {
     $salida = [];
 
     foreach ([
@@ -227,7 +234,11 @@ final class AccountsController extends ControllerBase {
       $salida[] = [
         'label' => $titulo,
         'count' => $cuantas,
-        'url' => Url::fromRoute('sales_leadership_diagnostic.accounts', [], ['query' => ['ver' => $clave]])->toString(),
+        'url' => Url::fromRoute(
+          'sales_leadership_diagnostic.accounts',
+          [],
+          ['query' => array_filter(['ver' => $clave, 'desde' => $desde])],
+        )->toString(),
         'active' => $clave === $actual,
       ];
     }
@@ -310,14 +321,49 @@ final class AccountsController extends ControllerBase {
   /**
    * De vuelta a la pantalla, en la misma pestaña y a la altura de la cuenta.
    */
-  private function volver(string $vista, int $cuenta): RedirectResponse {
+  private function volver(string $vista, int $cuenta, ?string $desde = NULL): RedirectResponse {
     $vista = in_array($vista, self::VISTAS, TRUE) ? $vista : 'todas';
 
     return new RedirectResponse(Url::fromRoute(
       'sales_leadership_diagnostic.accounts',
       [],
-      ['query' => ['ver' => $vista], 'fragment' => 'cuenta-' . $cuenta],
+      ['query' => array_filter(['ver' => $vista, 'desde' => $desde]), 'fragment' => 'cuenta-' . $cuenta],
     )->toString());
+  }
+
+  /**
+   * El agente del que se vino, si es uno que existe y se puede usar.
+   *
+   * Viene en la dirección, así que no se cree: un valor inventado o un agente
+   * desactivado dejan la vuelta en el panel, que siempre existe.
+   */
+  private function agenteDesde(string $id): ?string {
+    return $id !== '' && $this->agents->get($id) !== NULL ? $id : NULL;
+  }
+
+  /**
+   * A dónde vuelve «Mis cuentas» y con qué texto.
+   *
+   * Al agente del que se vino, que es donde viven sus cuentas. Sin él, al
+   * panel.
+   *
+   * @return array{url: string, label: string}
+   *   Destino y texto.
+   */
+  private function vuelta(?string $desde): array {
+    $agente = $desde !== NULL ? $this->agents->get($desde) : NULL;
+
+    if ($agente === NULL) {
+      return [
+        'url' => Url::fromRoute('sales_leadership_diagnostic.dashboard')->toString(),
+        'label' => (string) $this->t('← Volver a mis diagnósticos'),
+      ];
+    }
+
+    return [
+      'url' => Url::fromRoute('sales_leadership_diagnostic.agent_page', ['sld_agent' => $agente->id()])->toString(),
+      'label' => (string) $this->t('← Volver a @agente', ['@agente' => $agente->label()]),
+    ];
   }
 
   /**

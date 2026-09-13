@@ -160,6 +160,8 @@ final class DiagnosticThemeHooks {
           // Historial de este agente. No lleva columna «Agente» a propósito:
           // la página entera ya dice de quién es.
           'history' => [],
+          // Entrada a «Mis cuentas» con las cuentas de ESTE agente, o NULL.
+          'accounts' => NULL,
         ],
       ],
       'sld_chat' => [
@@ -257,6 +259,9 @@ final class DiagnosticThemeHooks {
           'truths' => [],
           'note_max' => 280,
           'dashboard_url' => '',
+          // A dónde vuelve y con qué texto: al agente del que se vino, o al
+          // panel.
+          'back' => NULL,
         ],
       ],
       'sld_welcome' => [

@@ -24,6 +24,8 @@
  * - start_url: destino del formulario que crea la sesión, con su token.
  * - dashboard_url: vuelta al panel.
  * - repeat_notice: aviso sobre la política de repetición, o nulo.
+ * - accounts: entrada a «Mis cuentas» con las cuentas de este agente (url y
+ *   count), o nulo si no propuso ninguna.
  * - history: filas de ESTE agente, cada una con id, date, status,
  *   status_machine, version, result_id e is_resumable.
  *
@@ -92,6 +94,19 @@
       <p class="sld__muted">{{ repeat_notice }}</p>
     {% endif %}
   </div>
+
+  {#
+    Las cuentas que propuso este agente en sus Packs. Van aquí, junto a su
+    botón, y no en el panel general: son de este agente.
+  #}
+  {% if accounts %}
+    <a class="sld-dashboard__accounts" href="{{ accounts.url }}">
+      <span class="sld-dashboard__accounts-title">{{ 'Mis cuentas'|t }}</span>
+      <span class="sld-dashboard__accounts-text">
+        {% trans %}{{ accounts.count }} cuenta de tus Weekly GOLD Packs. Anota qué pasó con ella y la tendré en cuenta en tu próxima misión.{% plural accounts.count %}{{ accounts.count }} cuentas de tus Weekly GOLD Packs. Anota qué pasó con cada una y las tendré en cuenta en tu próxima misión.{% endtrans %}
+      </span>
+    </a>
+  {% endif %}
 
   {#
     El historial de este agente. Sin columna «Agente»: la página entera ya

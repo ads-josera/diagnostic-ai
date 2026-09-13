@@ -115,6 +115,11 @@
                   {% if agent.description %}
                     <span class="sld-card__description">{{ agent.description }}</span>
                   {% endif %}
+                  {% if agent.accounts %}
+                    <span class="sld-card__accounts">
+                      {% trans %}{{ agent.accounts }} cuenta en seguimiento{% plural agent.accounts %}{{ agent.accounts }} cuentas en seguimiento{% endtrans %}
+                    </span>
+                  {% endif %}
                   <span class="sld-card__state">{{ agent.state }}</span>
                 </span>
               </a>
@@ -173,6 +178,9 @@
     La puerta a «Mis cuentas». Solo aparece cuando hay alguna: a quien nunca
     ha recibido un Pack, un enlace a una lista vacía solo le haría dudar de
     si le falta algo.
+
+    Y solo con UN agente. Con varios, las cuentas van en la tarjeta y en la
+    página del agente que las propuso: aquí parecían de todos.
   #}
   {% if accounts %}
     <a class="sld-dashboard__accounts" href="{{ accounts.url }}">

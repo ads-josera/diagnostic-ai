@@ -217,6 +217,66 @@ final class AccountsControllerTest extends KernelTestBase {
   }
 
   /**
+   * «Mis cuentas» vuelve al agente del que se vino, que es donde viven.
+   *
+   * Las cuentas se enseñan en la página del agente que las propuso, no en el
+   * panel general. Volver al panel desde ellas sacaría al alumno del agente
+   * en el que estaba trabajando.
+   */
+  public function testVuelveAlAgenteDelQueSeVino(): void {
+    $this->crearAgente('prospeccion', 'GAP Prospecting AI');
+
+    $pantalla = $this->controlador()->view(Request::create('/sales-diagnostic/cuentas', 'GET', ['desde' => 'prospeccion']));
+
+    $this->assertSame('/sales-diagnostic/agente/prospeccion', $pantalla['#back']['url']);
+    $this->assertSame('← Volver a GAP Prospecting AI', $pantalla['#back']['label']);
+  }
+
+  /**
+   * Un agente inventado en la dirección no lleva a ninguna parte rara.
+   *
+   * El valor viene de la URL y cualquiera puede escribirlo. Sin un agente
+   * utilizable detrás, la vuelta es al panel, que siempre existe.
+   */
+  public function testUnAgenteInventadoVuelveAlPanel(): void {
+    $pantalla = $this->controlador()->view(Request::create('/sales-diagnostic/cuentas', 'GET', ['desde' => 'no-existe']));
+
+    $this->assertSame('/sales-diagnostic', $pantalla['#back']['url']);
+    $this->assertStringNotContainsString('desde', $pantalla['#tabs'][0]['url'], 'Un agente inventado no se arrastra a las pestañas.');
+  }
+
+  /**
+   * Cambiar de pestaña o anotar no pierde el agente del que se vino.
+   */
+  public function testLasPestanasConservanElAgenteAlAnotar(): void {
+    $this->crearAgente('prospeccion', 'GAP Prospecting AI');
+    $id = $this->idDe('Traxión');
+
+    $pantalla = $this->controlador()->view(Request::create('/sales-diagnostic/cuentas', 'GET', ['desde' => 'prospeccion']));
+    $this->assertStringContainsString('desde=prospeccion', $pantalla['#tabs'][1]['url']);
+    $this->assertSame('prospeccion', $pantalla['#accounts'][0]['desde']);
+
+    $respuesta = $this->anotar($id, ['state' => ExecutionState::Contacted->value, 'desde' => 'prospeccion']);
+    $this->assertStringContainsString('desde=prospeccion', $respuesta->getTargetUrl());
+  }
+
+  /**
+   * Crea un agente utilizable.
+   */
+  private function crearAgente(string $id, string $nombre): void {
+    $this->container->get('entity_type.manager')
+      ->getStorage('sld_agent')
+      ->create([
+        'id' => $id,
+        'label' => $nombre,
+        'status' => TRUE,
+        'version' => '1.0',
+        'course_id' => '35884',
+        'system_prompt' => 'Prompt.',
+      ])->save();
+  }
+
+  /**
    * Envía el formulario de una cuenta.
    *
    * @param int $id

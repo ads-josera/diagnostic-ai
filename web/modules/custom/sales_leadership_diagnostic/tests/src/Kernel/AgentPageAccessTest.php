@@ -9,6 +9,7 @@ use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\Controller\AgentPageController;
 use Drupal\sales_leadership_diagnostic\DTO\AccessDecision;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
+use Drupal\sales_leadership_diagnostic\Service\Account\AccountRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\CourseAccessProviderInterface;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
 use Drupal\Tests\sales_leadership_diagnostic\Kernel\Stub\StubCourseAccessProvider;
@@ -88,6 +89,8 @@ final class AgentPageAccessTest extends KernelTestBase {
     $this->installEntitySchema('sld_diagnostic_session');
     $this->installEntitySchema('sld_diagnostic_result');
     $this->installSchema('externalauth', ['authmap']);
+    // La página enseña las cuentas que propuso el agente.
+    $this->installSchema('sales_leadership_diagnostic', ['sld_account', 'sld_account_event']);
     $this->installConfig(['system', 'sales_leadership_diagnostic']);
 
     // La página compone URLs con nombre de ruta; sin reconstruir el enrutador
@@ -188,6 +191,32 @@ final class AgentPageAccessTest extends KernelTestBase {
     $this->crearSesion('agente_ajeno');
 
     $this->assertCount(2, $this->ver('agente_comprado')['#history']);
+  }
+
+  /**
+   * Cada agente enseña solo SUS cuentas, con la vuelta hacia él.
+   *
+   * Las cuentas son del agente que las propuso. Hasta el 12-09-2026 se
+   * anunciaban en el panel general, junto al agente de diagnóstico, y parecía
+   * que eran de los dos.
+   */
+  public function testCadaAgenteEnsenaSoloSusCuentas(): void {
+    $this->concederAcceso([self::CURSO_COMPRADO, self::CURSO_AJENO]);
+    $this->assertNull($this->ver('agente_comprado')['#accounts'], 'Sin cuentas no hay entrada.');
+
+    $registro = $this->container->get(AccountRegistry::class);
+    $registro->ingestPack((int) $this->alumno->id(), 'agente_comprado', 10, [
+      ['name' => 'Traxión', 'disposition' => 'GOLD'],
+      ['name' => 'Olympic Transport', 'disposition' => 'SILVER'],
+    ]);
+    $registro->ingestPack((int) $this->alumno->id(), 'agente_ajeno', 11, [
+      ['name' => 'Cuenta de otro agente', 'disposition' => 'GOLD'],
+    ]);
+
+    $suyas = $this->ver('agente_comprado')['#accounts'];
+    $this->assertSame(2, $suyas['count']);
+    $this->assertStringContainsString('desde=agente_comprado', $suyas['url'], 'La entrada lleva la vuelta hacia este agente.');
+    $this->assertSame(1, $this->ver('agente_ajeno')['#accounts']['count']);
   }
 
   /**

@@ -108,6 +108,7 @@ final class DashboardController extends ControllerBase {
     // se puede leer.
     $agentes = $this->agents->forDecision($decision);
     $varios = count($agentes) > 1;
+    $cuentasPorAgente = $this->accounts->countsByAgent($uid);
 
     return [
       '#theme' => 'sld_dashboard',
@@ -119,7 +120,7 @@ final class DashboardController extends ControllerBase {
       // abrir otra vía de HTML arbitrario en la página del alumno.
       '#welcome_text' => $this->branding->getWelcomeText(),
       '#can_start' => $this->readiness->isReady(),
-      '#agents' => $this->buildAgents($agentes, $sessions, $varios),
+      '#agents' => $this->buildAgents($agentes, $sessions, $varios, $cuentasPorAgente),
       '#multiple_agents' => $varios,
       // El panel debe poder decir la verdad: que no sepamos si tiene acceso
       // no es lo mismo que saber que no lo tiene.
@@ -139,7 +140,11 @@ final class DashboardController extends ControllerBase {
       // El recuento solo cambia cuando llega un Pack, y un Pack es un
       // resultado nuevo: lo invalida la etiqueta de la lista de resultados,
       // que ya está abajo. Registrar un estado no cambia el recuento.
-      '#accounts' => $this->buildAccounts($uid),
+      //
+      // Solo con UN agente. Con varios, las cuentas van en la tarjeta y en la
+      // página del agente que las propuso: aquí, en el panel de todos, parecía
+      // que eran también del agente de diagnóstico.
+      '#accounts' => $varios ? NULL : $this->buildAccounts(array_sum($cuentasPorAgente)),
       '#memory_forget_all_url' => $this->buildForgetAllUrl(),
       '#attached' => [
         'library' => ['sales_leadership_diagnostic/dashboard'],
@@ -187,15 +192,13 @@ final class DashboardController extends ControllerBase {
   /**
    * La entrada a «Mis cuentas», o NULL si todavía no tiene ninguna.
    *
-   * @param int $uid
-   *   Alumno.
+   * @param int $cuantas
+   *   Cuántas cuentas tiene el alumno.
    *
    * @return array{url: string, count: int}|null
    *   Destino y cuántas cuentas tiene.
    */
-  private function buildAccounts(int $uid): ?array {
-    $cuantas = $this->accounts->countForUser($uid);
-
+  private function buildAccounts(int $cuantas): ?array {
     if ($cuantas === 0) {
       return NULL;
     }
@@ -278,11 +281,13 @@ final class DashboardController extends ControllerBase {
    *   Sus sesiones, para saber cuáles tiene a medias.
    * @param bool $varios
    *   Si tiene más de uno. Decide qué datos hacen falta.
+   * @param array<string, int> $cuentasPorAgente
+   *   Cuántas cuentas tiene el alumno de cada agente.
    *
    * @return array<int, array<string, mixed>>
    *   Una entrada por agente disponible.
    */
-  private function buildAgents(array $agentes, array $sessions, bool $varios): array {
+  private function buildAgents(array $agentes, array $sessions, bool $varios, array $cuentasPorAgente = []): array {
     $filas = [];
 
     foreach ($agentes as $agent) {
@@ -303,6 +308,9 @@ final class DashboardController extends ControllerBase {
           ? Url::fromRoute('sales_leadership_diagnostic.agent_page', ['sld_agent' => $id])->toString()
           : NULL,
         'state' => $varios ? $this->estadoDe($enCurso, $sessions, $id) : NULL,
+        // Con varios agentes, las cuentas se anuncian en la tarjeta del que
+        // las propuso. La tarjeta entera ya lleva a su página.
+        'accounts' => $varios ? (int) ($cuentasPorAgente[$id] ?? 0) : 0,
       ];
     }
 

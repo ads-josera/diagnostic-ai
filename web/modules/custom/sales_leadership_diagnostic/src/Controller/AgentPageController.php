@@ -11,6 +11,7 @@ use Drupal\sales_leadership_diagnostic\DTO\AccessDecision;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticResultRepository;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticSessionRepository;
+use Drupal\sales_leadership_diagnostic\Service\Account\AccountRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\ChatWelcome;
@@ -56,6 +57,7 @@ final class AgentPageController extends ControllerBase {
     private readonly ChatWelcome $welcome,
     private readonly DiagnosticStarter $starter,
     private readonly CsrfTokenGenerator $csrfToken,
+    private readonly AccountRegistry $accounts,
   ) {}
 
   /**
@@ -72,6 +74,7 @@ final class AgentPageController extends ControllerBase {
       $container->get(ChatWelcome::class),
       $container->get(DiagnosticStarter::class),
       $container->get('csrf_token'),
+      $container->get(AccountRegistry::class),
     );
   }
 
@@ -110,6 +113,11 @@ final class AgentPageController extends ControllerBase {
       '#start_url' => $this->buildStartUrl($agentId),
       '#dashboard_url' => Url::fromRoute('sales_leadership_diagnostic.dashboard')->toString(),
       '#repeat_notice' => $this->buildRepeatNotice(),
+      // Las cuentas que propuso ESTE agente. Viven aquí y no en el panel
+      // general: son suyas. El recuento solo cambia al llegar un Pack, y un
+      // Pack es un resultado nuevo, que ya invalida esta página por su
+      // etiqueta.
+      '#accounts' => $this->buildAccounts($uid, $agentId),
       '#history' => $this->history->forAgent(
         $sessions,
         $this->results->loadForUserIndexedBySession($uid),
@@ -130,6 +138,27 @@ final class AgentPageController extends ControllerBase {
           $this->starter->getCacheTags(),
         ),
       ],
+    ];
+  }
+
+  /**
+   * La entrada a «Mis cuentas» de este agente, o NULL si no tiene ninguna.
+   *
+   * Lleva el agente en la dirección para que «Mis cuentas» sepa volver aquí.
+   *
+   * @return array{url: string, count: int}|null
+   *   Destino y cuántas cuentas tiene.
+   */
+  private function buildAccounts(int $uid, string $agentId): ?array {
+    $cuantas = $this->accounts->countsByAgent($uid)[$agentId] ?? 0;
+
+    if ($cuantas === 0) {
+      return NULL;
+    }
+
+    return [
+      'url' => Url::fromRoute('sales_leadership_diagnostic.accounts', [], ['query' => ['desde' => $agentId]])->toString(),
+      'count' => $cuantas,
     ];
   }
 

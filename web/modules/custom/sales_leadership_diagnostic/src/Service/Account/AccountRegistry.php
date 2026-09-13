@@ -364,6 +364,27 @@ final class AccountRegistry {
   }
 
   /**
+   * Cuántas cuentas tiene una persona de cada agente.
+   *
+   * Las cuentas son del agente que las propuso, y se enseñan donde vive ese
+   * agente: en su tarjeta y en su página, no en el panel general, que es
+   * común a los dos. Lo pidió José Raúl el 12-09-2026 al verlas junto al
+   * agente de diagnóstico, que no tiene nada que ver con ellas.
+   *
+   * @return array<string, int>
+   *   Identificador del agente => cuántas cuentas.
+   */
+  public function countsByAgent(int $uid): array {
+    $consulta = $this->database->select(self::CUENTAS, 'c')
+      ->fields('c', ['agent'])
+      ->condition('uid', $uid)
+      ->groupBy('agent');
+    $consulta->addExpression('COUNT(*)', 'n');
+
+    return array_map('intval', $consulta->execute()->fetchAllKeyed());
+  }
+
+  /**
    * Cuántas cuentas tiene una persona.
    */
   public function countForUser(int $uid): int {

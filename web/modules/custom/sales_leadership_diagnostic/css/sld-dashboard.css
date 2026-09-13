@@ -411,3 +411,11 @@
     align-items: stretch;
   }
 }
+
+/* Las cuentas de un agente, en su tarjeta. Van en el color de acción porque
+   son algo pendiente de hacer; el estado de abajo, en gris, es informativo. */
+.sld-card__accounts {
+  color: var(--sld-color-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}

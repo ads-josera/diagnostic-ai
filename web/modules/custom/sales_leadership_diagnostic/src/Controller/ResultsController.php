@@ -205,7 +205,7 @@ final class ResultsController extends ControllerBase {
       // Registrar qué pasó con estas cuentas. Solo para su dueño, y solo si el
       // Pack tiene cuentas: el gestor que da soporte no registra por nadie.
       '#accounts_url' => $this->esSuyo($result) && $result->getAccounts() !== []
-        ? Url::fromRoute('sales_leadership_diagnostic.accounts')->toString()
+        ? Url::fromRoute('sales_leadership_diagnostic.accounts', [], ['query' => array_filter(['desde' => $result->getAgentId()])])->toString()
         : NULL,
       '#sections' => $this->buildSections($payload, $tipo),
       '#version' => $result->getDiagnosticVersion(),
