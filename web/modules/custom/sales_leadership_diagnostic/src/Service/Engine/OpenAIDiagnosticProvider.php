@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Service\Engine;
 
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticContext;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn;
+use Drupal\sales_leadership_diagnostic\Exception\DiagnosticException;
+use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory;
 
@@ -193,29 +197,123 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
     'additionalProperties' => FALSE,
   ];
 
+  /**
+   * Canal de log del módulo.
+   */
+  private LoggerChannelInterface $logger;
+
   public function __construct(
     private readonly OpenAIClient $client,
     private readonly DiagnosticResponseValidator $validator,
     private readonly ToolBoxFactory $tools,
-  ) {}
+    LoggerChannelFactoryInterface $loggerFactory,
+  ) {
+    $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
+  }
 
   /**
    * {@inheritdoc}
    */
   public function process(DiagnosticContext $context): DiagnosticTurn {
-    $raw = $this->client->completeJson(
-      $this->buildMessages($context),
+    $mensajes = $this->buildMessages($context);
+    $raw = $this->pedir($mensajes, 'Turno generado');
+    $turno = $this->validator->validate($raw);
+    $descuadre = $this->validator->arithmeticGap($turno);
+
+    if ($descuadre === NULL) {
+      return $turno;
+    }
+
+    return $this->corregirDescuadre($mensajes, $raw, $turno, $descuadre);
+  }
+
+  /**
+   * Pide al agente que corrija un informe cuyo global no es la suma.
+   *
+   * Es un control de la PLATAFORMA, no un cambio de metodología: no se toca
+   * ningún número, se le devuelve su propio informe y se le pide que lo
+   * recalcule con su Scoring Engine. Es lo que su Orchestrator manda ante un
+   * «Arithmetic Integrity FAIL»: detener, corregir en el motor responsable y
+   * revalidar. El alumno no llega a ver el informe que no cuadraba.
+   *
+   * Si la corrección falla —otra llamada que no cuadra, una respuesta que ya
+   * no es el informe, un error del proveedor— se guarda el ORIGINAL con un
+   * aviso. Dejar al alumno sin su informe por un descuadre sería peor que el
+   * descuadre, y cambiar la cifra por nuestra cuenta sería alterar un
+   * resultado del cliente.
+   *
+   * @param array<int, array{role: string, content: string}> $mensajes
+   *   La conversación que se envió.
+   * @param array<string, mixed> $raw
+   *   La respuesta que no cuadraba.
+   * @param \Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn $turno
+   *   El turno que no cuadraba, ya validado.
+   * @param array{global: float, suma: float} $descuadre
+   *   Las dos cifras.
+   */
+  private function corregirDescuadre(array $mensajes, array $raw, DiagnosticTurn $turno, array $descuadre): DiagnosticTurn {
+    // Solo cifras: nunca contenido de la conversación (§43).
+    $this->logger->warning('El informe declaró un Score global de @global y sus dimensiones suman @suma: se pide al agente que lo corrija antes de guardarlo.', [
+      '@global' => $descuadre['global'],
+      '@suma' => $descuadre['suma'],
+    ]);
+
+    $mensajes[] = ['role' => 'assistant', 'content' => (string) json_encode($raw, JSON_UNESCAPED_UNICODE)];
+    $mensajes[] = [
+      'role' => 'system',
+      'content' => sprintf(
+        'Control de integridad de la plataforma: en el resultado que acabas de entregar, las dimensiones suman %s y el Score Global declarado es %s. Tu Scoring Engine exige que el Score Global sea la suma de las diez dimensiones. Revisa los valores, corrige lo que esté mal y devuelve el informe completo —el mensaje y el resultado— en el mismo formato. No cambies nada que este descuadre no afecte.',
+        $descuadre['suma'],
+        $descuadre['global'],
+      ),
+    ];
+
+    try {
+      $corregido = $this->validator->validate($this->pedir($mensajes, 'Corrección de integridad'));
+    }
+    catch (DiagnosticException $e) {
+      $this->logger->warning('No se pudo obtener la corrección del informe: se guarda el original, que no cuadra.');
+      return $turno;
+    }
+
+    if (!$corregido->completed) {
+      $this->logger->warning('La corrección pedida no devolvió un informe: se guarda el original, que no cuadra.');
+      return $turno;
+    }
+
+    if ($this->validator->arithmeticGap($corregido) !== NULL) {
+      $this->logger->warning('El informe sigue sin cuadrar después de pedir la corrección: se guarda con este aviso para no dejar al alumno sin él.');
+      return $corregido;
+    }
+
+    $this->logger->info('El agente corrigió el descuadre del Score global antes de guardarlo.');
+
+    return $corregido;
+  }
+
+  /**
+   * Una llamada al modelo con el esquema del turno.
+   *
+   * @param array<int, array{role: string, content: string}> $mensajes
+   *   La conversación.
+   * @param string $proposito
+   *   Para qué es la llamada, tal como se anota en el consumo.
+   *
+   * @return array<string, mixed>
+   *   La respuesta del modelo.
+   */
+  private function pedir(array $mensajes, string $proposito): array {
+    return $this->client->completeJson(
+      $mensajes,
       'diagnostic_turn',
       self::RESPONSE_SCHEMA,
-      'Turno generado',
+      $proposito,
       NULL,
       // Qué herramientas hay lo decide la fábrica, no el motor. Aquí solo se
       // le pasan: el día que el Research Entitlement gobierne quién puede
       // buscar y cuándo, esta línea no cambia.
       $this->tools->forTurn(),
     );
-
-    return $this->validator->validate($raw);
   }
 
   /**

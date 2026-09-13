@@ -166,13 +166,57 @@ final class DiagnosticResponseValidator {
    *   Resultado ya extraído.
    */
   private function comprobarAritmetica(array $result): void {
+    $descuadre = $this->descuadre($result);
+
+    if ($descuadre === NULL) {
+      return;
+    }
+
+    ['global' => $global, 'suma' => $suma] = $descuadre;
+    $dimensiones = $result['dimensions'];
+
+    $this->logger->warning(
+      'El diagnóstico declaró una puntuación global de @global pero sus @n dimensiones suman @suma. Conviene revisarlo: la metodología exige que el global sea la suma.',
+      [
+        '@global' => $global,
+        '@n' => count($dimensiones),
+        '@suma' => $suma,
+      ],
+    );
+  }
+
+  /**
+   * Si un informe final no cuadra: su global frente a la suma de dimensiones.
+   *
+   * Lo usa el motor para pedir la corrección ANTES de guardar. Su metodología
+   * trata un global que no es la suma como fallo de tolerancia cero, y en las
+   * pruebas del cliente del 12-09-2026 pasó una vez de veintidós: las
+   * dimensiones sumaban 10 y el informe decía 11/100.
+   *
+   * @return array{global: float, suma: float}|null
+   *   Las dos cifras si no cuadran; NULL si cuadran o no hay nada que cuadrar.
+   */
+  public function arithmeticGap(DiagnosticTurn $turn): ?array {
+    return $turn->completed && is_array($turn->result) ? $this->descuadre($turn->result) : NULL;
+  }
+
+  /**
+   * El global y la suma, si se separan más de la tolerancia.
+   *
+   * @param array<string, mixed> $result
+   *   Resultado ya extraído.
+   *
+   * @return array{global: float, suma: float}|null
+   *   Las dos cifras, o NULL si cuadran o no hay nada que cuadrar.
+   */
+  private function descuadre(array $result): ?array {
     $global = $result['score'] ?? NULL;
     $dimensiones = $result['dimensions'] ?? NULL;
 
     // Sin puntuación global o sin dimensiones no hay nada que cuadrar: es el
     // caso de un diagnóstico parcial, que su metodología prohíbe puntuar.
     if (!is_numeric($global) || !is_array($dimensiones) || $dimensiones === []) {
-      return;
+      return NULL;
     }
 
     $suma = 0.0;
@@ -183,20 +227,9 @@ final class DiagnosticResponseValidator {
       }
     }
 
-    $desvio = abs((float) $global - $suma);
-
-    if ($desvio <= self::TOLERANCIA_ARITMETICA) {
-      return;
-    }
-
-    $this->logger->warning(
-      'El diagnóstico declaró una puntuación global de @global pero sus @n dimensiones suman @suma. Conviene revisarlo: la metodología exige que el global sea la suma.',
-      [
-        '@global' => $global,
-        '@n' => count($dimensiones),
-        '@suma' => $suma,
-      ],
-    );
+    return abs((float) $global - $suma) <= self::TOLERANCIA_ARITMETICA
+      ? NULL
+      : ['global' => (float) $global, 'suma' => $suma];
   }
 
   /**

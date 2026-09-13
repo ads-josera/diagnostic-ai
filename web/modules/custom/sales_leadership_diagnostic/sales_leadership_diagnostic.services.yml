@@ -165,6 +165,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIClient'
       - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator'
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory'
+      - '@logger.factory'
 
   Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory:
     arguments:
