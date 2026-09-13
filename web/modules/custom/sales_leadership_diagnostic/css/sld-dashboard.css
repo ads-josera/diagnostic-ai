@@ -260,13 +260,13 @@
  * El estado va en minusculas y discreto: acompana a la eleccion, no compite
  * con el nombre del agente, que es lo que se lee primero.
  */
+/* Lo hecho y lo pendiente: «3 realizados · uno a medias». En minúsculas: en
+   mayúsculas se leía como una etiqueta técnica, y con texto largo, peor. */
 .sld-card__state {
   margin-top: var(--sld-space-xs);
   color: var(--sld-color-text-muted);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 /* La pagina de un agente ---------------------------------------------- */

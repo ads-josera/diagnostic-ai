@@ -11,12 +11,12 @@ use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\sales_leadership_diagnostic\DTO\AccessDecision;
 use Drupal\Core\Url;
-use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\ReadinessBlocker;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticResultRepository;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticSessionRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Account\AccountRegistry;
+use Drupal\sales_leadership_diagnostic\Service\Diagnostic\AgentProgress;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
 use Drupal\sales_leadership_diagnostic\Service\Branding\Branding;
@@ -58,6 +58,7 @@ final class DashboardController extends ControllerBase {
     private readonly StudentHistoryBuilder $history,
     private readonly ChatWelcome $welcome,
     private readonly AccountRegistry $accounts,
+    private readonly AgentProgress $progress,
   ) {}
 
   /**
@@ -80,6 +81,7 @@ final class DashboardController extends ControllerBase {
       $container->get(StudentHistoryBuilder::class),
       $container->get(ChatWelcome::class),
       $container->get(AccountRegistry::class),
+      $container->get(AgentProgress::class),
     );
   }
 
@@ -292,13 +294,13 @@ final class DashboardController extends ControllerBase {
 
     foreach ($agentes as $agent) {
       $id = (string) $agent->id();
-      $enCurso = $this->findResumableId($sessions, $id);
+      $progreso = $this->progress->describe($sessions, $id);
 
       $filas[] = [
         'id' => $id,
         'label' => $agent->label(),
         'description' => $agent->getDescription(),
-        'resume_session_id' => $enCurso,
+        'resume_session_id' => $progreso['resumable'],
         'start_url' => $this->buildStartUrl($id),
         // El icono ya existía: se cargaba en la ficha del agente y solo se
         // veía dentro del chat, con la conversación vacía. Aquí es lo que
@@ -307,7 +309,9 @@ final class DashboardController extends ControllerBase {
         'page_url' => $varios
           ? Url::fromRoute('sales_leadership_diagnostic.agent_page', ['sld_agent' => $id])->toString()
           : NULL,
-        'state' => $varios ? $this->estadoDe($enCurso, $sessions, $id) : NULL,
+        // Lo hecho y lo pendiente, dicho en la tarjeta: «3 realizados · uno a
+        // medias». Es lo que hace informada la elección entre agentes.
+        'state' => $varios ? $progreso['label'] : NULL,
         // Con varios agentes, las cuentas se anuncian en la tarjeta del que
         // las propuso. La tarjeta entera ya lleva a su página.
         'accounts' => $varios ? (int) ($cuentasPorAgente[$id] ?? 0) : 0,
@@ -315,35 +319,6 @@ final class DashboardController extends ControllerBase {
     }
 
     return $filas;
-  }
-
-  /**
-   * En qué punto está el alumno con un agente, para su tarjeta.
-   *
-   * Se dice en la tarjeta y no solo dentro, porque es lo que hace que la
-   * elección sea informada: quien dejó una conversación a medias necesita
-   * verlo antes de entrar, no después.
-   *
-   * @param int|null $enCurso
-   *   Conversación a medias con este agente, si la hay.
-   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[] $sessions
-   *   Sesiones del alumno.
-   * @param string $agentId
-   *   Agente de la tarjeta.
-   */
-  private function estadoDe(?int $enCurso, array $sessions, string $agentId): string {
-    if ($enCurso !== NULL) {
-      return (string) $this->t('A medias');
-    }
-
-    foreach ($sessions as $session) {
-      if ($session->getAgentId() === $agentId
-        && $session->getStatus() === DiagnosticStatus::Completed) {
-        return (string) $this->t('Realizado');
-      }
-    }
-
-    return (string) $this->t('Sin empezar');
   }
 
   /**
@@ -381,30 +356,6 @@ final class DashboardController extends ControllerBase {
       $parametros,
       ['query' => ['token' => $this->csrfToken->get($internal)]],
     )->toString();
-  }
-
-  /**
-   * Identificador de la sesión que el alumno tiene a medias, si la hay.
-   *
-   * Sirve solo para cambiar el texto del botón: quien dejó una conversación
-   * empezada lee «Continuar» en vez de «Iniciar», y así no teme perderla al
-   * pulsar. Quién puede empezar de verdad lo decide el servidor.
-   *
-   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[] $sessions
-   *   Sesiones del alumno.
-   * @param string $agentId
-   *   Agente del que se busca la conversación a medias.
-   */
-  private function findResumableId(array $sessions, string $agentId): ?int {
-    foreach ($sessions as $session) {
-      // Se compara también el agente: una conversación a medias con uno no
-      // debe cambiar el texto del botón de otro.
-      if ($session->getStatus()->acceptsMessages() && $session->getAgentId() === $agentId) {
-        return (int) $session->id();
-      }
-    }
-
-    return NULL;
   }
 
   /**

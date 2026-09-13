@@ -114,6 +114,11 @@ services:
 
   # Las filas del historial del alumno. Lo pintan el panel y la página de cada
   # agente, y por eso no vive dentro de un controller.
+  # Lo hecho y lo pendiente del alumno con cada agente: la tarjeta del panel y
+  # el botón de la página del agente cuentan con la misma pieza.
+  Drupal\sales_leadership_diagnostic\Service\Diagnostic\AgentProgress:
+    arguments: []
+
   Drupal\sales_leadership_diagnostic\Service\Diagnostic\StudentHistoryBuilder:
     arguments:
       - '@date.formatter'

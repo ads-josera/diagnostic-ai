@@ -12,6 +12,7 @@ use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticResultRepository;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticSessionRepository;
 use Drupal\sales_leadership_diagnostic\Service\Account\AccountRegistry;
+use Drupal\sales_leadership_diagnostic\Service\Diagnostic\AgentProgress;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Authorization\DiagnosticAccessChecker;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\ChatWelcome;
@@ -58,6 +59,7 @@ final class AgentPageController extends ControllerBase {
     private readonly DiagnosticStarter $starter,
     private readonly CsrfTokenGenerator $csrfToken,
     private readonly AccountRegistry $accounts,
+    private readonly AgentProgress $progress,
   ) {}
 
   /**
@@ -75,6 +77,7 @@ final class AgentPageController extends ControllerBase {
       $container->get(DiagnosticStarter::class),
       $container->get('csrf_token'),
       $container->get(AccountRegistry::class),
+      $container->get(AgentProgress::class),
     );
   }
 
@@ -109,7 +112,9 @@ final class AgentPageController extends ControllerBase {
       // mientras la conversación estuviera vacía. Aquí se lee ANTES de
       // empezar, que es cuando sirve para decidir.
       '#intro' => $this->welcome->getIntro($sld_agent),
-      '#resume_session_id' => $this->findResumableId($sessions, $agentId),
+      // Con la misma pieza que la tarjeta del panel: un chat abierto y vacío
+      // no convierte el botón en «Continuar».
+      '#resume_session_id' => $this->progress->describe($sessions, $agentId)['resumable'],
       '#start_url' => $this->buildStartUrl($agentId),
       '#dashboard_url' => Url::fromRoute('sales_leadership_diagnostic.dashboard')->toString(),
       '#repeat_notice' => $this->buildRepeatNotice(),
@@ -183,26 +188,6 @@ final class AgentPageController extends ControllerBase {
     return $externalUserId === NULL
       ? NULL
       : $this->accessChecker->decide($externalUserId);
-  }
-
-  /**
-   * Identificador de la conversación que tiene a medias con este agente.
-   *
-   * Solo cambia el texto del botón. Quién puede empezar lo decide el servidor.
-   *
-   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface[] $sessions
-   *   Sesiones del alumno.
-   * @param string $agentId
-   *   Agente de esta página.
-   */
-  private function findResumableId(array $sessions, string $agentId): ?int {
-    foreach ($sessions as $session) {
-      if ($session->getStatus()->acceptsMessages() && $session->getAgentId() === $agentId) {
-        return (int) $session->id();
-      }
-    }
-
-    return NULL;
   }
 
   /**
