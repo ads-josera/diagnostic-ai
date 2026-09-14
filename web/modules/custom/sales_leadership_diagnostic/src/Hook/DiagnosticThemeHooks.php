@@ -210,6 +210,9 @@ final class DiagnosticThemeHooks {
           'status_label' => '',
           'accepts_messages' => FALSE,
           'messages' => [],
+          // Quién firma los mensajes del agente: su nombre. NULL deja el
+          // genérico «Diagnostic AI» (agente borrado).
+          'agent_name' => NULL,
         ],
       ],
       'sld_studio' => [
@@ -218,6 +221,8 @@ final class DiagnosticThemeHooks {
           'session_id' => 0,
           'messages' => [],
           'reset_url' => '',
+          // Como en el chat: el nombre del agente que se ensaya.
+          'agent_name' => NULL,
         ],
       ],
       // Pantalla de consumo del gestor. Se mira de un vistazo, así que el

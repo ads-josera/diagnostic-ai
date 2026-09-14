@@ -95,6 +95,9 @@ final class PromptStudioController extends ControllerBase {
       '#form' => $this->formBuilder()->getForm(PromptStudioForm::class, $agente),
       '#session_id' => $sessionId,
       '#messages' => $this->buildMessages($sessionId),
+      // El ensayo firma con el nombre del agente que se prueba, igual que el
+      // chat del alumno: el gestor tiene que ver EXACTAMENTE lo que verá él.
+      '#agent_name' => $agente->label(),
       '#reset_url' => Url::fromRoute(
         'sales_leadership_diagnostic.studio_reset',
         ['sld_agent' => $agente->id()],
@@ -103,6 +106,8 @@ final class PromptStudioController extends ControllerBase {
         'library' => ['sales_leadership_diagnostic/studio'],
         'drupalSettings' => [
           'salesLeadershipDiagnostic' => [
+            // La firma de los mensajes que el JS pinta sin recargar.
+            'agentName' => $agente->label(),
             // El JS del chat del alumno se reutiliza tal cual: lee su destino
             // de aquí, así que basta con apuntarlo al endpoint del ensayo.
             'messageEndpoint' => Url::fromRoute(

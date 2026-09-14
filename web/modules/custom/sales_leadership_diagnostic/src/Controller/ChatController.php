@@ -90,6 +90,10 @@ final class ChatController extends ControllerBase {
       '#status_label' => $statusLabels[$status->value] ?? $status->value,
       '#accepts_messages' => $status->acceptsMessages(),
       '#messages' => $messages,
+      // Quién firma los mensajes del agente. Firmaban todos «Diagnostic AI»,
+      // también los del de prospección (visto el 13-09-2026). NULL si el
+      // agente se borró: la plantilla vuelve entonces al nombre genérico.
+      '#agent_name' => $agente?->label(),
       // La bienvenida solo tiene sentido antes del primer turno: una vez que
       // hay conversación, el alumno ya sabe de qué va esto y el cartel
       // estorbaría al leer. Se resuelve aquí y no en la plantilla para que la
@@ -108,6 +112,8 @@ final class ChatController extends ControllerBase {
         'drupalSettings' => [
           'salesLeadershipDiagnostic' => [
             'sessionId' => (int) $session->id(),
+            // La misma firma para los mensajes que el JS pinta sin recargar.
+            'agentName' => $agente?->label(),
             'acceptsMessages' => $status->acceptsMessages(),
             // Solo se entrega el endpoint si la sesión admite mensajes. Una
             // sesión cerrada no debe siquiera ofrecer a dónde escribir; el

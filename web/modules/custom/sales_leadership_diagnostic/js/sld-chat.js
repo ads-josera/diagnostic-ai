@@ -422,7 +422,7 @@
 
           appendMessage(log, {
             role: 'assistant',
-            author: Drupal.t('Diagnostic AI'),
+            author: settings.agentName || Drupal.t('Diagnostic AI'),
             time: nowLabel(),
             html: resultado.message_html,
           });
@@ -436,7 +436,7 @@
 
         appendMessage(log, {
           role: 'assistant',
-          author: Drupal.t('Diagnostic AI'),
+          author: settings.agentName || Drupal.t('Diagnostic AI'),
           time: data.time || nowLabel(),
           html: data.message_html,
         });
