@@ -116,8 +116,14 @@ composer install --no-dev --optimize-autoloader
 vendor/bin/drush --version    # drush es dependencia de producción
 ```
 
-Si Composer es anterior a 2.10.3, actualizarlo antes (`composer self-update`):
-la vulnerabilidad permite ejecutar órdenes al instalar un paquete malicioso.
+Si Composer es anterior a 2.10.3, actualizarlo antes: la vulnerabilidad permite
+ejecutar órdenes al instalar un paquete malicioso. **En este servidor
+`composer self-update` no sirve**: `/usr/local/bin/composer` es un binario
+compartido que pertenece a otra cuenta del sistema y no se toca. La cuenta
+`labai` tiene su propio Composer en `~/.local/bin/composer` (instalado el
+14-09-2026 con el instalador oficial, verificando su firma), que va antes en
+el `PATH`. Comprobar con `command -v composer` que es ese el que responde; para
+actualizarlo más adelante, `composer self-update` sí funciona sobre esa copia.
 
 **El `.htaccess` y PHP 8.4.** Lo que hace que el dominio corra con PHP 8.4 es
 un bloque que cPanel escribe en `web/.htaccess`. `composer install` regenera
