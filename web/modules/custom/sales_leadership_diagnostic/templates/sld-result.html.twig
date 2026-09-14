@@ -20,12 +20,13 @@
  * - own: cierto si quien mira es el dueño; el pie solo le habla de tú a él.
  * - version: versión del diagnóstico con la que se generó.
  * - created: fecha de generación.
+ * - accent: color del agente que lo generó («cian» o «lima»).
  *
  * Los elementos de las listas son texto plano y Twig los escapa. Proceden del
  * motor de IA y no se tratan como marcado.
  */
 #}
-<div class="sld sld-result">
+<div class="sld sld-result sld-result--{{ accent }}">
 
   <header class="sld-result__header">
     <h1 class="sld-result__title">{{ title }}</h1>

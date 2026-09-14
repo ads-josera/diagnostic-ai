@@ -58,11 +58,13 @@ final class DiagnosticThemeHooks {
    * tienen que seguir exactamente igual mientras tanto.
    *
    * Fase 1: la página de cada agente y «Mis cuentas».
+   * Fase 2: el informe, también cuando lo abre el gestor (mismo marco).
    */
   private const STYLED_ROUTES = [
     'sales_leadership_diagnostic.dashboard',
     'sales_leadership_diagnostic.agent_page',
     'sales_leadership_diagnostic.accounts',
+    'sales_leadership_diagnostic.result',
   ];
 
   private const INNER_ROUTES = [
@@ -249,6 +251,8 @@ final class DiagnosticThemeHooks {
           // Si quien mira es el dueño: decide si el pie le habla de tú.
           // Por defecto NO: una pantalla que no lo diga no tutea a nadie.
           'own' => FALSE,
+          // Color del agente que lo generó, en el estilo «AI Sales Agents».
+          'accent' => 'cian',
           // El Weekly GOLD Pack, cuenta por cuenta, y el pool cribado. Vacíos
           // en los resultados anteriores al 10-09-2026 y en los del agente de
           // diagnóstico, que no produce cuentas.

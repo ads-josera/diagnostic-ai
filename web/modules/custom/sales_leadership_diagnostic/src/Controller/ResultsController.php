@@ -178,6 +178,9 @@ final class ResultsController extends ControllerBase {
       // usa el marco interno del módulo, que no pinta la región donde el tema
       // coloca su bloque de título, así que lo imprime la plantilla.
       '#title' => $this->title($result),
+      // El color del agente que lo generó, el mismo de su tarjeta y su
+      // página. Si el agente ya no existe, el de siempre.
+      '#accent' => $this->agenteDe($result)?->getAccent() ?? 'cian',
       '#summary' => Markup::create($this->markdown->render($result->getSummary())),
       '#summary_label' => $this->summaryLabel($tipo),
       '#score' => $result->getScore(),

@@ -661,6 +661,302 @@
   border-left-color: var(--agt-cian);
 }
 
+/* El informe (fase 2) ----------------------------------------------------- */
+
+/* Se lee durante minutos, no se hojea como la landing: el texto corrido va en
+   un gris claro y no en blanco pleno —el blanco sobre negro deslumbra en un
+   texto largo—, con interlineado amplio y el ancho de línea contenido. */
+
+/* El color del agente que lo generó: la cifra, las barras y el aviso del
+   parcial. Cian por defecto. */
+.sld-home--agentes .sld-result {
+  --agt-acento: var(--agt-cian);
+  --agt-acento-rgb: 78, 226, 242;
+}
+
+.sld-home--agentes .sld-result--lima {
+  --agt-acento: var(--agt-lima);
+  --agt-acento-rgb: 166, 255, 77;
+}
+
+.sld-home--agentes .sld-result__header {
+  border-bottom-color: var(--agt-linea);
+}
+
+.sld-home--agentes .sld-inner-frame .sld-result__title {
+  color: var(--sld-color-text);
+  font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.sld-home--agentes .sld-result__meta,
+.sld-home--agentes .sld-result__version {
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+
+.sld-home--agentes .sld-result__version {
+  border-color: rgba(120, 150, 158, 0.35);
+  border-radius: var(--sld-radius-sm);
+}
+
+.sld-home--agentes .sld-result__section-title {
+  color: var(--agt-cian);
+  font-family: var(--agt-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+/* La puntuación, grande como los precios de la landing. */
+.sld-home--agentes .sld-score__value {
+  color: var(--agt-acento);
+  font-size: clamp(3rem, 7vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.sld-home--agentes .sld-score__max {
+  font-family: var(--agt-mono);
+  letter-spacing: 0.06em;
+}
+
+.sld-home--agentes .sld-score__band strong {
+  letter-spacing: 0.02em;
+}
+
+.sld-home--agentes .sld-score__confidence {
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.sld-home--agentes .sld-score__bar,
+.sld-home--agentes .sld-dimensions__bar {
+  border-radius: 2px;
+  background: rgba(120, 150, 158, 0.2);
+}
+
+.sld-home--agentes .sld-score__fill,
+.sld-home--agentes .sld-dimensions__fill {
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(var(--agt-acento-rgb), 0.55), var(--agt-acento));
+}
+
+/* Madurez por dimensión. */
+.sld-home--agentes .sld-dimensions thead th {
+  color: var(--sld-color-text-muted);
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+}
+
+.sld-home--agentes .sld-dimensions th,
+.sld-home--agentes .sld-dimensions td {
+  border-bottom-color: rgba(120, 150, 158, 0.18);
+}
+
+.sld-home--agentes .sld-dimensions tbody tr:hover {
+  background: rgba(78, 226, 242, 0.04);
+}
+
+.sld-home--agentes .sld-dimensions__score {
+  font-weight: 700;
+}
+
+.sld-home--agentes .sld-result__partial {
+  border-left-color: var(--agt-acento);
+  background: rgba(var(--agt-acento-rgb), 0.06);
+}
+
+@media (max-width: 34rem) {
+  .sld-home--agentes .sld-dimensions tr {
+    border-color: rgba(120, 150, 158, 0.2);
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  /* En la tarjeta de cada dimensión, la fila de puntuación lleva tres cosas:
+     la etiqueta, la cifra y la barra. Repartidas a partes iguales, la
+     etiqueta se partía en «Puntua-ción» y la barra flotaba arriba. La
+     etiqueta ocupa lo que necesita y empuja cifra y barra a la derecha. */
+  .sld-home--agentes .sld-dimensions td {
+    align-items: center;
+  }
+
+  .sld-home--agentes .sld-dimensions td::before {
+    margin-inline-end: auto;
+    white-space: nowrap;
+  }
+
+  .sld-home--agentes .sld-dimensions__bar {
+    width: 4rem;
+  }
+}
+
+/* El resumen y las listas: lo que de verdad se lee. */
+.sld-home--agentes .sld-result__prose {
+  max-width: 72ch;
+  color: #d5e1e4;
+  font-size: 1.02rem;
+  line-height: 1.75;
+}
+
+.sld-home--agentes .sld-result__prose :is(h1, h2, h3, h4, h5, h6, strong, b) {
+  color: var(--sld-color-text);
+}
+
+.sld-home--agentes .sld-result__list li {
+  border-color: rgba(120, 150, 158, 0.2);
+  background: linear-gradient(180deg, rgba(12, 22, 27, 0.7), rgba(7, 11, 14, 0.7));
+  color: #d5e1e4;
+}
+
+/* Cada tipo de lista con su filete, y los cuatro distinguibles entre sí. Con
+   la paleta oscura, recomendaciones (el azul de «información») y prioridades
+   (el color principal) habrían salido las dos en cian; las recomendaciones
+   pasan a un azul lavanda. Fortalezas, oportunidades y prioridades conservan
+   su significado: verde de «va bien», ámbar de aviso y cian principal. */
+.sld-home--agentes .sld-result__list--recommendations li::before {
+  background: #8db0f0;
+}
+
+.sld-home--agentes .sld-result a:not([class]) {
+  color: var(--agt-cian);
+}
+
+.sld-home--agentes .sld-result a:not([class]):hover {
+  color: var(--agt-lima);
+}
+
+/* El Weekly GOLD Pack. */
+.sld-home--agentes .sld-pack__track {
+  border-radius: var(--sld-radius-sm);
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sld-home--agentes .sld-pack__account {
+  border-color: rgba(120, 150, 158, 0.2);
+  background: linear-gradient(180deg, rgba(12, 22, 27, 0.7), rgba(7, 11, 14, 0.7));
+}
+
+.sld-home--agentes .sld-pack__rank {
+  border-radius: var(--sld-radius-sm);
+  background: rgba(var(--agt-acento-rgb), 0.1);
+  color: var(--agt-acento);
+  font-family: var(--agt-mono);
+}
+
+.sld-home--agentes .sld-pack__name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.sld-home--agentes .sld-pack__chip,
+.sld-home--agentes .sld-pack__status,
+.sld-home--agentes .sld-pack__discrepancy,
+.sld-home--agentes .sld-pack__date,
+.sld-home--agentes .sld-pack__verified {
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.sld-home--agentes .sld-pack__chip {
+  border-radius: var(--sld-radius-sm);
+}
+
+/* GOLD en el lima de la marca; SILVER en gris claro. Las dos piden acción y
+   por eso llevan borde; las demás se quedan quietas, como en el claro. */
+.sld-home--agentes .sld-pack__chip--gold {
+  border-color: var(--agt-lima);
+  color: var(--agt-lima);
+}
+
+.sld-home--agentes .sld-pack__chip--silver {
+  border-color: #c7d6da;
+  color: #c7d6da;
+}
+
+.sld-home--agentes .sld-pack__fields dt,
+.sld-home--agentes .sld-pack__warn-title,
+.sld-home--agentes .sld-pack__message-head {
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+}
+
+.sld-home--agentes .sld-pack__fields dd {
+  color: #d5e1e4;
+}
+
+.sld-home--agentes .sld-pack__alt {
+  color: var(--sld-color-text-muted);
+}
+
+.sld-home--agentes .sld-pack__warn {
+  background: rgba(227, 179, 79, 0.07);
+}
+
+.sld-home--agentes .sld-pack__message {
+  border-color: rgba(120, 150, 158, 0.25);
+}
+
+.sld-home--agentes .sld-pack__message-head {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sld-home--agentes .sld-pack__message-body {
+  background: rgba(0, 0, 0, 0.25);
+  color: #d5e1e4;
+}
+
+.sld-home--agentes .sld-pack__copy {
+  font-family: var(--agt-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sld-home--agentes .sld-result__footer {
+  border-top-color: var(--agt-linea);
+}
+
+/* La navegación del gestor, que el marco pinta cuando es él quien abre el
+   informe de un alumno. Su pestaña activa llevaba el color principal sobre
+   blanco: con el cian de la paleta fija habría quedado ilegible. */
+.sld-home--agentes .sld-manager__nav-link {
+  border-radius: var(--sld-radius-sm);
+  color: #a9bdc2;
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sld-home--agentes .sld-manager__nav-link:hover,
+.sld-home--agentes .sld-manager__nav-link:focus-visible {
+  background: rgba(78, 226, 242, 0.1);
+  color: var(--sld-color-text);
+}
+
+.sld-home--agentes .sld-manager__nav-link.is-active {
+  background: var(--agt-cian);
+  color: #04070a;
+}
+
 /* Pie -------------------------------------------------------------------- */
 
 /* `!important` porque la plantilla pinta el fondo del pie en línea, con el
@@ -692,6 +988,76 @@
 
   .sld-home--agentes .sld-home__bar {
     min-height: 64px;
+  }
+}
+
+/* Impresión: en claro ------------------------------------------------------ */
+
+/* Quien imprime su informe o lo guarda en PDF se lo lleva en papel: un fondo
+   negro gasta tinta y se lee peor. Se vuelve a la paleta clara del módulo, y
+   fuera el fondo, la red, la barra y el pie. Los colores de la paleta oscura
+   se redefinen a tonos que sí se leen sobre blanco. */
+@media print {
+  .sld-home.sld-home--agentes,
+  .sld-home--agentes .sld,
+  .sld-home--agentes .sld-result,
+  .sld-home--agentes .sld-result--lima,
+  .sld-home--agentes .sld-agent-page,
+  .sld-home--agentes .sld-agent-page--lima {
+    --agt-cian: #1f4788;
+    --agt-lima: #3f6b00;
+    --agt-acento: #1f4788;
+    --agt-acento-rgb: 31, 71, 136;
+    --agt-linea: #d9dde3;
+
+    --sld-color-primary: #1f4788;
+    --sld-color-primary-contrast: #ffffff;
+    --sld-color-bg: #ffffff;
+    --sld-color-surface: #f6f7f9;
+    --sld-color-border: #d9dde3;
+    --sld-color-text: #1c1f24;
+    --sld-color-text-muted: #5b6470;
+    --sld-color-success: #1a7f4b;
+    --sld-color-warning: #8a6100;
+    --sld-color-danger: #b3261e;
+    --sld-color-info: #1f4788;
+  }
+
+  .sld-home--agentes,
+  .sld-home--agentes .sld-home__frame--liso {
+    color-scheme: light;
+    background: #ffffff;
+    color: #1c1f24;
+  }
+
+  .sld-home--agentes .sld-home__frame--liso::before,
+  .sld-home--agentes .sld-home__frame--liso::after,
+  .sld-home--agentes .sld-nodos,
+  .sld-home--agentes .sld-home__bar,
+  .sld-home--agentes .sld-home__footer,
+  .sld-home--agentes .sld-home__strip {
+    display: none;
+  }
+
+  .sld-home--agentes .sld-inner-frame.sld-home__card {
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .sld-home--agentes .sld-result__prose,
+  .sld-home--agentes .sld-result__list li,
+  .sld-home--agentes .sld-pack__fields dd,
+  .sld-home--agentes .sld-pack__message-body,
+  .sld-home--agentes .sld-pack__chip--silver {
+    color: #1c1f24;
+  }
+
+  .sld-home--agentes .sld-result__list li,
+  .sld-home--agentes .sld-pack__account,
+  .sld-home--agentes .sld-pack__message-body {
+    background: none;
   }
 }
 
