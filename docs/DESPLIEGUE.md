@@ -449,6 +449,33 @@ Si WordPress no responde durante la prueba, el mensaje debe decir **«No hemos
 podido verificar tu acceso»** y no «no tienes acceso»: son cosas distintas y se
 distinguen desde el 28-08-2026.
 
+## 10. Acceso por suscripción
+
+Opcional, desde el plugin 1.3.0. Da acceso a **todos** los agentes mientras la
+suscripción esté pagada, mensual o anual. El porqué está en
+`docs/decisiones/0019-la-suscripcion.md`. Todo se hace en el WordPress del
+cliente; Drupal no se toca.
+
+1. **Activar WooCommerce Subscriptions.** Stripe ya admite cobros recurrentes.
+2. **Crear el curso** «Suscripción Salesbumm AI» en LearnDash, en modo de
+   acceso **Cerrado**. No necesita lecciones. Si se deja en Abierto o Gratis, el
+   plugin lo ignora —cualquiera lo tendría sin pagar— y lo avisa en sus ajustes.
+3. **Crear los productos de suscripción**, uno por plan y segmento (o uno
+   variable con mensual y anual), y asociarles ese curso en su apartado de
+   LearnDash. Quién puede comprar el precio de cada segmento se decide en la
+   tienda, por ejemplo con el plugin de membresías.
+4. **Ajustes → Diagnostic AI → Cursos de suscripción**: poner el ID del curso.
+   No ponerlo también en «Cursos que dan acceso».
+5. **Probar con una cuenta de prueba y Stripe en modo prueba:**
+   - Suscribirse: entra y ve los dos agentes, sin aviso de caducidad.
+   - Cancelar la suscripción: pierde el acceso. Drupal recuerda una
+     autorización concedida **hasta 15 minutos**, así que el cierre puede
+     tardar eso.
+   - Simular un pago fallido y comprobar que la integración retira el curso
+     cuando la suscripción queda **en espera**: depende de cómo esté configurada
+     la tienda.
+   - Con un alumno que ya tenía el curso, comprobar que sigue igual.
+
 ---
 
 ## Despliegues posteriores
@@ -525,8 +552,22 @@ instalado.
    Solo en ese caso: exigir la última versión por costumbre obligaría al
    cliente a actualizar por cambios que no le afectan.
 
-6. Comprimir la carpeta `salesbumm-sld` y subirla en **Plugins → Añadir nuevo →
-   Subir plugin**, marcando la opción de reemplazar.
+6. **Correr las pruebas del plugin**, que deben pasar todas:
+
+   ```bash
+   ddev exec vendor/bin/phpunit -c wordpress-plugin/salesbumm-sld/tests/phpunit.xml.dist
+   ```
+
+7. **Empaquetar** sin las pruebas ni los archivos ocultos de macOS (comprimir
+   desde el Finder mete una carpeta `__MACOSX` en el zip):
+
+   ```bash
+   cd wordpress-plugin && rm -f salesbumm-sld.zip && \
+     zip -rX salesbumm-sld.zip salesbumm-sld -x 'salesbumm-sld/tests/*' '*.DS_Store'
+   ```
+
+   Subirlo en **Plugins → Añadir nuevo → Subir plugin**, marcando la opción de
+   reemplazar.
 
 ### Después de subirla
 

@@ -26,6 +26,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * diagnóstico caduca. Derivar la caducidad del curso sería imposible
  * precisamente porque el curso no caduca.
  *
+ * Desde la 1.3.0 hay una segunda puerta: la suscripción. Quien tiene un curso
+ * de suscripción entra a todos los agentes sin reloj propio, porque la
+ * suscripción ya caduca sola: WooCommerce le retira el curso al cancelarse.
+ * Cuando eso ocurre, vuelve a mandar lo de arriba sin cambio alguno.
+ *
  * Toda la lógica de LearnDash queda encapsulada aquí. Si el cliente cambiara
  * de LMS, se reescribe esta clase y el módulo de Drupal no se entera.
  */
@@ -85,6 +90,40 @@ class CourseAccess {
 
 		$owned_courses = $this->find_owned_courses( $user_id, $courses );
 
+		// El alumno tiene el curso: si nunca se le inició el reloj, se inicia
+		// ahora. El origen de esa fecha es una decisión de negocio y por eso
+		// es configurable.
+		//
+		// Se hace ANTES de mirar la suscripción y aunque la tenga: el periodo
+		// del curso corre desde la compra, con o sin suscripción. Si no, al
+		// cancelarla empezaría a contar de cero y le regalaría otro periodo.
+		if ( array() !== $owned_courses ) {
+			$this->clock->start_if_absent( $user_id, $this->resolve_start( $user_id, $owned_courses[0] ) );
+		}
+
+		$subscription = $this->find_subscription( $user_id );
+
+		if ( null !== $subscription ) {
+			$granted = $this->filter_existing( $courses );
+
+			if ( array() !== $granted ) {
+				return array(
+					'has_access'    => true,
+					'started_at'    => $this->enrolled_at( $user_id, $subscription ),
+					// Sin fecha de fin: la suscripción es quien la marca. Al
+					// cancelarse, WooCommerce retira el curso y este camino
+					// deja de aplicarse.
+					'expires_at'    => null,
+					'course_id'     => $granted[0],
+					// Todos los cursos que dan agente, como si los tuviera:
+					// Drupal le concede así todos los agentes sin enterarse
+					// de que existe la suscripción.
+					'owned_courses' => $granted,
+					'reason'        => 'acceso por suscripción',
+				);
+			}
+		}
+
 		if ( array() === $owned_courses ) {
 			return $this->deny( 'no posee ningún curso autorizador' );
 		}
@@ -92,11 +131,6 @@ class CourseAccess {
 		// `course_id` conserva el PRIMERO por compatibilidad: un Drupal que no
 		// conozca todavía `owned_courses` sigue funcionando exactamente igual.
 		$owned = $owned_courses[0];
-
-		// El alumno tiene el curso: si nunca se le inició el reloj, se inicia
-		// ahora. El origen de esa fecha es una decisión de negocio y por eso
-		// es configurable.
-		$this->clock->start_if_absent( $user_id, $this->resolve_start( $user_id, $owned ) );
 
 		if ( ! $this->clock->is_active( $user_id ) ) {
 			return array(
@@ -158,19 +192,93 @@ class CourseAccess {
 	private function find_owned_courses( int $user_id, array $courses ): array {
 		$owned = array();
 
-		foreach ( $courses as $course_id ) {
-			if ( ! $this->course_exists( $course_id ) ) {
-				continue;
-			}
-
+		foreach ( $this->filter_existing( $courses ) as $course_id ) {
 			// sfwd_lms_has_access() es la vía canónica de LearnDash y ya
 			// contempla inscripción directa, compra, grupo y acceso abierto.
 			if ( sfwd_lms_has_access( $course_id, $user_id ) ) {
-				$owned[] = (int) $course_id;
+				$owned[] = $course_id;
 			}
 		}
 
 		return $owned;
+	}
+
+	/**
+	 * El curso de suscripción que tiene el alumno, si tiene alguno.
+	 *
+	 * Tener el curso ES tener la suscripción al corriente: la integración de
+	 * LearnDash con WooCommerce lo concede al pagar y lo retira al cancelarse
+	 * o dejar de pagarse. Por eso aquí no se consulta WooCommerce.
+	 *
+	 * @param int $user_id Usuario.
+	 */
+	private function find_subscription( int $user_id ): ?int {
+		$subscriptions = $this->filter_existing( $this->settings->get_subscription_course_ids() );
+
+		foreach ( $subscriptions as $course_id ) {
+			if ( ! self::is_free_for_all( $course_id ) && sfwd_lms_has_access( $course_id, $user_id ) ) {
+				return $course_id;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Indica si un curso lo puede tener cualquiera sin pagar.
+	 *
+	 * En LearnDash, un curso Abierto da acceso a todo usuario con sesión y uno
+	 * Gratis a quien pulse inscribirse. Como curso de suscripción regalaría
+	 * los dos agentes, así que no se acepta. Solo se aplica a la suscripción:
+	 * los cursos que dan acceso siguen como estaban.
+	 *
+	 * @param int $course_id Curso.
+	 */
+	public static function is_free_for_all( int $course_id ): bool {
+		if ( ! function_exists( 'learndash_get_setting' ) ) {
+			return false;
+		}
+
+		$type = (string) learndash_get_setting( $course_id, 'course_price_type' );
+
+		return in_array( $type, array( 'open', 'free' ), true );
+	}
+
+	/**
+	 * Los cursos de la lista que están publicados, en el mismo orden.
+	 *
+	 * @param int[] $courses Cursos configurados.
+	 *
+	 * @return int[]
+	 */
+	private function filter_existing( array $courses ): array {
+		$existing = array();
+
+		foreach ( $courses as $course_id ) {
+			if ( $this->course_exists( (int) $course_id ) ) {
+				$existing[] = (int) $course_id;
+			}
+		}
+
+		return $existing;
+	}
+
+	/**
+	 * Fecha de alta del alumno en un curso, según LearnDash.
+	 *
+	 * @param int $user_id   Usuario.
+	 * @param int $course_id Curso.
+	 *
+	 * @return int|null Marca de tiempo, o NULL si LearnDash no la expone.
+	 */
+	private function enrolled_at( int $user_id, int $course_id ): ?int {
+		if ( ! function_exists( 'ld_course_access_from' ) ) {
+			return null;
+		}
+
+		$from = ld_course_access_from( $course_id, $user_id );
+
+		return is_numeric( $from ) && (int) $from > 0 ? (int) $from : null;
 	}
 
 	/**
@@ -195,15 +303,7 @@ class CourseAccess {
 			return time();
 		}
 
-		if ( function_exists( 'ld_course_access_from' ) ) {
-			$from = ld_course_access_from( $course_id, $user_id );
-
-			if ( is_numeric( $from ) && (int) $from > 0 ) {
-				return (int) $from;
-			}
-		}
-
-		return time();
+		return $this->enrolled_at( $user_id, $course_id ) ?? time();
 	}
 
 	/**

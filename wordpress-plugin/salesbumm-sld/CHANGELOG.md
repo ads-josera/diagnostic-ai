@@ -16,6 +16,50 @@ Se sigue [versionado semántico](https://semver.org/lang/es/):
 
 ---
 
+## 1.3.0 — 13 de septiembre de 2026
+
+**Novedades**
+
+- **Acceso por suscripción.** Campo nuevo en los ajustes, «Cursos de
+  suscripción». Quien tenga uno de esos cursos entra a **todos** los agentes y
+  su acceso no caduca por su cuenta: dura lo que dure la suscripción. La cobra
+  WooCommerce Subscriptions, mensual o anual, y la integración de LearnDash con
+  WooCommerce concede el curso al pagar y lo retira al cancelarse.
+- Quien compró el curso y además se suscribe no gana ni pierde nada: su
+  periodo de doce meses sigue contando desde la compra.
+- Un curso que figure en las dos listas se trata como suscripción, y la
+  pantalla de ajustes lo señala.
+- Un curso de suscripción en modo **Abierto** o **Gratis** se ignora y la
+  pantalla lo avisa: cualquiera lo tendría y se llevaría los agentes sin pagar.
+
+**Compatibilidad**
+
+- Con el campo vacío, el plugin se comporta exactamente como la 1.2.0.
+- Drupal no necesita ningún cambio: al suscriptor le llegan todos los cursos
+  en `owned_courses` y `expires_at` vacío, que ya sabía interpretar. La versión
+  mínima que exige Drupal no sube.
+
+**Mantenimiento**
+
+- El plugin tiene pruebas automáticas por primera vez, en `tests/`. Las del
+  acceso por curso se escribieron contra la 1.2.0 antes de tocarla y siguen
+  pasando. No van en el paquete que se sube a WordPress.
+
+---
+
+## 1.2.0 — 25 de agosto de 2026
+
+**Novedades**
+
+- El endpoint de autorización devuelve `owned_courses`: **todos** los cursos
+  autorizadores que tiene el alumno, no solo el primero. Es lo que permite a
+  Drupal concederle cada agente por el curso que lo da. `course_id` se conserva
+  con el primero para no romper a un Drupal anterior.
+
+*Esta entrada se añadió con la 1.3.0: faltaba.*
+
+---
+
 ## 1.1.0 — 22 de agosto de 2026
 
 **Novedades**

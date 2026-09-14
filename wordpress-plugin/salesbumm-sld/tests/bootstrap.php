@@ -59,14 +59,22 @@ final class SldWp {
 	public static $access = array();
 
 	/**
+	 * Modo de acceso de cada curso en LearnDash; sin entrada, «closed».
+	 *
+	 * @var array<int, string>
+	 */
+	public static $price_types = array();
+
+	/**
 	 * Deja todo vacío.
 	 */
 	public static function reset(): void {
-		self::$options   = array();
-		self::$user_meta = array();
-		self::$users     = array();
-		self::$posts     = array();
-		self::$access    = array();
+		self::$options     = array();
+		self::$user_meta   = array();
+		self::$users       = array();
+		self::$posts       = array();
+		self::$access      = array();
+		self::$price_types = array();
 	}
 
 	/**
@@ -156,6 +164,10 @@ function sfwd_lms_has_access( $course_id, $uid ) {
 
 function ld_course_access_from( $course_id, $uid ) {
 	return SldWp::$access[ (int) $uid ][ (int) $course_id ] ?? 0;
+}
+
+function learndash_get_setting( $course_id, $key ) {
+	return 'course_price_type' === $key ? ( SldWp::$price_types[ (int) $course_id ] ?? 'closed' ) : '';
 }
 
 function absint( $value ) {

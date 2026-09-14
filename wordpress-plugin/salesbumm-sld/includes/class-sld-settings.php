@@ -32,6 +32,14 @@ class Settings {
 	public const OPTION_START      = 'sld_access_start_origin';
 
 	/**
+	 * Cursos de LearnDash que representan una suscripción activa.
+	 *
+	 * Desde la 1.3.0. WooCommerce Subscriptions concede el curso mientras la
+	 * suscripción está al corriente y lo retira al cancelarse.
+	 */
+	public const OPTION_SUBSCRIPTION_IDS = 'sld_subscription_course_ids';
+
+	/**
 	 * Duración por defecto del acceso al diagnóstico, en meses.
 	 */
 	private const DEFAULT_MONTHS = 12;
@@ -84,6 +92,16 @@ class Settings {
 			array(
 				'type'              => 'string',
 				'sanitize_callback' => array( $this, 'sanitize_course_ids' ),
+				'default'           => '',
+			)
+		);
+
+		register_setting(
+			self::OPTION_GROUP,
+			self::OPTION_SUBSCRIPTION_IDS,
+			array(
+				'type'              => 'string',
+				'sanitize_callback' => array( $this, 'sanitize_subscription_course_ids' ),
 				'default'           => '',
 			)
 		);
@@ -200,21 +218,35 @@ class Settings {
 	 * una compra posterior —del mismo programa o de otro que se designe—
 	 * reactive al alumno sin tocar configuración.
 	 *
+	 * Un curso que figure también como de suscripción NO cuenta aquí: como
+	 * curso normal le arrancaría el reloj al alumno y se lo cerraría a los
+	 * doce meses aunque siguiera pagando.
+	 *
 	 * @return int[]
 	 */
 	public function get_course_ids(): array {
-		$raw = (string) get_option( self::OPTION_COURSE_IDS, '' );
+		return array_values( array_diff( $this->get_configured_course_ids(), $this->get_subscription_course_ids() ) );
+	}
 
-		if ( '' === trim( $raw ) ) {
-			// Compatibilidad con la configuración de un solo curso.
-			$legacy = (int) get_option( self::LEGACY_OPTION_COURSE_ID, 0 );
+	/**
+	 * Cursos que representan una suscripción activa.
+	 *
+	 * Tenerlo abre TODOS los agentes y no caduca por su cuenta: dura lo que
+	 * dure la suscripción, que es quien concede y retira el curso.
+	 *
+	 * @return int[]
+	 */
+	public function get_subscription_course_ids(): array {
+		return $this->parse_ids( (string) get_option( self::OPTION_SUBSCRIPTION_IDS, '' ) );
+	}
 
-			return $legacy > 0 ? array( $legacy ) : array();
-		}
-
-		$ids = array_map( 'absint', $this->split_ids( $raw ) );
-
-		return array_values( array_unique( array_filter( $ids ) ) );
+	/**
+	 * Cursos que aparecen en las dos listas: un error de configuración.
+	 *
+	 * @return int[]
+	 */
+	public function get_overlapping_course_ids(): array {
+		return array_values( array_intersect( $this->get_configured_course_ids(), $this->get_subscription_course_ids() ) );
 	}
 
 	/**
@@ -246,10 +278,16 @@ class Settings {
 	 * @param mixed $value Valor recibido.
 	 */
 	public function sanitize_course_ids( $value ): string {
-		$ids = array_map( 'absint', $this->split_ids( (string) $value ) );
-		$ids = array_values( array_unique( array_filter( $ids ) ) );
+		return implode( ', ', $this->parse_ids( (string) $value ) );
+	}
 
-		return implode( ', ', $ids );
+	/**
+	 * Normaliza la lista de cursos de suscripción.
+	 *
+	 * @param mixed $value Valor recibido.
+	 */
+	public function sanitize_subscription_course_ids( $value ): string {
+		return implode( ', ', $this->parse_ids( (string) $value ) );
 	}
 
 	/**
@@ -409,6 +447,47 @@ define( '<?php echo esc_html( $constant ); ?>', '<?php echo esc_html__( 'pega-aq
 					</tr>
 					<tr>
 						<th scope="row">
+							<label for="sld_subscription_course_ids"><?php echo esc_html__( 'Cursos de suscripción', 'salesbumm-sld' ); ?></label>
+						</th>
+						<td>
+							<input name="<?php echo esc_attr( self::OPTION_SUBSCRIPTION_IDS ); ?>"
+								id="sld_subscription_course_ids"
+								type="text"
+								class="regular-text"
+								value="<?php echo esc_attr( implode( ', ', $this->get_subscription_course_ids() ) ); ?>"
+								placeholder="52310">
+							<p class="description">
+								<?php echo esc_html__( 'IDs de los cursos de LearnDash que vende la suscripción (mensual o anual). Tener uno abre TODOS los agentes y no caduca por su cuenta: dura lo que dure la suscripción, porque WooCommerce retira el curso al cancelarse o dejar de pagarse. Déjalo vacío si no hay suscripción.', 'salesbumm-sld' ); ?>
+							</p>
+							<?php
+							$free_for_all = array_values( array_filter( $this->get_subscription_course_ids(), array( CourseAccess::class, 'is_free_for_all' ) ) );
+							?>
+							<?php if ( $free_for_all ) : ?>
+								<p class="description" style="color:#b3261e">
+									<?php
+									printf(
+										/* translators: %s: lista de IDs de curso. */
+										esc_html__( 'No se tiene en cuenta: %s. Está en modo Abierto o Gratis en LearnDash, así que cualquiera lo tendría sin pagar. Ponlo en modo Cerrado.', 'salesbumm-sld' ),
+										esc_html( implode( ', ', $free_for_all ) )
+									);
+									?>
+								</p>
+							<?php endif; ?>
+							<?php if ( $this->get_overlapping_course_ids() ) : ?>
+								<p class="description" style="color:#b3261e">
+									<?php
+									printf(
+										/* translators: %s: lista de IDs de curso. */
+										esc_html__( 'En las dos listas a la vez: %s. Se trata como suscripción; quítalo de «Cursos que dan acceso».', 'salesbumm-sld' ),
+										esc_html( implode( ', ', $this->get_overlapping_course_ids() ) )
+									);
+									?>
+								</p>
+							<?php endif; ?>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">
 							<label for="sld_months"><?php echo esc_html__( 'Duración del acceso (meses)', 'salesbumm-sld' ); ?></label>
 						</th>
 						<td>
@@ -470,6 +549,37 @@ define( '<?php echo esc_html( $constant ); ?>', '<?php echo esc_html__( 'pega-aq
 			</p>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Cursos autorizadores tal como están escritos, sin quitar nada.
+	 *
+	 * @return int[]
+	 */
+	private function get_configured_course_ids(): array {
+		$raw = (string) get_option( self::OPTION_COURSE_IDS, '' );
+
+		if ( '' === trim( $raw ) ) {
+			// Compatibilidad con la configuración de un solo curso.
+			$legacy = (int) get_option( self::LEGACY_OPTION_COURSE_ID, 0 );
+
+			return $legacy > 0 ? array( $legacy ) : array();
+		}
+
+		return $this->parse_ids( $raw );
+	}
+
+	/**
+	 * Convierte el texto de un campo en identificadores únicos, en su orden.
+	 *
+	 * @param string $raw Texto tal como lo escribió el administrador.
+	 *
+	 * @return int[]
+	 */
+	private function parse_ids( string $raw ): array {
+		$ids = array_map( 'absint', $this->split_ids( $raw ) );
+
+		return array_values( array_unique( array_filter( $ids ) ) );
 	}
 
 	/**

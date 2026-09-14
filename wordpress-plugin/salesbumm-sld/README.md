@@ -108,11 +108,36 @@ esas copias. Una constante de `wp-config.php` se queda en el servidor.
 | Campo | Qué es |
 |---|---|
 | URL de acceso en Drupal | La ruta `/sales-diagnostic/sso` del sitio Drupal. **Debe usar HTTPS**: el token viaja en esta URL |
-| Curso que da acceso | ID del curso de LearnDash cuya compra habilita el diagnóstico. Debe coincidir con el configurado en Drupal |
+| Cursos que dan acceso | IDs de los cursos de LearnDash cuya compra habilita un agente. Cada uno debe coincidir con el configurado en su agente de Drupal |
+| Cursos de suscripción | IDs de los cursos que vende la suscripción. Tener uno abre **todos** los agentes, sin caducidad propia. Vacío si no hay suscripción |
+| Duración del acceso | Meses que dura el acceso por curso. 0 = no caduca. No afecta a la suscripción |
+| El periodo empieza a contar | Desde que se detecta al alumno, o desde su alta en el curso |
 | Vigencia del token | Segundos. Solo tiene que sobrevivir a una redirección. Recomendado: 90 |
 
 Si el cliente cambia el curso que da acceso, se edita aquí y en Drupal. No hay
 que tocar código en ninguno de los dos lados.
+
+### La suscripción
+
+El plugin no habla con WooCommerce: solo mira si el alumno tiene el curso de
+suscripción. Quien lo concede y lo retira es la integración de LearnDash con
+WooCommerce, según el estado de la suscripción. Así el plugin sigue dependiendo
+solo de LearnDash, y el día que se cambie la forma de cobrar no hay que tocarlo.
+
+El curso de suscripción debe estar en modo **Cerrado**. En modo Abierto o
+Gratis cualquiera lo tendría, así que el plugin lo ignora y lo avisa en la
+pantalla de ajustes.
+
+Los pasos para montarlo en el WordPress del cliente están en
+`docs/DESPLIEGUE.md`, sección «Acceso por suscripción».
+
+### Pruebas
+
+```bash
+ddev exec vendor/bin/phpunit -c wordpress-plugin/salesbumm-sld/tests/phpunit.xml.dist
+```
+
+Simulan WordPress y LearnDash en memoria; no hace falta ningún WordPress.
 
 ---
 
