@@ -3,6 +3,10 @@
 Documento para **Jarvis (Claude) en el servidor cPanel** y para José Raúl.
 Se escribió el 14-09-2026, justo antes del primer despliegue.
 
+**Ensayado de principio a fin el 14-09-2026** en local: instalación limpia
+desde el repositorio, cargadores, cuentas y comprobación en el navegador
+(logotipos, iconos, los dos agentes, pantallas del gestor), sin un solo error.
+
 **Léelo entero antes de empezar.** Quien ejecuta esto en el servidor no tiene
 el contexto del desarrollo: solo este repositorio. Todo lo que hace falta saber
 está aquí o en `docs/DESPLIEGUE.md`, que es el manual detallado; este documento
