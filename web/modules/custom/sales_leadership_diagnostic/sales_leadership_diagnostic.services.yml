@@ -499,3 +499,16 @@ services:
       - '@config.factory'
       - '@datetime.time'
       - '@logger.factory'
+
+  # --- Mantenimiento --------------------------------------------------------
+
+  # Borra los datos de uso que dejan las pruebas (14-09-2026). Lo usa el
+  # comando `drush sld:limpiar-pruebas`, que por defecto solo simula.
+  Drupal\sales_leadership_diagnostic\Service\Maintenance\TestDataCleaner:
+    arguments:
+      - '@entity_type.manager'
+      - '@database'
+      - '@state'
+      - '@keyvalue'
+      - '@queue'
+      - '@logger.factory'

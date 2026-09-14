@@ -2,6 +2,13 @@
 
 ## Sales Leadership Diagnostic AI
 
+> **Para el despliegue en labai.salesbumm.com, empezar por
+> `docs/ARRANQUE-PRODUCCION.md`** (14-09-2026): dice en qué orden, con qué datos
+> y corrige lo que aquí quedó viejo — el dominio y la IP de servidor que se
+> citan más abajo eran de un plan anterior, y en cPanel los secretos van en
+> `settings.local.php`, no en variables de entorno. Este manual sigue siendo el
+> detalle de cada paso.
+
 Procedimiento para levantar el sitio en un entorno nuevo (staging o producción).
 
 **Este procedimiento se ha ensayado**, no solo redactado: se ejecutó una

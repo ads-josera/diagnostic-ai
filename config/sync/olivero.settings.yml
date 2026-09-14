@@ -1,7 +1,9 @@
 _core:
   default_config_hash: JkatGyQH5-1sqy2NXLUZ3rqGFhCAqO9pqLflNusnKZo
 favicon:
-  use_default: true
+  mimetype: image/png
+  path: modules/custom/sales_leadership_diagnostic/images/favicon.png
+  use_default: false
 features:
   comment_user_picture: true
   comment_user_verification: true
