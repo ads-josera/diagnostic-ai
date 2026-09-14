@@ -235,14 +235,19 @@ composer install --no-dev --optimize-autoloader
 vendor/bin/drush --version
 ```
 
-**PHP 8.4 depende de una línea del `.htaccess`.** cPanel elige la versión de PHP
-del dominio con un bloque `AddHandler` en `web/.htaccess`, y ese archivo lo
-regenera `composer install` a partir del de Drupal. Para que no se pierda, el
-repositorio lo antepone en cada instalación
-(`assets/scaffold/htaccess-cpanel-php84.txt`, declarado en `composer.json` en
-`extra.drupal-scaffold.file-mapping`). Si se cambia la versión de PHP del
-dominio en cPanel, hay que cambiar también ese archivo; si no, el siguiente
-despliegue devolvería el dominio a la versión anterior.
+**PHP 8.4 del dominio lo decide PHP-FPM.** El dominio corre con PHP-FPM
+(MultiPHP Manager, versión 8.4), así que la versión la fija la configuración
+del servidor y no el `.htaccess`: `web/.htaccess` es el de Drupal, que
+`composer install` regenera sin que eso afecte a PHP. Con FPM encendido,
+cPanel quita su bloque `AddHandler` del `.htaccess`; el repositorio no lo
+vuelve a poner (se probó el 14-09-2026 y se retiró, porque peleaba con el
+panel). Si alguna vez se apagara PHP-FPM, la versión volvería a depender de
+ese bloque y `composer install` lo borraría: no apagarlo.
+
+Tras **cambiar la raíz del documento** en cPanel hay que volver a aplicar
+PHP-FPM (apagar y encender en MultiPHP Manager): si no, el pool sigue en la
+raíz vieja y todo `.php` responde 404 «No input file specified» (ver la sonda
+en `docs/ARRANQUE-PRODUCCION.md`, paso 2).
 
 ## 3. Secretos y ajustes del entorno
 
@@ -547,7 +552,6 @@ cd /home/labai/public_html
 drush sql:dump --gzip --result-file=../copia-previa.sql   # SIEMPRE antes
 git pull
 composer install --no-dev --optimize-autoloader
-head -6 web/.htaccess      # el bloque de PHP 8.4 de cPanel sigue arriba
 drush updatedb -y          # aplica los hook_update_N pendientes
 drush config:import -y     # aplica la configuración del repositorio
 drush cache:rebuild

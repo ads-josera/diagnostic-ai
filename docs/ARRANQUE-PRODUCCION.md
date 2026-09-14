@@ -125,21 +125,23 @@ compartido que pertenece a otra cuenta del sistema y no se toca. La cuenta
 el `PATH`. Comprobar con `command -v composer` que es ese el que responde; para
 actualizarlo más adelante, `composer self-update` sí funciona sobre esa copia.
 
-**El `.htaccess` y PHP 8.4.** Lo que hace que el dominio corra con PHP 8.4 es
-un bloque que cPanel escribe en `web/.htaccess`. `composer install` regenera
-ese archivo con el de Drupal, y sin el bloque el sitio caería al PHP 8.1 del
-sistema, donde Drupal 11 no funciona. Por eso el repositorio lo añade solo en
-cada `composer install` (`assets/scaffold/htaccess-cpanel-php84.txt`, mapeado
-en `composer.json`). Después de instalar, comprobarlo contra la copia que se
-guardó del original:
+**PHP 8.4 lo decide PHP-FPM, no el `.htaccess`.** El dominio corre con PHP-FPM
+(MultiPHP Manager → PHP-FPM encendido, versión 8.4): la versión la fija la
+configuración del servidor, y `web/.htaccess` es el de Drupal sin añadidos.
+Con FPM encendido, cPanel **quita** su bloque `AddHandler` del `.htaccess`, y
+el repositorio no lo vuelve a poner, para no pelear con el panel.
+
+Lección del 14-09-2026: **después de cambiar la raíz del documento en cPanel,
+volver a aplicar PHP-FPM** (MultiPHP Manager: apagar y encender PHP-FPM del
+dominio, dejando 8.4). Si no, el pool de FPM sigue sirviendo desde la raíz
+vieja y cualquier `.php` responde 404 «No input file specified» mientras los
+archivos estáticos funcionan. La prueba que lo delata:
 
 ```bash
-head -6 web/.htaccess
-diff <(head -6 web/.htaccess) /home/labai/backups/htaccess-cpanel-web-*.bak
+echo '<?php echo "WEB ", PHP_VERSION;' > web/sonda-fpm.php
+curl -s https://labai.salesbumm.com/sonda-fpm.php   # esperado: WEB 8.4.x
+rm web/sonda-fpm.php
 ```
-
-Si algún día se cambia la versión de PHP del dominio en cPanel, cambiar
-también ese archivo del repositorio.
 
 ## Paso 3 — Base de datos y `settings.local.php`
 
@@ -346,7 +348,6 @@ cd /home/labai/public_html
 vendor/bin/drush sql:dump --gzip --result-file=../copia-previa.sql
 git pull
 composer install --no-dev --optimize-autoloader
-head -6 web/.htaccess      # el bloque de PHP 8.4 de cPanel sigue arriba
 vendor/bin/drush updatedb -y
 vendor/bin/drush config:import -y
 vendor/bin/drush cache:rebuild
