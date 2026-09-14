@@ -45,9 +45,8 @@ dice **en qué orden** y **con qué datos**, y corrige lo que allí quedó viejo
 | Repositorio | `git@github.com:ads-josera/diagnostic-ai.git` (**privado**) |
 | WordPress del cliente | https://salesbumm.com, con el plugin puente **1.3.0** ya instalado y sus dos secretos ya definidos en su `wp-config.php` |
 
-> `docs/DESPLIEGUE.md` menciona `diagnostico.salesbumm.com` y la IP
-> `72.167.47.47`. **Eran de un plan anterior.** El dominio es
-> `labai.salesbumm.com`, y la IP hay que comprobarla en ESTE servidor (paso 1).
+> La IP del servidor hay que comprobarla en ESTE servidor (paso 1): la
+> `72.167.47.47` de planes anteriores era de otro.
 
 ---
 
@@ -144,7 +143,7 @@ $settings['sld_openai_api_key'] = 'RELLENAR';
 $settings['sld_search_api_key'] = 'RELLENAR';
 ```
 
-> Por qué un archivo y no variables de entorno, como dice DESPLIEGUE §3: en
+> Por qué un archivo y no variables de entorno: en
 > cPanel las variables del servidor web no llegan a la línea de órdenes, y el
 > cron (que genera los turnos que investigan y escribe la memoria) corre por
 > línea de órdenes. El archivo lo leen los dos.

@@ -3,11 +3,9 @@
 ## Sales Leadership Diagnostic AI
 
 > **Para el despliegue en labai.salesbumm.com, empezar por
-> `docs/ARRANQUE-PRODUCCION.md`** (14-09-2026): dice en qué orden, con qué datos
-> y corrige lo que aquí quedó viejo — el dominio y la IP de servidor que se
-> citan más abajo eran de un plan anterior, y en cPanel los secretos van en
-> `settings.local.php`, no en variables de entorno. Este manual sigue siendo el
-> detalle de cada paso.
+> `docs/ARRANQUE-PRODUCCION.md`**: dice en qué orden y con qué datos. Este
+> manual es el detalle de cada paso. Revisado entero el 14-09-2026, después del
+> ensayo de instalación limpia, para que los dos digan lo mismo.
 
 Procedimiento para levantar el sitio en un entorno nuevo (staging o producción).
 
@@ -34,7 +32,8 @@ que importa esté versionado.
 
 | Requisito | Versión |
 |---|---|
-| PHP | 8.3 o superior |
+| PHP | **8.4** (la de desarrollo); mínimo 8.3. La de la línea de órdenes, la misma que la de la web: el cron corre por línea de órdenes |
+| Composer | **2.10.3 o superior** (CVE-2026-84361) |
 | Base de datos | MariaDB 10.6+ / MySQL 8.0+ / PostgreSQL 12+ |
 | Composer | 2.x |
 | HTTPS | **Obligatorio.** El token de acceso viaja en la URL |
@@ -58,8 +57,8 @@ por línea de órdenes, donde PHP no tiene límite de tiempo. Los límites de ab
 siguen importando —el turno síncrono existe y el estudio del prompt también—
 pero dejan de ser la diferencia entre funcionar y no funcionar.
 
-Este servidor es **WHM/cPanel con acceso de raíz**, así que los cuatro límites
-se pueden poner. Hay que revisarlos **en este orden**, porque el primero es el
+Con **WHM (acceso de raíz)** los cuatro límites se pueden poner; con cPanel sin
+acceso de raíz, hay que pedírselos al proveedor del alojamiento. Hay que revisarlos **en este orden**, porque el primero es el
 que mata turnos sin que nadie entienda por qué:
 
 | # | Qué | Dónde | Valor |
@@ -99,16 +98,18 @@ dejó de conceder acceso.
 
 Lo que hay que hacer, en el hPanel de Hostinger del cliente:
 
-1. Autorizar la IP del servidor de producción. A 28-08-2026 es
-   **`72.167.47.47`**.
-2. **Comprobar que esa es la IP de SALIDA**, no solo la de entrada. Con NAT o
-   balanceadores pueden ser distintas, y entonces se estaría autorizando una
-   que nunca aparece en las peticiones. Desde el servidor:
+1. **Averiguar la IP de SALIDA del servidor**, desde el propio servidor. Con NAT
+   o balanceadores la de salida puede no ser la de entrada, y entonces se
+   estaría autorizando una que nunca aparece en las peticiones:
 
        curl https://api.ipify.org
 
-   Debe devolver exactamente la IP autorizada. Verificado el 28-08-2026:
-   devuelve `72.167.47.47`.
+2. Autorizar exactamente esa IP en el panel del cliente.
+
+> La IP `72.167.47.47` que figuraba aquí era del servidor de un plan anterior
+> (28-08-2026). La del servidor de labai.salesbumm.com se comprueba con el
+> paso 1.
+
 
 3. Confirmar que esa pantalla del panel **autoriza** y no **bloquea**. En
    algunas versiones sirve para lo contrario, y añadir ahí la IP la dejaría
@@ -213,31 +214,39 @@ diez sesiones reales, el módulo entero ocupaba menos de 700 KB.
 git clone git@github.com:ads-josera/diagnostic-ai.git
 cd diagnostic-ai
 
-# --no-dev excluye Drush y las herramientas de desarrollo.
+composer --version    # 2.10.3 o superior; si no: composer self-update
+# --no-dev excluye las herramientas de desarrollo. Drush NO: desde el
+# 14-09-2026 es dependencia de producción, porque el cron, los cargadores y la
+# limpieza de datos de prueba lo necesitan en el servidor.
 composer install --no-dev --optimize-autoloader
+vendor/bin/drush --version
 ```
 
-> Si necesitas Drush en el servidor para el despliegue, instala sin `--no-dev`
-> o añade `drush/drush` como dependencia de producción. El resto de comandos de
-> este manual lo requieren.
+## 3. Secretos y ajustes del entorno
 
-## 3. Variables de entorno
+**Antes** de instalar. En cPanel van en **`web/sites/default/settings.local.php`**
+(git lo ignora y `settings.php` lo carga al final), no en variables de
+entorno: las del servidor web no llegan a la línea de órdenes, y el cron —que
+genera los turnos que investigan y escribe la memoria— corre por línea de
+órdenes. La plantilla completa, con la base de datos, está en
+`docs/ARRANQUE-PRODUCCION.md` (paso 3). Lo esencial:
 
-**Antes** de instalar. Ver `.env.example` para la descripción de cada una.
-
-```bash
-export DRUPAL_HASH_SALT="$(openssl rand -hex 32)"
-export DRUPAL_TRUSTED_HOST='^diagnostico\.salesbumm\.com$'
-
-export SLD_JWT_SHARED_SECRET="..."   # idéntico al de wp-config.php
-export SLD_WP_HMAC_SECRET="..."      # idéntico al de wp-config.php
-export SLD_OPENAI_API_KEY="..."
-
-# OPCIONAL. Sin ella el agente no busca en internet: lo declara y sigue con lo
-# que no dependa de ello, que es un estado valido de su metodologia y no una
-# instalacion a medias. No aparece como pendiente en el informe de estado.
-export SLD_SEARCH_API_KEY="..."
+```php
+$settings['hash_salt'] = '...';               // openssl rand -hex 32
+$settings['trusted_host_patterns'] = ['^labai\.salesbumm\.com$'];
+$settings['sld_jwt_shared_secret'] = '...';   // idéntico al de wp-config.php
+$settings['sld_wp_hmac_secret'] = '...';      // idéntico al de wp-config.php
+$settings['sld_openai_api_key'] = '...';
+// OPCIONAL. Sin ella el agente no busca en internet: lo declara y sigue con lo
+// que no dependa de ello, que es un estado válido de su metodología y no una
+// instalación a medias. No aparece como pendiente en el informe de estado.
+$settings['sld_search_api_key'] = '...';
 ```
+
+Los valores los escribe José Raúl directamente en el servidor: nunca pasan por
+un chat ni por el repositorio. Donde el servidor sí entregue variables de
+entorno a PHP y a la línea de órdenes, `settings.php` también las lee (`SLD_*`,
+`DRUPAL_HASH_SALT`, `DRUPAL_TRUSTED_HOST`; ver `.env.example`).
 
 ### Reglas que no son opcionales
 
@@ -247,7 +256,11 @@ export SLD_SEARCH_API_KEY="..."
 2. **Los dos secretos del puente, distintos entre sí.**
 3. **Secretos nuevos para cada entorno** (§49). Los de producción no se
    comparten con desarrollo ni con staging, y los que se usaron durante el
-   desarrollo deben rotarse antes de producción.
+   desarrollo deben rotarse antes de producción. Esto vale para los dos
+   secretos del puente. Las llaves de OpenAI y de búsqueda son, por decisión de
+   José Raúl (14-09-2026), las suyas mientras el cliente prueba; se cambian por
+   las del cliente cuando él lo indique, editando dos líneas del
+   `settings.local.php` y limpiando la caché.
 4. **`sld_use_mock_engine` NO debe existir** en `settings.php`. Si está, los
    diagnósticos se generan con respuestas de prueba. El informe de estado lo
    marca como error, pero conviene comprobarlo antes.
@@ -258,7 +271,7 @@ export SLD_SEARCH_API_KEY="..."
 # Crea la base de datos vacía y configura $databases en settings.php.
 
 drush site:install --existing-config \
-  --account-name=DevAdmin \
+  --account-name=admin \
   --account-pass="$(openssl rand -base64 18)" \
   -y
 ```
@@ -293,18 +306,21 @@ drush core:requirements | grep -i diagnostic
 Un despliegue recién hecho deja el informe así:
 
 ```
-[OK]      Diagnostic AI: WordPress / LearnDash => Configurado
-[OK]      Diagnostic AI: secretos              => Configurados
-[Warning] Diagnostic AI: agentes               => Ninguno disponible
-[Warning] Diagnostic AI: plugin de WordPress   => Sin comprobar todavía
+[OK]  Diagnostic AI: agentes               => 2 agentes disponibles
+[OK]  Diagnostic AI: documentos            => Protegidos
+[OK]  Diagnostic AI: plugin de WordPress   => Sin datos todavía
+[OK]  Diagnostic AI: secretos              => Configurados
+[OK]  Diagnostic AI: WordPress / LearnDash => Configurado
 ```
 
-El aviso de los agentes es normal hasta crear el primero (§6). Un agente cuenta
-como disponible cuando está **activo, tiene curso y tiene prompt**: si falta
-alguna de las tres, no aparece y los alumnos no pueden empezar.
+Es lo que dio el ensayo de instalación limpia del 14-09-2026. Los dos agentes
+llegan con la configuración exportada, pero **sin documentos, icono ni
+logotipos** hasta pasar los cargadores (§6). Un agente cuenta como disponible
+cuando está **activo, tiene curso y tiene prompt**: si falta alguna de las
+tres, no aparece y los alumnos no pueden empezar.
 
-El del plugin desaparece en cuanto se consulta la autorización de alguien por
-primera vez.
+La línea del plugin se completa en cuanto se consulta la autorización de
+alguien por primera vez.
 
 **No debe aparecer ninguna línea sobre el motor simulado**: si aparece, retira
 `sld_use_mock_engine` de `settings.php` y limpia caché.
@@ -321,14 +337,19 @@ En **Configuración → Salesbumm → Sales Leadership Diagnostic AI**:
 | Reglas de uso | Política de repetición y plazo de conservación (§Conservación) |
 | Marca y Portada | Colores, logotipos y textos del cliente |
 
-### Crear el agente
+### Los agentes
 
 Desde el 26-08-2026 el diagnóstico lo conducen **agentes**, no un prompt único.
-La pestaña «Agente» que hubo aquí se retiró: escribía en un sitio que ya no
-gobernaba nada.
+Los dos de Salesbumm **llegan con la configuración exportada**: no hay que
+crearlos. Lo que la configuración no puede traer son sus archivos —documentos,
+icono— ni los logotipos de la portada: guarda el NÚMERO de cada archivo, y el
+que viene es el del entorno de desarrollo. Se ponen con los cargadores (abajo),
+y el módulo `config_ignore` impide que un despliegue posterior pise esos
+números.
 
-En **Configuración → Salesbumm → Sales Leadership Diagnostic AI → Agentes**,
-«Añadir agente». Un agente necesita tres cosas para estar disponible:
+Para un agente NUEVO: **Configuración → Salesbumm → Sales Leadership
+Diagnostic AI → Agentes**, «Añadir agente». Un agente necesita tres cosas para
+estar disponible:
 
 1. Estar **activo**.
 2. Tener el **curso de LearnDash** que lo concede. Es lo que decide qué alumno
@@ -353,10 +374,16 @@ repositorio y los deja en su sitio:
 
 ```
 drush php:script bin/cargar-agentes.php
+drush php:script bin/cargar-marca.php
 ```
 
-Pone el prompt de cada agente desde `docs/knowledge-cliente/`, su **contrato
-de salida** desde `docs/contratos-de-salida/` y sus documentos de conocimiento:
+El segundo pone el fondo y los dos logotipos de la portada desde `docs/marca/`:
+sin él, **ninguna pantalla del alumno tiene logotipo**. El primero pone el
+prompt de cada agente desde `docs/knowledge-cliente/`, su **icono** desde
+`docs/marca/`, su **contrato de salida** desde `docs/contratos-de-salida/` y
+sus documentos de conocimiento. En un entorno nuevo dice «carga inicial» y no
+sube la versión del agente: es la misma metodología, solo que aún no estaba.
+Los documentos son estos:
 los quince del de prospección, en el orden del manifiesto del cliente, y los
 nueve del de diagnóstico, desde `docs/Knowledge documents/`, en el orden de
 autoridad de su Orchestrator. El «Documento Maestro Interno» del Framework NO
@@ -391,9 +418,9 @@ Los roles llegan con la configuración exportada, pero **las cuentas no**. Quien
 vaya a dar soporte necesita una:
 
 ```bash
-drush user:create gestor --mail="gestor@salesbumm.com" \
+drush user:create gestor.sam --mail="..." \
   --password="$(openssl rand -base64 18)"
-drush user:role:add gestor_sam gestor
+drush user:role:add gestor_sam gestor.sam
 ```
 
 Con ese rol entra a **Contenido → Resultados de diagnóstico**, que es su sitio:
@@ -407,7 +434,7 @@ En **salesbumm.com → Ajustes → Diagnostic AI**, rellenar la
 **URL de acceso en Drupal** con la ruta de este entorno:
 
 ```
-https://diagnostico.salesbumm.com/sales-diagnostic/sso
+https://labai.salesbumm.com/sales-diagnostic/sso
 ```
 
 > ⚠ Ese campo apunta a los alumnos reales. Nunca debe contener una URL de
@@ -423,6 +450,11 @@ cadena entera sin inventar ningún atajo en el módulo.
 |---|---|---|
 | Usuario A | el del primer agente | Solo ese agente |
 | Usuario B | el del segundo agente | Solo el otro |
+| Usuario C | la **membresía** (curso de suscripción, plugin 1.3.0, §10) | Los dos agentes, sin caducidad |
+
+Además, **`alumno.demo`** se conserva siempre en producción para pruebas
+(decisión de José Raúl, 14-09-2026), enlazado a un usuario de prueba de
+WordPress con curso: ver `docs/ARRANQUE-PRODUCCION.md`, paso 6.
 
 Tres cosas que evitan sustos:
 
@@ -488,6 +520,7 @@ cliente; Drupal no se toca.
 ## Despliegues posteriores
 
 ```bash
+drush sql:dump --gzip --result-file=../copia-previa.sql   # SIEMPRE antes
 git pull
 composer install --no-dev --optimize-autoloader
 drush updatedb -y          # aplica los hook_update_N pendientes
@@ -499,6 +532,10 @@ drush cache:rebuild
 repositorio. Si alguien cambió algo desde la interfaz y no se exportó, se
 pierde. Antes de un despliegue, comprobar `drush config:status` para ver si hay
 cambios sin versionar.
+
+La excepción son los números de archivo —documentos e icono de cada agente,
+fondo y logotipos de la portada—: los protege `config_ignore`. Los cargadores
+(§6) solo se vuelven a pasar cuando cambian esos archivos en el repositorio.
 
 ---
 
@@ -617,6 +654,13 @@ mide el contraste en modo claro y oscuro, y comprueba que el gestor llegue a
 sus herramientas **por enlace** y no escribiendo la URL. No envía mensajes al
 proveedor de IA, así que no cuesta llamadas.
 
+Desde el 14-09-2026 la completa **`bin/recorrido.mjs`**, que hace las ACCIONES:
+guardar cada formulario como administrador y como gestor, anotar una cuenta,
+abrir los informes, comprobar que nada se sale de ancho en móvil y, con
+`SLD_CHAT=1`, mandar un mensaje real (cuesta unos centavos). Instrucciones en
+su cabecera. Las dos corren en local, antes de desplegar, y **nunca a la vez**:
+comparten cuentas y una le cierra la sesión a la otra.
+
 ---
 
 ## Lista de comprobación
@@ -626,12 +670,13 @@ proveedor de IA, así que no cuesta llamadas.
 - [ ] **IP del servidor autorizada en el Hostinger del cliente**, verificada
       con `curl https://api.ipify.org` desde el propio servidor. Sin esto se
       quedan fuera TODOS los alumnos a la vez
-- [ ] Los dos usuarios de prueba creados en su WordPress, un curso cada uno
+- [ ] Usuarios de prueba en su WordPress: uno por curso y uno con la membresía (§8)
 - [ ] El prompt de cada agente y su curso de LearnDash, confirmados por escrito
 
 ### Servidor y secretos
 
-- [ ] HTTPS activo y `DRUPAL_TRUSTED_HOST` configurado
+- [ ] HTTPS activo y `trusted_host_patterns` con `^labai\.salesbumm\.com$`
+- [ ] Composer 2.10.3 o superior en el servidor
 - [ ] Los tres secretos definidos, con 32 caracteres o más
 - [ ] Secretos distintos de los de desarrollo
 - [ ] `sld_use_mock_engine` **ausente** de `settings.php`
@@ -649,15 +694,19 @@ proveedor de IA, así que no cuesta llamadas.
 
 - [ ] `drush updatedb:status` sin pendientes
 - [ ] `drush config:status` sin diferencias
-- [ ] Informe de estado sin errores. El aviso de «ningún agente disponible» es
-      normal hasta crear el primero
-- [ ] Cuenta del gestor creada y con el rol `gestor_sam`
+- [ ] Informe de estado sin errores: «2 agentes disponibles»
+- [ ] Cargadores pasados: `cargar-agentes.php` y `cargar-marca.php`. Sin ellos
+      no hay logotipos, iconos ni documentos
+- [ ] Las tres cuentas: admin, `gestor.sam` (rol `gestor_sam`) y `alumno.demo`
+      enlazado a un usuario de prueba de WordPress
 
 ### Configuración del producto
 
 - [ ] Modelo de IA elegido del catálogo
-- [ ] **Un agente por curso**, cada uno activo, con su curso y con su prompt
-- [ ] Documentos de conocimiento cargados en cada agente, si los hay
+- [ ] Los dos agentes activos, cada uno con su curso de LearnDash confirmado
+- [ ] Documentos de conocimiento cargados en cada agente (los pone el cargador)
+- [ ] Topes: 5 USD por alumno y 30 USD globales al mes (vienen en la
+      configuración; subir el global al abrir a alumnos reales)
 - [ ] Presupuesto de tokens holgado. Con 2.000 el informe final del cliente NO
       cabe y el alumno pierde el diagnóstico al concluir
 - [ ] Decidido el plazo de conservación de las conversaciones (de fábrica: no
@@ -669,7 +718,7 @@ proveedor de IA, así que no cuesta llamadas.
 - [ ] Prueba de humo superada con un usuario de prueba
 - [ ] **Aislamiento comprobado con los dos usuarios de prueba**: cada uno ve
       solo su agente y no alcanza nada del otro
-- [ ] `bin/humo.mjs` en verde
+- [ ] En local, antes de desplegar: `bin/humo.mjs` y `bin/recorrido.mjs` en verde
 - [ ] Versión del plugin subida y anotada en su CHANGELOG
 - [ ] El informe de estado muestra la versión correcta del plugin
 - [ ] Copia de la base de datos guardada
