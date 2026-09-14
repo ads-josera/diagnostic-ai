@@ -60,6 +60,9 @@ final class DiagnosticThemeHooks {
    * Fase 1: la página de cada agente y «Mis cuentas».
    * Fase 2: el informe, también cuando lo abre el gestor (mismo marco).
    * Fase 3: la conversación, que tiene su propio marco (.sld-page).
+   * Fase 4: la portada, el inicio de sesión y «sin acceso». Con ella, todas
+   * las pantallas del alumno. Las del gestor NO: son de trabajo y siguen la
+   * paleta de Marca.
    */
   private const STYLED_ROUTES = [
     'sales_leadership_diagnostic.dashboard',
@@ -67,6 +70,9 @@ final class DiagnosticThemeHooks {
     'sales_leadership_diagnostic.accounts',
     'sales_leadership_diagnostic.result',
     self::CHAT_ROUTE,
+    self::HOME_ROUTE,
+    ...self::LOGIN_ROUTES,
+    'sales_leadership_diagnostic.sso_denied',
   ];
 
   private const INNER_ROUTES = [
@@ -74,6 +80,11 @@ final class DiagnosticThemeHooks {
     'sales_leadership_diagnostic.agent_page',
     'sales_leadership_diagnostic.result',
     'sales_leadership_diagnostic.accounts',
+    // «Sin acceso», desde el 13-09-2026. Se servía con el marco genérico del
+    // tema —cabecera y menús del sitio— y era la única pantalla del alumno
+    // que lo conservaba. Puede verla alguien SIN sesión, así que el marco
+    // solo ofrece «Cerrar sesión» a quien la tiene.
+    'sales_leadership_diagnostic.sso_denied',
   ];
 
   /**
@@ -425,6 +436,18 @@ final class DiagnosticThemeHooks {
       }
     }
 
+    // El estilo «AI Sales Agents», solo en las rutas que ya lo llevan: la
+    // clase la pone la plantilla del marco y la hoja y la red de nodos las
+    // trae la librería. En cualquier otra ruta no llega ni una cosa ni la otra.
+    //
+    // Va ANTES de la comprobación del marco de portada, y no después como
+    // hasta la fase 3: la portada no pasa por ella —su controlador se pone
+    // sus propias imágenes— y se salía antes de llegar aquí.
+    if (in_array($this->routeMatch->getRouteName(), self::STYLED_ROUTES, TRUE)) {
+      $variables['sld_tema'] = 'agentes';
+      $variables['#attached']['library'][] = 'sales_leadership_diagnostic/agentes';
+    }
+
     if (!$this->usesHomeFrame()) {
       return;
     }
@@ -440,14 +463,6 @@ final class DiagnosticThemeHooks {
     // `dashboard` que ya adjunta el controlador: una trae el marco y la otra
     // el contenido de la tarjeta.
     $variables['#attached']['library'][] = 'sales_leadership_diagnostic/welcome';
-
-    // El estilo «AI Sales Agents», solo en las rutas que ya lo llevan: la
-    // clase la pone la plantilla del marco y la hoja y la red de nodos las
-    // trae la librería. En cualquier otra ruta no llega ni una cosa ni la otra.
-    if (in_array($this->routeMatch->getRouteName(), self::STYLED_ROUTES, TRUE)) {
-      $variables['sld_tema'] = 'agentes';
-      $variables['#attached']['library'][] = 'sales_leadership_diagnostic/agentes';
-    }
 
     // Sin estas etiquetas, cambiar el fondo o el logotipo no se veria en esta
     // pagina hasta que caducara por otro motivo.

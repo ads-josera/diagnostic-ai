@@ -9,9 +9,15 @@
  *
  * Variables:
  * - message: explicación adaptada al motivo.
+ *
+ * El título lo pone esta plantilla desde el 13-09-2026, cuando la página pasó
+ * al marco interno del módulo: ese marco no pinta el bloque de título del
+ * tema, y sin esta línea la página se quedaba sin <h1>.
  */
 #}
-<div class="sld sld-denied">
+<div class="sld sld-dashboard sld-denied">
+  <h1 class="sld-dashboard__greeting">{{ 'Acceso al diagnóstico'|t }}</h1>
+
   <div class="sld__notice sld__notice--warning" role="status">
     <p>{{ message }}</p>
   </div>

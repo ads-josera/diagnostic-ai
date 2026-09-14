@@ -55,14 +55,18 @@ final class AgentsStyleSampleTest extends KernelTestBase {
   public static function pantallas(): array {
     // Se va ampliando por fases, y cada fase mueve aquí sus pantallas a TRUE.
     // Fase 1 (13-09-2026): la página de cada agente y «Mis cuentas».
-    // Fase 2: el informe. Fase 3: la conversación.
+    // Fase 2: el informe. Fase 3: la conversación. Fase 4: la portada, el
+    // inicio de sesión y «sin acceso»; con eso, todas las del alumno.
     return [
       'panel' => ['sales_leadership_diagnostic.dashboard', TRUE],
       'página de un agente' => ['sales_leadership_diagnostic.agent_page', TRUE],
       'mis cuentas' => ['sales_leadership_diagnostic.accounts', TRUE],
       'informe' => ['sales_leadership_diagnostic.result', TRUE],
       'conversación' => ['sales_leadership_diagnostic.session', TRUE],
-      'inicio de sesión' => ['user.login', FALSE],
+      'portada' => ['sales_leadership_diagnostic.welcome', TRUE],
+      'inicio de sesión' => ['user.login', TRUE],
+      'recuperar la contraseña' => ['user.pass', TRUE],
+      'sin acceso' => ['sales_leadership_diagnostic.sso_denied', TRUE],
     ];
   }
 

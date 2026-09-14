@@ -17,9 +17,11 @@
  * Es el mismo contenido configurable que la portada, a propósito: son la misma
  * página en dos momentos distintos y deben verse igual sin que haya que
  * cargar las imágenes dos veces.
+ *
+ * `sld_tema`: el estilo «AI Sales Agents» (fase 4 del rediseño, 13-09-2026).
  */
 #}
-<div class="sld-home">
+<div class="sld-home{{ sld_tema ? ' sld-home--' ~ sld_tema }}">
   <div class="sld-home__frame"
        {% if sld_background %}style="background-image: url('{{ sld_background }}')"{% endif %}>
 

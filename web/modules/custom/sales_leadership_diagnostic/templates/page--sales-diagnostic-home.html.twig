@@ -11,9 +11,11 @@
  * Se conserva `page.content`, que es donde el controlador pone la portada, y
  * los mensajes del sistema: un aviso de sesión caducada tiene que poder verse
  * aunque la página sea a pantalla completa.
+ *
+ * `sld_tema`: el estilo «AI Sales Agents» (fase 4 del rediseño, 13-09-2026).
  */
 #}
-<div class="sld-home">
+<div class="sld-home{{ sld_tema ? ' sld-home--' ~ sld_tema }}">
   {{ page.highlighted }}
   {{ page.content }}
 </div>

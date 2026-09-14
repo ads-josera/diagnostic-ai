@@ -74,11 +74,15 @@
         Enlace simple y no un formulario: `user.logout` es la ruta pública de
         Drupal core para cerrar sesión, ya pensada para enlazarse por GET.
       #}
-      <a class="sld-home__logout"
-         style="background-color: {{ sld_accent_color }}"
-         href="{{ path('user.logout') }}">
-        {{ 'Cerrar sesión'|t }}
-      </a>
+      {# Solo con sesión: «sin acceso» también usa este marco y la ve quien
+         no ha conseguido entrar. #}
+      {% if logged_in %}
+        <a class="sld-home__logout"
+           style="background-color: {{ sld_accent_color }}"
+           href="{{ path('user.logout') }}">
+          {{ 'Cerrar sesión'|t }}
+        </a>
+      {% endif %}
     </header>
 
     <main class="sld-home__main" role="main">

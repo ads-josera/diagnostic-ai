@@ -50,10 +50,14 @@
    con la misma fuerza que `.sld-home--agentes`, y ganaría el que se cargue
    después. Así no depende del orden. `.sld` los vuelve a declarar por dentro,
    de ahí la segunda línea. */
-.sld-home.sld-home--agentes,
-.sld-home--agentes .sld,
-.sld-page.sld-page--agentes,
-.sld-page.sld-page--agentes .sld {
+/* Y con `html` delante. La pantalla Marca inyecta sus colores con selectores
+   de la MISMA fuerza (`.sld-home.sld-home`, `.sld.sld`): ganaba esta hoja solo
+   por cargarse después, y un cambio de orden le devolvía el azul de Marca a
+   las pantallas oscuras. Visto al preparar la fase 4, el 13-09-2026. */
+html .sld-home.sld-home--agentes,
+html .sld-home--agentes .sld,
+html .sld-page.sld-page--agentes,
+html .sld-page.sld-page--agentes .sld {
   --agt-fondo: #06090b;
   --agt-cian: #4ee2f2;
   --agt-lima: #a6ff4d;
@@ -109,15 +113,19 @@
 
 /* Fondo: rejilla, halos y la red de nodos -------------------------------- */
 
-.sld-home--agentes .sld-home__frame--liso {
+.sld-home--agentes .sld-home__frame {
   position: relative;
   isolation: isolate;
   background-color: var(--agt-fondo);
+  /* La portada y el inicio de sesión pintan EN LÍNEA la fotografía de la
+     pestaña «Portada», y en línea gana a cualquier regla. El estilo oscuro no
+     la lleva: es la misma decisión que con Marca, paleta fija. */
+  background-image: none !important;
 }
 
 /* La rejilla se desvanece hacia abajo: acompaña la cabecera y no se mete
    debajo del texto que se lee. */
-.sld-home--agentes .sld-home__frame--liso::before {
+.sld-home--agentes .sld-home__frame::before {
   content: "";
   position: absolute;
   inset: 0 0 auto;
@@ -132,7 +140,7 @@
   mask-image: radial-gradient(110% 80% at 30% 0%, #000 0%, transparent 75%);
 }
 
-.sld-home--agentes .sld-home__frame--liso::after {
+.sld-home--agentes .sld-home__frame::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -993,6 +1001,162 @@
   }
 }
 
+/* Portada, inicio de sesión y «sin acceso» (fase 4) ------------------------ */
+
+/* La red, a toda la altura en la portada y el inicio de sesión: son el
+   escaparate, como la cabecera de la landing. En las internas se queda arriba
+   y se desvanece antes de llegar al texto. */
+.sld-home--agentes .sld-home__frame:not(.sld-home__frame--liso) .sld-nodos {
+  height: 100%;
+  -webkit-mask-image: linear-gradient(#000 55%, transparent);
+  mask-image: linear-gradient(#000 55%, transparent);
+}
+
+.sld-home--agentes .sld-home__nav-link {
+  color: #c7d6da;
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sld-home--agentes .sld-home__nav-link:hover {
+  color: var(--agt-cian);
+  text-decoration: none;
+}
+
+.sld-home--agentes .sld-home__enter {
+  border-radius: var(--sld-radius-sm);
+  color: #04070a;
+}
+
+/* La tarjeta de la portada y la del inicio de sesión. Las internas llevan su
+   propia regla, más arriba. */
+.sld-home--agentes .sld-home__card:not(.sld-inner-frame) {
+  border: 1px solid rgba(78, 226, 242, 0.22);
+  border-radius: var(--sld-radius);
+  background: linear-gradient(160deg, rgba(14, 25, 30, 0.92), rgba(7, 11, 14, 0.92));
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.9);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* La etiqueta de la landing sobre el titular. Texto decorativo, oculto a los
+   lectores de pantalla donde se admite. Solo en la portada: en el inicio de
+   sesión estorba al formulario. */
+.sld-home--agentes .sld-home__card:not(.sld-inner-frame):not(.sld-login)::before {
+  content: "AI SALES AGENTS™";
+  content: "AI SALES AGENTS™" / "";
+  display: inline-block;
+  margin-bottom: 1.6rem;
+  padding: 0.45rem 0.8rem 0.45rem 1.6rem;
+  border: 1px solid rgba(78, 226, 242, 0.3);
+  border-radius: 2px;
+  background: radial-gradient(circle at 0.8rem 50%, var(--agt-lima) 3px, transparent 3.6px) no-repeat;
+  color: var(--agt-cian);
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.24em;
+}
+
+.sld-home--agentes .sld-home__title {
+  color: var(--sld-color-text);
+  font-size: clamp(1.7rem, 3.6vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.sld-home--agentes .sld-home__intro {
+  color: #c7d6da;
+}
+
+/* El botón principal, el de la landing: cian con paso a lima. */
+.sld-home--agentes .sld-home__button,
+.sld-home--agentes .sld-login input[type="submit"],
+.sld-home--agentes .sld-login button[type="submit"] {
+  border-radius: 3px;
+  background: var(--agt-cian);
+  color: #04070a;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 0 1px rgba(78, 226, 242, 0.5), 0 18px 46px -18px rgba(78, 226, 242, 0.75);
+  transition: background-color 0.16s ease, transform 0.16s ease;
+}
+
+.sld-home--agentes .sld-home__button {
+  padding: 1rem 1.6rem;
+}
+
+/* El tema le da al botón de enviar un margen derecho de 18 px (el `.button`
+   de Olivero), y por eso acababa antes que los campos de encima. Medido el
+   13-09-2026; ya pasaba en la versión clara. */
+.sld-home--agentes .sld-login input[type="submit"],
+.sld-home--agentes .sld-login button[type="submit"] {
+  margin-inline-end: 0;
+}
+
+.sld-home--agentes .sld-home__button:hover,
+.sld-home--agentes .sld-home__button:focus,
+.sld-home--agentes .sld-login input[type="submit"]:hover,
+.sld-home--agentes .sld-login button[type="submit"]:hover {
+  background: var(--agt-lima);
+  color: #04070a;
+  transform: translateY(-2px);
+}
+
+.sld-home--agentes .sld-home__button:focus-visible {
+  outline: 2px solid var(--agt-cian);
+  outline-offset: 3px;
+}
+
+.sld-home--agentes .sld-home__help {
+  color: #8fa6ac;
+}
+
+/* El formulario de inicio de sesión: campos oscuros, etiquetas en gris claro. */
+.sld-home--agentes .sld-login label {
+  color: #c7d6da;
+}
+
+.sld-home--agentes .sld-login input[type="text"],
+.sld-home--agentes .sld-login input[type="password"],
+.sld-home--agentes .sld-login input[type="email"] {
+  border-color: rgba(120, 150, 158, 0.35);
+  border-radius: var(--sld-radius-sm);
+  background: rgba(10, 19, 23, 0.9);
+  color: var(--sld-color-text);
+}
+
+.sld-home--agentes .sld-login .description {
+  color: #8fa6ac;
+}
+
+.sld-home--agentes .sld-login .sld-login__links a {
+  color: var(--agt-cian);
+}
+
+.sld-home--agentes .sld-login .sld-login__links a:hover {
+  color: var(--agt-lima);
+}
+
+/* El logotipo del pie de la portada y del inicio de sesión es el de color,
+   pensado para la banda crema: sobre el negro se perdía. En blanco, como el
+   de la barra. En las internas ya se usa el claro y no cambia. */
+.sld-home--agentes .sld-home__footer-logo {
+  filter: brightness(0) invert(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sld-home--agentes .sld-home__button,
+  .sld-home--agentes .sld-login input[type="submit"],
+  .sld-home--agentes .sld-login button[type="submit"] {
+    transition: none;
+    transform: none;
+  }
+}
+
 /* La conversación (fase 3) ------------------------------------------------- */
 
 /* El chat tiene su propio marco (.sld-page): sin tarjeta ni pie, la barra, el
@@ -1322,12 +1486,14 @@
    fuera el fondo, la red, la barra y el pie. Los colores de la paleta oscura
    se redefinen a tonos que sí se leen sobre blanco. */
 @media print {
-  .sld-home.sld-home--agentes,
-  .sld-home--agentes .sld,
-  .sld-home--agentes .sld-result,
-  .sld-home--agentes .sld-result--lima,
-  .sld-home--agentes .sld-agent-page,
-  .sld-home--agentes .sld-agent-page--lima {
+  /* Con `html` delante, igual que la paleta de pantalla: si esta fuera más
+     débil que aquella, en papel ganaría el negro. */
+  html .sld-home.sld-home--agentes,
+  html .sld-home--agentes .sld,
+  html .sld-home--agentes .sld-result,
+  html .sld-home--agentes .sld-result--lima,
+  html .sld-home--agentes .sld-agent-page,
+  html .sld-home--agentes .sld-agent-page--lima {
     --agt-cian: #1f4788;
     --agt-lima: #3f6b00;
     --agt-acento: #1f4788;
@@ -1348,14 +1514,14 @@
   }
 
   .sld-home--agentes,
-  .sld-home--agentes .sld-home__frame--liso {
+  .sld-home--agentes .sld-home__frame {
     color-scheme: light;
     background: #ffffff;
     color: #1c1f24;
   }
 
-  .sld-home--agentes .sld-home__frame--liso::before,
-  .sld-home--agentes .sld-home__frame--liso::after,
+  .sld-home--agentes .sld-home__frame::before,
+  .sld-home--agentes .sld-home__frame::after,
   .sld-home--agentes .sld-nodos,
   .sld-home--agentes .sld-home__bar,
   .sld-home--agentes .sld-home__footer,

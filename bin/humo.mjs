@@ -200,6 +200,10 @@ export default async function run(page) {
   for (const [ruta, selector, quien] of [
     ['/', '.sld-home__frame', 'portada'],
     ['/sales-diagnostic', '.sld', 'panel del alumno'],
+    // Desde que todas las pantallas del alumno llevan el estilo oscuro de
+    // paleta fija (13-09-2026), Marca solo manda en las del gestor. Sin esta
+    // línea no quedaba ninguna comprobación de que Marca se sigue aplicando.
+    ['/admin/content/sales-diagnostic', '.sld-manager', 'pantallas del gestor'],
   ]) {
     await page.goto(`${SITIO}${ruta}`, { waitUntil: 'networkidle' });
 
