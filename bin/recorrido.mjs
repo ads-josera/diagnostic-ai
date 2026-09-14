@@ -159,6 +159,17 @@ export default async function run(page) {
   await abrir('/admin/config/salesbumm/diagnostic/documentos/sales_leadership_diagnostic', 'documentos del agente de diagnóstico (admin)');
   await abrir('/admin/config/salesbumm/diagnostic/agentes/anadir', 'alta de agente (admin)');
 
+  // El informe de estado, sin una sola línea en rojo. El 14-09-2026 José Raúl
+  // encontró a mano «No coinciden las definiciones de entidad» y ninguna de
+  // las comprobaciones lo miraba. Los avisos en amarillo no cuentan aquí.
+  await seguro('informe de estado sin errores (admin)', async () => {
+    await page.goto(`${SITIO}/admin/reports/status`, { waitUntil: 'networkidle' });
+    const errores = await page.locator('.system-status-report__entry--error').evaluateAll(
+      (filas) => filas.map((f) => f.innerText.replace(/\s+/g, ' ').trim().slice(0, 140)),
+    );
+    anotar(errores.length === 0, 'informe de estado sin errores (admin)', errores.join(' | '));
+  });
+
   // --- Gestor ---------------------------------------------------------------
   await entrar(process.env.SLD_GESTOR, 'gestor');
   await guardar('/admin/config/salesbumm/diagnostic/agentes/sales_leadership_diagnostic', 'Guardar', 'ficha del agente de diagnóstico (gestor)');

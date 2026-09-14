@@ -1652,3 +1652,29 @@ function sales_leadership_diagnostic_update_10023(): string {
 
   return (string) t('Color asignado a @n agente(s).', ['@n' => $cambiados]);
 }
+
+/**
+ * Registra la definición del agente de diagnóstico como instalada.
+ *
+ * El informe de estado decía «No coinciden las definiciones de entidad y/o
+ * campo: el tipo de entidad Agente de diagnóstico necesita ser instalado». Lo
+ * vio José Raúl el 14-09-2026 entrando como administrador en local.
+ *
+ * Los agentes llegaron al módulo cuando este ya estaba instalado, y Drupal
+ * solo apunta la definición de un tipo de entidad al instalar el módulo o si
+ * se le pide. Nadie se lo pidió: los agentes funcionaban —son configuración y
+ * no tienen tablas propias— pero el registro seguía vacío. En una instalación
+ * limpia se apunta sola (el ensayo del 14-09-2026 no lo mostraba), así que aquí
+ * solo actúa si falta.
+ */
+function sales_leadership_diagnostic_update_10024(): string {
+  $gestor = \Drupal::entityDefinitionUpdateManager();
+
+  if ($gestor->getEntityType('sld_agent') !== NULL) {
+    return (string) t('La definición del agente ya estaba registrada: nada que hacer.');
+  }
+
+  $gestor->installEntityType(\Drupal::entityTypeManager()->getDefinition('sld_agent'));
+
+  return (string) t('Definición del agente de diagnóstico registrada como instalada.');
+}
