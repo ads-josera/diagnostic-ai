@@ -44,6 +44,10 @@ const PANTALLAS = {
     '/sales-diagnostic/results/48',
     '/sales-diagnostic/session/66',
     '/sales-diagnostic/session/73',
+    // Una conversación en borrador, sin mensajes: la pantalla de bienvenida
+    // del chat, con el icono, la presentación y las sugerencias. Verla no la
+    // cambia. Se añadió en la fase 3 del rediseño (13-09-2026).
+    '/sales-diagnostic/session/128',
     '/sales-diagnostic/sin-acceso',
   ],
   gestor: [

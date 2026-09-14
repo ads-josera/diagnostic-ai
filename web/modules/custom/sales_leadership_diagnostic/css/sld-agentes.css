@@ -51,7 +51,9 @@
    después. Así no depende del orden. `.sld` los vuelve a declarar por dentro,
    de ahí la segunda línea. */
 .sld-home.sld-home--agentes,
-.sld-home--agentes .sld {
+.sld-home--agentes .sld,
+.sld-page.sld-page--agentes,
+.sld-page.sld-page--agentes .sld {
   --agt-fondo: #06090b;
   --agt-cian: #4ee2f2;
   --agt-lima: #a6ff4d;
@@ -988,6 +990,328 @@
 
   .sld-home--agentes .sld-home__bar {
     min-height: 64px;
+  }
+}
+
+/* La conversación (fase 3) ------------------------------------------------- */
+
+/* El chat tiene su propio marco (.sld-page): sin tarjeta ni pie, la barra, el
+   registro y el compositor ocupan la pantalla entera. La clase la pone
+   page--sales-diagnostic-chat.html.twig solo con el estilo activo. Aquí NO va
+   la red animada: detrás de una conversación distrae de lo que se lee. */
+.sld-page.sld-page--agentes {
+  --agt-acento: var(--agt-cian);
+  --agt-acento-rgb: 78, 226, 242;
+  position: relative;
+  isolation: isolate;
+  color-scheme: dark;
+  background: var(--agt-fondo);
+  color: var(--sld-color-text);
+  font-family: var(--sld-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.sld-page.sld-page--lima {
+  --agt-acento: var(--agt-lima);
+  --agt-acento-rgb: 166, 255, 77;
+}
+
+/* Solo arriba y apagados: la rejilla y un halo, sin tocar el texto. */
+.sld-page.sld-page--agentes::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 28rem;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(78, 226, 242, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(78, 226, 242, 0.045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(90% 70% at 30% 0%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(90% 70% at 30% 0%, #000 0%, transparent 75%);
+}
+
+.sld-page.sld-page--agentes::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(36rem 30rem at -8% -10%, rgba(var(--agt-acento-rgb), 0.1), transparent 62%);
+}
+
+.sld-page--agentes :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--sld-font);
+}
+
+.sld-page--agentes ::selection {
+  background: var(--agt-cian);
+  color: #04070a;
+}
+
+/* La barra: el nombre del agente con el punto de su color, como la landing. */
+.sld-page--agentes .sld-page__bar {
+  border-bottom-color: var(--agt-linea);
+  background: rgba(6, 9, 11, 0.72);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.sld-page--agentes .sld-page__title {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--sld-color-text);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.sld-page--agentes .sld-page__title::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--agt-acento);
+  box-shadow: 0 0 12px var(--agt-acento);
+}
+
+.sld-page--agentes .sld-home__logout {
+  border-radius: var(--sld-radius-sm);
+  color: #04070a;
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sld-page--agentes .sld-chat__header {
+  border-bottom-color: var(--agt-linea);
+}
+
+.sld-page--agentes .sld-chat__back,
+.sld-page--agentes .sld__link {
+  color: var(--agt-cian);
+}
+
+.sld-page--agentes .sld-chat__back {
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.sld-page--agentes .sld-chat__back:hover,
+.sld-page--agentes .sld__link:hover {
+  color: var(--agt-lima);
+  text-decoration: none;
+}
+
+.sld-page--agentes .sld-status {
+  border-radius: var(--sld-radius-sm);
+  background: transparent;
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+/* La bienvenida. */
+.sld-page--agentes .sld-chat__welcome-icon {
+  width: 56px;
+  height: 56px;
+  padding: 12px;
+  border: 1px solid rgba(var(--agt-acento-rgb), 0.25);
+  border-radius: var(--sld-radius-sm);
+  background: rgba(var(--agt-acento-rgb), 0.08);
+}
+
+.sld-page--agentes .sld-chat__welcome-agent {
+  color: var(--sld-color-text);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.sld-page--agentes .sld-chat__welcome-intro {
+  color: #c7d6da;
+  font-size: 1.02rem;
+  line-height: 1.65;
+}
+
+.sld-page--agentes .sld-chat__welcome-title {
+  color: var(--agt-cian);
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.sld-page--agentes .sld-chat__suggestion {
+  border: 1px solid rgba(var(--agt-acento-rgb), 0.24);
+  border-radius: var(--sld-radius);
+  background: linear-gradient(180deg, rgba(12, 22, 27, 0.85), rgba(7, 11, 14, 0.85));
+  color: #c7d6da;
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.sld-page--agentes .sld-chat__suggestion:hover {
+  border-color: rgba(var(--agt-acento-rgb), 0.6);
+  background: linear-gradient(180deg, rgba(12, 22, 27, 0.85), rgba(7, 11, 14, 0.85));
+  color: var(--sld-color-text);
+  transform: translateY(-2px);
+}
+
+.sld-page--agentes .sld-chat__suggestion:focus-visible {
+  outline: 2px solid var(--agt-acento);
+}
+
+/* Los mensajes. El del agente lleva el filete de su color; el tuyo, un tinte
+   cian y no el cian pleno: una respuesta larga del alumno sobre cian macizo
+   se leía mal, y es texto que él mismo relee. */
+.sld-page--agentes .sld-chat__meta {
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.sld-page--agentes .sld-chat__author {
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.sld-page--agentes .sld-chat__message--assistant .sld-chat__author {
+  color: var(--agt-acento);
+}
+
+.sld-page--agentes .sld-chat__time {
+  color: #8fa6ac;
+}
+
+.sld-page--agentes .sld-chat__bubble {
+  border-color: rgba(120, 150, 158, 0.2);
+  border-radius: var(--sld-radius);
+  line-height: 1.7;
+}
+
+.sld-page--agentes .sld-chat__message--assistant .sld-chat__bubble {
+  border-left: 2px solid rgba(var(--agt-acento-rgb), 0.55);
+  background: linear-gradient(180deg, rgba(13, 23, 28, 0.92), rgba(8, 13, 16, 0.92));
+  color: #d5e1e4;
+}
+
+.sld-page--agentes .sld-chat__bubble :is(h2, h3, h4, h5, strong, b) {
+  color: var(--sld-color-text);
+}
+
+.sld-page--agentes .sld-chat__message--user .sld-chat__bubble {
+  border-color: rgba(78, 226, 242, 0.28);
+  background: rgba(78, 226, 242, 0.1);
+  color: var(--sld-color-text);
+}
+
+.sld-page--agentes .sld-chat__bubble a {
+  color: var(--agt-cian);
+}
+
+.sld-page--agentes .sld-chat__bubble a:hover {
+  color: var(--agt-lima);
+}
+
+.sld-page--agentes .sld-chat__bubble th,
+.sld-page--agentes .sld-chat__bubble td {
+  border-color: rgba(120, 150, 158, 0.25);
+}
+
+.sld-page--agentes .sld-chat__bubble th {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Mientras piensa o investiga. */
+.sld-page--agentes .sld-chat__typing {
+  color: #a9bdc2;
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sld-page--agentes .sld-chat__typing-dots span {
+  border-radius: 1px;
+  background: var(--agt-acento);
+}
+
+.sld-page--agentes .sld-chat__working {
+  border: 1px solid rgba(var(--agt-acento-rgb), 0.2);
+  background: rgba(var(--agt-acento-rgb), 0.06);
+}
+
+/* El compositor. */
+.sld-page--agentes .sld-chat__composer {
+  border-top-color: var(--agt-linea);
+}
+
+.sld-page--agentes .sld-chat__input {
+  border-color: rgba(120, 150, 158, 0.3);
+  border-radius: var(--sld-radius-sm);
+  background: rgba(10, 19, 23, 0.9);
+  color: var(--sld-color-text);
+}
+
+.sld-page--agentes .sld-chat__input::placeholder {
+  color: #8fa6ac;
+}
+
+.sld-page--agentes .sld-chat__input:focus-visible {
+  border-color: transparent;
+  outline: 2px solid var(--agt-acento);
+}
+
+.sld-page--agentes .sld__button {
+  border-radius: var(--sld-radius-sm);
+  font-family: inherit;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 0 1px rgba(78, 226, 242, 0.5), 0 18px 46px -18px rgba(78, 226, 242, 0.75);
+  transition: background-color 0.16s ease, transform 0.16s ease;
+}
+
+.sld-page--agentes .sld__button:hover {
+  transform: translateY(-2px);
+}
+
+.sld-page--lima .sld__button:not(.sld__button--secondary) {
+  background: var(--agt-lima);
+  box-shadow: 0 0 0 1px rgba(166, 255, 77, 0.5), 0 18px 46px -18px rgba(166, 255, 77, 0.7);
+}
+
+.sld-page--lima .sld__button:not(.sld__button--secondary):hover,
+.sld-page--lima .sld__button:not(.sld__button--secondary):focus {
+  background: var(--agt-cian);
+}
+
+.sld-page--agentes .sld-chat__hint {
+  color: #8fa6ac;
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sld-page--agentes .sld-chat__suggestion,
+  .sld-page--agentes .sld__button {
+    transition: none;
+  }
+
+  .sld-page--agentes .sld-chat__suggestion:hover,
+  .sld-page--agentes .sld__button:hover {
+    transform: none;
   }
 }
 

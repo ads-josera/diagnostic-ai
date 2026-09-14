@@ -59,12 +59,14 @@ final class DiagnosticThemeHooks {
    *
    * Fase 1: la página de cada agente y «Mis cuentas».
    * Fase 2: el informe, también cuando lo abre el gestor (mismo marco).
+   * Fase 3: la conversación, que tiene su propio marco (.sld-page).
    */
   private const STYLED_ROUTES = [
     'sales_leadership_diagnostic.dashboard',
     'sales_leadership_diagnostic.agent_page',
     'sales_leadership_diagnostic.accounts',
     'sales_leadership_diagnostic.result',
+    self::CHAT_ROUTE,
   ];
 
   private const INNER_ROUTES = [
@@ -393,7 +395,11 @@ final class DiagnosticThemeHooks {
     $sesion = $this->routeMatch->getParameter('sld_diagnostic_session');
 
     if ($sesion instanceof DiagnosticSessionInterface) {
-      $variables['sld_page_title'] = $this->agents->get($sesion->getAgentId())?->label() ?? '';
+      $agente = $this->agents->get($sesion->getAgentId());
+      $variables['sld_page_title'] = $agente?->label() ?? '';
+      // Su color en el estilo «AI Sales Agents»: el mismo de su tarjeta y su
+      // página. El marco del chat solo lo usa si el estilo está activo.
+      $variables['sld_acento'] = $agente?->getAccent() ?? 'cian';
     }
 
     // Las secciones del gestor. Van SIEMPRE que la pantalla lleve su marco,

@@ -18,9 +18,13 @@
  *
  * El título lo imprime esta plantilla en lugar del bloque de título del tema.
  * Así hay exactamente un <h1> tanto si la sugerencia se aplica como si no.
+ *
+ * `sld_tema` y `sld_acento`: el estilo «AI Sales Agents» y el color del agente
+ * de esta conversación (fase 3 del rediseño, 13-09-2026). Sin ellos, el marco
+ * sale exactamente como antes.
  */
 #}
-<div class="sld-page">
+<div class="sld-page{{ sld_tema ? ' sld-page--' ~ sld_tema }}{{ sld_tema and sld_acento ? ' sld-page--' ~ sld_acento }}">
 
   <header class="sld-page__bar">
     {# El nombre del agente de ESTA conversación, no una cadena fija. Estuvo
