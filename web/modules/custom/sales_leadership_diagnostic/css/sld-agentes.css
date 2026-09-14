@@ -82,6 +82,10 @@
 }
 
 .sld-home--agentes {
+  /* Los controles nativos —desplegables, calendario, barras de
+     desplazamiento— en su versión oscura. Sin esto, «Mis cuentas» abría sus
+     desplegables en blanco sobre la pantalla negra. */
+  color-scheme: dark;
   background: var(--agt-fondo);
   color: var(--sld-color-text);
   font-family: var(--sld-font);
@@ -232,10 +236,10 @@
 
 /* Tarjetas de agente ----------------------------------------------------- */
 
-/* Cada agente con su color, como en la landing: el primero cian, el segundo
-   lima. Va por posición porque es una muestra; al llevarlo a todas las
-   pantallas conviene que el color sea un ajuste de cada agente, para que su
-   página y su chat usen el mismo. */
+/* Cada agente con su color, como en la landing. Es un ajuste del agente
+   (`accent`, en su ficha): en la muestra iba por posición, y con otro orden
+   su tarjeta y su página habrían dicho colores distintos. La etiqueta
+   «AGENTE_01» sí va por posición: es un ordinal, no una identidad. */
 .sld-home--agentes .sld-dashboard__cards {
   counter-reset: agente;
   gap: 1.25rem;
@@ -255,7 +259,7 @@
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.sld-home--agentes .sld-dashboard__cards > li:nth-child(even) .sld-card {
+.sld-home--agentes .sld-card--lima {
   --agt-acento: var(--agt-lima);
   --agt-acento-rgb: 166, 255, 77;
   background: linear-gradient(180deg, rgba(15, 24, 17, 0.85), rgba(7, 11, 14, 0.85));
@@ -392,6 +396,269 @@
   color: #8fa6ac;
   font-family: var(--agt-mono);
   font-size: 0.75rem;
+}
+
+/* Enlaces y vueltas (fase 1) ---------------------------------------------- */
+
+.sld-home--agentes .sld__link,
+.sld-home--agentes .sld-account__meta a {
+  color: var(--agt-cian);
+}
+
+.sld-home--agentes .sld__link:hover,
+.sld-home--agentes .sld-account__meta a:hover {
+  color: var(--agt-lima);
+}
+
+/* «← Volver a mis diagnósticos», como las etiquetas de la landing. */
+.sld-home--agentes .sld-agent-page__back,
+.sld-home--agentes .sld-accounts__back {
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+/* La página de un agente (fase 1) ----------------------------------------- */
+
+/* El color del agente vive en su página entera: icono, cita de presentación,
+   botón y la entrada a sus cuentas. Cian por defecto. */
+.sld-home--agentes .sld-agent-page {
+  --agt-acento: var(--agt-cian);
+  --agt-acento-rgb: 78, 226, 242;
+}
+
+.sld-home--agentes .sld-agent-page--lima {
+  --agt-acento: var(--agt-lima);
+  --agt-acento-rgb: 166, 255, 77;
+}
+
+/* El icono arriba y no centrado: en móvil la descripción ocupa seis líneas y,
+   centrado, flotaba a media altura sin nada al lado. */
+.sld-home--agentes .sld-agent-page__header {
+  align-items: flex-start;
+  gap: 1.1rem;
+}
+
+.sld-home--agentes .sld-agent-page__icon {
+  border: 1px solid rgba(var(--agt-acento-rgb), 0.25);
+  border-radius: var(--sld-radius-sm);
+  background: rgba(var(--agt-acento-rgb), 0.08);
+}
+
+.sld-home--agentes .sld-agent-page__icon--initial {
+  color: var(--agt-acento);
+}
+
+.sld-home--agentes .sld-agent-page__header .sld__muted {
+  margin: 0.4rem 0 0;
+  font-size: 1.02rem;
+  line-height: 1.5;
+}
+
+/* La presentación, como la cita de la landing: filete de color a la izquierda. */
+.sld-home--agentes .sld-agent-page__intro {
+  max-width: 64ch;
+  padding-left: 1.1rem;
+  border-left: 2px solid var(--agt-acento);
+  color: #c7d6da;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+/* El botón de un agente lima es lima, como el de la landing, y al pasar el
+   ratón cambia a cian: el mismo juego que allí, al revés que el cian. */
+.sld-home--agentes .sld-agent-page--lima .sld__button:not(.sld__button--secondary) {
+  background: var(--agt-lima);
+  box-shadow: 0 0 0 1px rgba(166, 255, 77, 0.5), 0 18px 46px -18px rgba(166, 255, 77, 0.7);
+}
+
+.sld-home--agentes .sld-agent-page--lima .sld__button:not(.sld__button--secondary):hover,
+.sld-home--agentes .sld-agent-page--lima .sld__button:not(.sld__button--secondary):focus {
+  background: var(--agt-cian);
+}
+
+/* La entrada a «Mis cuentas». El color de respaldo es para el panel con un
+   solo agente, donde no hay página de agente que lo defina. */
+.sld-home--agentes .sld-dashboard__accounts {
+  border: 1px solid rgba(var(--agt-acento-rgb, 78, 226, 242), 0.28);
+  border-radius: var(--sld-radius);
+  background: linear-gradient(160deg, rgba(var(--agt-acento-rgb, 78, 226, 242), 0.07), rgba(255, 255, 255, 0.012));
+}
+
+.sld-home--agentes .sld-dashboard__accounts:hover,
+.sld-home--agentes .sld-dashboard__accounts:focus-visible {
+  border-color: rgba(var(--agt-acento-rgb, 78, 226, 242), 0.6);
+  box-shadow: none;
+}
+
+.sld-home--agentes .sld-dashboard__accounts-title {
+  color: var(--agt-acento, var(--agt-cian));
+  font-family: var(--agt-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* El historial: cabeceras como etiquetas, filas con filete fino. */
+.sld-home--agentes .sld-dashboard__table th {
+  color: #8fa6ac;
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+}
+
+.sld-home--agentes .sld-dashboard__table th,
+.sld-home--agentes .sld-dashboard__table td {
+  border-bottom-color: rgba(120, 150, 158, 0.18);
+}
+
+.sld-home--agentes .sld-dashboard__table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.sld-home--agentes .sld-dashboard__table tbody tr:hover {
+  background: rgba(78, 226, 242, 0.04);
+}
+
+.sld-home--agentes .sld-status {
+  border-radius: var(--sld-radius-sm);
+  background: transparent;
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 34rem) {
+  .sld-home--agentes .sld-dashboard__table tr {
+    background: rgba(255, 255, 255, 0.015);
+    box-shadow: none;
+  }
+}
+
+/* «Mis cuentas» (fase 1) --------------------------------------------------- */
+
+.sld-home--agentes .sld-accounts__title {
+  color: var(--sld-color-text);
+  font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+
+.sld-home--agentes .sld-accounts__intro {
+  font-size: 1.02rem;
+}
+
+.sld-home--agentes .sld-accounts__figure {
+  border-color: rgba(78, 226, 242, 0.18);
+  background: linear-gradient(160deg, rgba(13, 23, 28, 0.9), rgba(7, 11, 14, 0.9));
+}
+
+.sld-home--agentes .sld-accounts__figure dt {
+  color: #8fa6ac;
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+}
+
+.sld-home--agentes .sld-accounts__figure dd {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* El logro va en el verde de «va bien», no en el lima de la marca: es un
+   estado, y así lo dice también su chip. La hoja de cuentas lo oscurecía
+   para el fondo blanco; sobre el negro hay que dejarlo tal cual. */
+.sld-home--agentes .sld-accounts__figure--logro {
+  border-color: rgba(95, 211, 155, 0.3);
+}
+
+.sld-home--agentes .sld-accounts__figure--logro dd {
+  color: var(--sld-color-success);
+}
+
+.sld-home--agentes .sld-accounts__tab {
+  border-radius: var(--sld-radius-sm);
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sld-home--agentes .sld-account {
+  border-color: rgba(120, 150, 158, 0.2);
+  background: linear-gradient(180deg, rgba(12, 22, 27, 0.7), rgba(7, 11, 14, 0.7));
+}
+
+.sld-home--agentes .sld-account:target {
+  border-color: var(--agt-cian);
+  box-shadow: none;
+}
+
+.sld-home--agentes .sld-account__name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.sld-home--agentes .sld-account__disposition {
+  color: var(--agt-lima);
+  font-family: var(--agt-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+/* Los chips de estado. La hoja de cuentas los mezcla con negro para leerse
+   sobre blanco; sobre el fondo oscuro eso los apagaba. Aquí van en su color
+   pleno sobre un tinte del mismo color. */
+.sld-home--agentes .sld-account__chip {
+  border: 1px solid transparent;
+  border-radius: var(--sld-radius-sm);
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.sld-home--agentes .sld-account__chip--pendiente {
+  border: 1px dashed rgba(120, 150, 158, 0.45);
+}
+
+.sld-home--agentes .sld-account__chip--neutro {
+  border-color: rgba(120, 150, 158, 0.3);
+}
+
+.sld-home--agentes .sld-account__chip--avance {
+  border-color: rgba(78, 226, 242, 0.3);
+  background: rgba(78, 226, 242, 0.1);
+  color: var(--agt-cian);
+}
+
+.sld-home--agentes .sld-account__chip--logro {
+  border-color: rgba(95, 211, 155, 0.3);
+  background: rgba(95, 211, 155, 0.1);
+  color: var(--sld-color-success);
+}
+
+.sld-home--agentes .sld-account__chip--cierre {
+  border-color: rgba(255, 139, 126, 0.3);
+  background: rgba(255, 139, 126, 0.1);
+  color: var(--sld-color-danger);
+}
+
+.sld-home--agentes .sld-account__state {
+  border-radius: var(--sld-radius-sm);
+}
+
+.sld-home--agentes .sld-account__note {
+  border-left-color: var(--agt-cian);
 }
 
 /* Pie -------------------------------------------------------------------- */

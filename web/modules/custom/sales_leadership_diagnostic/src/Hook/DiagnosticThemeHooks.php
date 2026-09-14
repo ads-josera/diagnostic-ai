@@ -49,15 +49,21 @@ final class DiagnosticThemeHooks {
   private const RESULT_ROUTE = 'sales_leadership_diagnostic.result';
 
   /**
-   * El panel del alumno, hoy la única pantalla con el estilo nuevo.
+   * Las pantallas del alumno que ya llevan el estilo nuevo.
    *
-   * El estilo «AI Sales Agents», el de la landing oscura de la membresía.
+   * El estilo «AI Sales Agents», el de la landing oscura de la membresía. Se
+   * enseñó primero en el panel y José Raúl lo aprobó el 13-09-2026; desde
+   * entonces se extiende por fases, y cada fase añade aquí sus rutas. Va por
+   * ruta y no para todo el marco a propósito: las que aún no han pasado
+   * tienen que seguir exactamente igual mientras tanto.
    *
-   * Es una muestra (13-09-2026) para que José Raúl la apruebe antes de llevar
-   * el estilo al resto. Por eso va por ruta y no para todo el marco: las demás
-   * pantallas tienen que seguir exactamente igual mientras tanto.
+   * Fase 1: la página de cada agente y «Mis cuentas».
    */
-  private const DASHBOARD_ROUTE = 'sales_leadership_diagnostic.dashboard';
+  private const STYLED_ROUTES = [
+    'sales_leadership_diagnostic.dashboard',
+    'sales_leadership_diagnostic.agent_page',
+    'sales_leadership_diagnostic.accounts',
+  ];
 
   private const INNER_ROUTES = [
     'sales_leadership_diagnostic.dashboard',
@@ -173,6 +179,8 @@ final class DiagnosticThemeHooks {
           'history' => [],
           // Entrada a «Mis cuentas» con las cuentas de ESTE agente, o NULL.
           'accounts' => NULL,
+          // Su color en el estilo «AI Sales Agents»: «cian» o «lima».
+          'accent' => 'cian',
         ],
       ],
       'sld_chat' => [
@@ -423,10 +431,10 @@ final class DiagnosticThemeHooks {
     // el contenido de la tarjeta.
     $variables['#attached']['library'][] = 'sales_leadership_diagnostic/welcome';
 
-    // El estilo «AI Sales Agents», solo en el panel: la clase la pone la
-    // plantilla del marco y la hoja y la red de nodos las trae la librería.
-    // En cualquier otra ruta no llega ni una cosa ni la otra.
-    if ($this->routeMatch->getRouteName() === self::DASHBOARD_ROUTE) {
+    // El estilo «AI Sales Agents», solo en las rutas que ya lo llevan: la
+    // clase la pone la plantilla del marco y la hoja y la red de nodos las
+    // trae la librería. En cualquier otra ruta no llega ni una cosa ni la otra.
+    if (in_array($this->routeMatch->getRouteName(), self::STYLED_ROUTES, TRUE)) {
       $variables['sld_tema'] = 'agentes';
       $variables['#attached']['library'][] = 'sales_leadership_diagnostic/agentes';
     }

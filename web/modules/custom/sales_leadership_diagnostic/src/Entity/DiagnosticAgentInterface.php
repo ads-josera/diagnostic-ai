@@ -105,6 +105,11 @@ interface DiagnosticAgentInterface extends ConfigEntityInterface {
   public function canSearch(): bool;
 
   /**
+   * Color del agente en las pantallas del alumno: «cian» o «lima».
+   */
+  public function getAccent(): string;
+
+  /**
    * Si el agente puede ofrecerse a un alumno.
    */
   public function isUsable(): bool;

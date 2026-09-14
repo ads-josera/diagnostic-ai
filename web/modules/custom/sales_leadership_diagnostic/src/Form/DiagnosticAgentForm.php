@@ -268,6 +268,17 @@ final class DiagnosticAgentForm extends EntityForm {
       '#maxlength' => 100,
     ];
 
+    $form['accent'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Color del agente'),
+      '#description' => $this->t('Lo distingue en las pantallas del alumno: su tarjeta en el panel, su página y su conversación. Son los dos colores del estilo «AI Sales Agents», elegidos para leerse bien sobre el fondo oscuro.'),
+      '#options' => [
+        'cian' => $this->t('Cian'),
+        'lima' => $this->t('Lima'),
+      ],
+      '#default_value' => $agente->getAccent(),
+    ];
+
     $form['weight'] = [
       '#type' => 'number',
       '#title' => $this->t('Orden'),

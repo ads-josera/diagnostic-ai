@@ -90,9 +90,20 @@ use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
     'result_title',
     'weight',
     'can_search',
+    'accent',
   ],
 )]
 final class DiagnosticAgent extends ConfigEntityBase implements DiagnosticAgentInterface {
+
+  /**
+   * Colores de la paleta «AI Sales Agents» que puede llevar un agente.
+   */
+  public const ACCENTS = ['cian', 'lima'];
+
+  /**
+   * El color de un agente que no ha elegido otro.
+   */
+  public const ACCENT_DEFAULT = 'cian';
 
   /**
    * Identificador legible por máquina.
@@ -175,6 +186,19 @@ final class DiagnosticAgent extends ConfigEntityBase implements DiagnosticAgentI
    * Orden en los listados y en el panel del alumno.
    */
   protected int $weight = 0;
+
+  /**
+   * Color del agente en el estilo «AI Sales Agents».
+   *
+   * Una clave de la paleta y no un color libre: la paleta la fija el estilo
+   * (css/sld-agentes.css) y está medida para leerse sobre el fondo oscuro. Un
+   * color cualquiera elegido aquí podría salir ilegible.
+   *
+   * Existe desde el 13-09-2026. En la muestra del panel el color iba por
+   * posición —el primero cian, el segundo lima—, y en cuanto cambiara el
+   * orden, su tarjeta, su página y su conversación dirían colores distintos.
+   */
+  protected string $accent = self::ACCENT_DEFAULT;
 
   /**
    * Si este agente puede salir a buscar en internet.
@@ -298,6 +322,17 @@ final class DiagnosticAgent extends ConfigEntityBase implements DiagnosticAgentI
    */
   public function canSearch(): bool {
     return $this->can_search;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Un valor fuera de la paleta —configuración importada a mano, por ejemplo—
+   * cae en el de siempre en vez de llegar a la plantilla como una clase CSS
+   * que no pinta nada.
+   */
+  public function getAccent(): string {
+    return in_array($this->accent, self::ACCENTS, TRUE) ? $this->accent : self::ACCENT_DEFAULT;
   }
 
   /**

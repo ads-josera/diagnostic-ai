@@ -283,3 +283,6 @@ sales_leadership_diagnostic.agent.*:
     can_search:
       type: boolean
       label: 'Puede buscar en internet'
+    accent:
+      type: string
+      label: 'Color del agente en las pantallas del alumno'

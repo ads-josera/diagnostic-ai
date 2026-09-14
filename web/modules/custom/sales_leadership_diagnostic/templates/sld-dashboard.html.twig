@@ -92,7 +92,7 @@
         <ul class="sld-dashboard__cards">
           {% for agent in agents %}
             <li>
-              <a class="sld-card" href="{{ agent.page_url }}">
+              <a class="sld-card sld-card--{{ agent.accent }}" href="{{ agent.page_url }}">
                 {#
                   Sin icono se pinta la inicial del agente, no un hueco.
 

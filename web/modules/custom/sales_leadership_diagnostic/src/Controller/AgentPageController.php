@@ -108,6 +108,7 @@ final class AgentPageController extends ControllerBase {
       '#agent_label' => $sld_agent->label(),
       '#agent_description' => $sld_agent->getDescription(),
       '#icon_url' => $this->welcome->getIconUrl($sld_agent),
+      '#accent' => $sld_agent->getAccent(),
       // La presentación que hasta ahora solo se veía dentro del chat, y solo
       // mientras la conversación estuviera vacía. Aquí se lee ANTES de
       // empezar, que es cuando sirve para decidir.

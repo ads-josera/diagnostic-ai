@@ -315,6 +315,9 @@ final class DashboardController extends ControllerBase {
         // Con varios agentes, las cuentas se anuncian en la tarjeta del que
         // las propuso. La tarjeta entera ya lleva a su página.
         'accounts' => $varios ? (int) ($cuentasPorAgente[$id] ?? 0) : 0,
+        // Su color en el estilo «AI Sales Agents»: el mismo en su tarjeta, su
+        // página y su conversación, sea cual sea el orden.
+        'accent' => $agent->getAccent(),
       ];
     }
 

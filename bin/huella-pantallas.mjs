@@ -77,6 +77,12 @@ async function huella(page) {
       // cuando llega: con ella dos pasadas idénticas salían distintas.
       if (el.id === 'drupal-live-announce') continue;
       const cs = getComputedStyle(el);
+      // Lo que no se pinta no puede cambiar la pantalla. La lista de mensajes
+      // vacía de Olivero (oculta) recibe su margen de un script a destiempo, y
+      // hacía distintas dos pasadas idénticas (visto tres veces, 13-09-2026).
+      // Si algo visible se ocultara, o al revés, cambiaría la lista de
+      // elementos y se detectaría igual.
+      if (cs.display === 'none') continue;
       const r = el.getBoundingClientRect();
       const clase = typeof el.className === 'string' ? el.className.trim() : '';
       filas.push([
@@ -145,7 +151,14 @@ export default async function run(page) {
   if (!base) return { etiqueta, pantallas: Object.keys(firmas).length, firmas };
 
   const antes = `${process.env.SLD_SALIDA}/${base}`;
-  const informe = { iguales: [], distintas: {} };
+  // Una pantalla que no cargó no «cambió»: la comparación no vale nada. Pasó el
+  // 13-09-2026 al correrla a la vez que bin/humo.mjs, que entra y sale con la
+  // misma cuenta de gestor: sus cuatro pantallas dieron 403 y salían como
+  // «distintas». Se dice aparte y primero, para que no se confunda.
+  const noCargaron = Object.entries(firmas)
+    .filter(([, f]) => f.estado !== 200)
+    .map(([clave, f]) => `${clave} (HTTP ${f.estado})`);
+  const informe = { noCargaron, iguales: [], distintas: {} };
   for (const clave of Object.keys(firmas)) {
     const a = existsSync(`${antes}/${clave}.txt`) ? readFileSync(`${antes}/${clave}.txt`, 'utf8').split('\n') : [];
     const d = readFileSync(`${dir}/${clave}.txt`, 'utf8').split('\n');

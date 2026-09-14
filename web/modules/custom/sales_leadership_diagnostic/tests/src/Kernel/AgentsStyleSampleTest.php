@@ -53,11 +53,13 @@ final class AgentsStyleSampleTest extends KernelTestBase {
    *   Ruta y si debe llevarlo.
    */
   public static function pantallas(): array {
+    // Se va ampliando por fases, y cada fase mueve aquí sus pantallas a TRUE.
+    // Fase 1 (13-09-2026): la página de cada agente y «Mis cuentas».
     return [
       'panel' => ['sales_leadership_diagnostic.dashboard', TRUE],
-      'página de un agente' => ['sales_leadership_diagnostic.agent_page', FALSE],
+      'página de un agente' => ['sales_leadership_diagnostic.agent_page', TRUE],
+      'mis cuentas' => ['sales_leadership_diagnostic.accounts', TRUE],
       'informe' => ['sales_leadership_diagnostic.result', FALSE],
-      'mis cuentas' => ['sales_leadership_diagnostic.accounts', FALSE],
       'conversación' => ['sales_leadership_diagnostic.session', FALSE],
       'inicio de sesión' => ['user.login', FALSE],
     ];
@@ -81,6 +83,23 @@ final class AgentsStyleSampleTest extends KernelTestBase {
     $librerias = $variables['#attached']['library'] ?? [];
     $this->assertSame($lleva, in_array('sales_leadership_diagnostic/agentes', $librerias, TRUE), 'La hoja de estilos.');
     $this->assertSame($lleva ? 'agentes' : NULL, $variables['sld_tema'] ?? NULL, 'La clase del marco.');
+  }
+
+  /**
+   * Cada agente guarda su color, y uno fuera de la paleta cae en cian.
+   *
+   * Hasta el 13-09-2026 el color iba por posición en el panel: con otro orden,
+   * la tarjeta y la página del mismo agente habrían dicho colores distintos.
+   */
+  public function testCadaAgenteTieneSuColor(): void {
+    $almacen = $this->container->get('entity_type.manager')->getStorage('sld_agent');
+
+    $lima = $almacen->create(['id' => 'con_lima', 'label' => 'Lima', 'accent' => 'lima']);
+    $lima->save();
+    $this->assertSame('lima', $almacen->load('con_lima')->getAccent(), 'Se guarda y se exporta.');
+
+    $this->assertSame('cian', $almacen->create(['id' => 'sin_color', 'label' => 'Sin'])->getAccent(), 'Sin elegir, cian.');
+    $this->assertSame('cian', $almacen->create(['id' => 'raro', 'label' => 'Raro', 'accent' => 'fucsia'])->getAccent(), 'Fuera de la paleta, cian.');
   }
 
 }

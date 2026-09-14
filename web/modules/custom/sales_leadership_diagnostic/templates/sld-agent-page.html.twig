@@ -28,12 +28,13 @@
  *   count), o nulo si no propuso ninguna.
  * - history: filas de ESTE agente, cada una con id, date, status,
  *   status_machine, version, result_id e is_resumable.
+ * - accent: su color en el estilo «AI Sales Agents» («cian» o «lima»).
  *
  * Twig autoescapa todas las variables, de modo que ningún dato de usuario
  * puede inyectar marcado.
  */
 #}
-<div class="sld sld-dashboard sld-agent-page">
+<div class="sld sld-dashboard sld-agent-page sld-agent-page--{{ accent }}">
 
   {#
     La vuelta va ARRIBA y es lo primero que se lee. Esta página se alcanza

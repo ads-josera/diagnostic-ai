@@ -1630,3 +1630,25 @@ function sales_leadership_diagnostic_update_10022(): string {
 
   return (string) t('Se movieron @n documento(s) de conocimiento de la carpeta pública a la privada.', ['@n' => $movidos]);
 }
+
+/**
+ * Da a cada agente su color en el estilo «AI Sales Agents».
+ *
+ * El color pasa a ser un ajuste del agente (13-09-2026). Hasta ahora, en la
+ * muestra del panel, iba por posición. Se deja cada uno con el que ya tenía
+ * a la vista: el de prospección en lima, como en la landing de la membresía,
+ * y el resto en cian, el valor por defecto.
+ *
+ * Se guardan TODOS, también los que quedan en cian, para que la clave conste
+ * en su configuración y se exporte: una ausencia no se distingue de un olvido.
+ */
+function sales_leadership_diagnostic_update_10023(): string {
+  $cambiados = 0;
+
+  foreach (\Drupal::entityTypeManager()->getStorage('sld_agent')->loadMultiple() as $agente) {
+    $agente->set('accent', $agente->id() === 'prospecting_diagnostic' ? 'lima' : 'cian')->save();
+    $cambiados++;
+  }
+
+  return (string) t('Color asignado a @n agente(s).', ['@n' => $cambiados]);
+}
