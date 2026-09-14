@@ -93,9 +93,14 @@ Seguir `docs/DESPLIEGUE.md` §1. Lo crítico, en orden:
 cd ~   # o la carpeta donde vaya el proyecto; su subcarpeta web/ es la raíz del dominio
 git clone git@github.com:ads-josera/diagnostic-ai.git
 cd diagnostic-ai
+composer --version           # debe ser 2.10.3 o superior (CVE-2026-84361)
 composer install --no-dev --optimize-autoloader
 vendor/bin/drush --version   # drush es dependencia de producción: debe responder
 ```
+
+Si el Composer del servidor es anterior a 2.10.3, actualizarlo antes
+(`composer self-update`): la vulnerabilidad permite ejecutar órdenes al
+instalar un paquete malicioso.
 
 ## Paso 3 — Base de datos y `settings.local.php`
 
@@ -167,16 +172,27 @@ La configuración exportada ya trae, entre otras cosas:
   la pantalla de consumo: 20.
 - Registro de Drupal a 100 000 entradas, favicon, marca y los dos agentes.
 
-## Paso 5 — Agentes y documentos de conocimiento
+## Paso 5 — Agentes, documentos, iconos y logotipos
 
 ```bash
 vendor/bin/drush php:script bin/cargar-agentes.php
+vendor/bin/drush php:script bin/cargar-marca.php
 ```
 
-Pone el prompt, el contrato de salida y los documentos de cada agente desde el
-repositorio, en la carpeta **privada**. Comprobar en **Informes → Informe de
-estado** que «Diagnostic AI: documentos de conocimiento» dice **Protegidos**.
-Detalle en DESPLIEGUE §6.
+El primero pone el prompt, el contrato de salida, los documentos (en la
+carpeta **privada**) y el **icono** de cada agente. El segundo, el fondo y los
+**dos logotipos** de la portada. Todo sale del repositorio (`docs/marca/`,
+`docs/knowledge-cliente/`, `docs/Knowledge documents/`).
+
+Por qué hacen falta: la configuración guarda el NÚMERO de cada archivo, y los
+números que vienen en `config/sync` son los del entorno de desarrollo. Sin
+estos dos pasos, los agentes quedan sin documentos ni icono y **ninguna
+pantalla del alumno tiene logotipo**. En la primera carga el cargador dice
+«carga inicial en este entorno» y **no sube la versión** de los agentes: es la
+misma metodología, solo que aún no estaba aquí.
+
+Comprobar en **Informes → Informe de estado** que «Diagnostic AI: documentos de
+conocimiento» dice **Protegidos**. Detalle en DESPLIEGUE §6.
 
 ## Paso 6 — Las tres cuentas que se conservan siempre
 
@@ -294,8 +310,14 @@ vendor/bin/drush config:import -y
 vendor/bin/drush cache:rebuild
 ```
 
-⚠ `config:import` **sobrescribe** la configuración de producción con la del
-repositorio. Si alguien cambia en la interfaz de producción algo que es
+Los números de archivo (documentos e icono de cada agente, fondo y logotipos
+de la portada) **no** los toca `config:import`: los protege el módulo
+`config_ignore` (`config/sync/config_ignore.settings.yml`). Los cargadores del
+paso 5 solo se vuelven a pasar cuando cambian los documentos, los iconos o los
+logotipos del repositorio.
+
+⚠ Todo lo demás sí: `config:import` **sobrescribe** la configuración de
+producción con la del repositorio. Si alguien cambia en la interfaz de producción algo que es
 configuración (topes, marca, ajustes de un agente), ese cambio **se pierde en el
 siguiente despliegue** salvo que se lleve también al repositorio. Antes de
 desplegar, `vendor/bin/drush config:status` dice qué se perdería.

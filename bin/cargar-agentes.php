@@ -44,6 +44,9 @@ $contratos = dirname(__DIR__) . '/docs/contratos-de-salida/';
 $plan = [
   'prospecting_diagnostic' => [
     'prompt' => 'GAP_Prospecting_AI_CORE_INSTRUCTIONS_v1.4.3_COMPACT.txt',
+    // En docs/marca/. Mismo nombre que tiene en public://sales-diagnostic/,
+    // para que en local se reutilice el archivo que ya hay.
+    'icono' => 'gap-icon_0.png',
     'carpeta' => 'docs/knowledge-cliente/',
     'documentos' => [
       'GAP_Prospecting_AI_01_Orchestrator_v1.3.docx',
@@ -65,6 +68,7 @@ $plan = [
   ],
   'sales_leadership_diagnostic' => [
     'prompt' => 'Sales_Leadership_Diagnostic_AI_prompt_final_aprobado.txt',
+    'icono' => 'icono-agente.svg',
     'carpeta' => 'docs/Knowledge documents/',
     // El juego completo que mandó el cliente el 12-09-2026. Para este agente no
     // hay manifiesto como el del Documento 13, así que el orden sigue la
@@ -162,7 +166,45 @@ function huella_documentos(array $fids): string {
   return sha1(implode('|', $partes));
 }
 
+/**
+ * Si a la lista le falta algún archivo en ESTE entorno.
+ *
+ * Pasa en una instalación nueva: la ficha llega con la configuración exportada
+ * y trae los números de archivo del entorno donde se exportó, que aquí no
+ * existen. Cargar los documentos entonces no cambia la metodología —es la
+ * misma, solo que aún no estaba aquí—, y subir la versión por eso haría que
+ * cada entorno contara versiones distintas del mismo agente (§57).
+ */
+function faltan_archivos(array $fids): bool {
+  $sistema = \Drupal::service('file_system');
+
+  foreach ($fids as $fid) {
+    $archivo = \Drupal::entityTypeManager()->getStorage('file')->load($fid);
+    $real = $archivo ? $sistema->realpath($archivo->getFileUri()) : FALSE;
+    if (!$real || !is_file($real)) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
 $problemas = [];
+
+// La huella de lo que había, de TODOS los agentes, antes de escribir un solo
+// archivo. En un entorno nuevo los primeros archivos que se crean reciben los
+// números más bajos, y podrían coincidir con los que trae la ficha del
+// segundo agente: compararlos después daría una huella falsa.
+$previo = [];
+foreach (array_keys($plan) as $id) {
+  $existente = $etm->getStorage('sld_agent')->load($id);
+  if ($existente !== NULL) {
+    $previo[$id] = [
+      'huella' => huella_documentos($existente->getKnowledgeFids()),
+      'faltaban' => faltan_archivos($existente->getKnowledgeFids()),
+    ];
+  }
+}
 
 foreach ($plan as $id => $datos) {
   $agente = $etm->getStorage('sld_agent')->load($id);
@@ -228,9 +270,44 @@ foreach ($plan as $id => $datos) {
     }
   }
 
+  // --- El icono ---
+  // Viaja en docs/marca/ desde el 14-09-2026. La ficha guarda el NÚMERO de su
+  // archivo, que en otro entorno no existe: el agente salía sin icono. No es
+  // metodología, así que cambiarlo no sube la versión.
+  if (!empty($datos['icono'])) {
+    $origenIcono = dirname(__DIR__) . '/docs/marca/' . $datos['icono'];
+
+    if (!is_file($origenIcono)) {
+      $problemas[] = "Falta el icono {$datos['icono']} en docs/marca/.";
+    }
+    else {
+      $publico = 'public://sales-diagnostic';
+      $fs->prepareDirectory($publico, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+      $icono = \Drupal::service('file.repository')
+        ->writeData(file_get_contents($origenIcono), $publico . '/' . $datos['icono'], FileExists::Replace);
+      // Permanente y con su uso, como lo deja la ficha: si no, la limpieza
+      // automática de Drupal lo borra a las seis horas.
+      $icono->setPermanent();
+      $icono->save();
+      $uso = \Drupal::service('file.usage');
+      if (!isset($uso->listUsage($icono)['sales_leadership_diagnostic'])) {
+        $uso->add($icono, 'sales_leadership_diagnostic', 'sld_agent', $id);
+      }
+
+      if ($agente->getWelcomeIconFid() !== (int) $icono->id()) {
+        $agente->set('welcome_icon_fid', (int) $icono->id());
+        printf("  icono: %s (archivo %d)\n", $datos['icono'], $icono->id());
+      }
+      else {
+        printf("  icono: sin cambios\n");
+      }
+    }
+  }
+
   // --- Los documentos ---
   if ($datos['documentos'] !== NULL) {
-    $antes = huella_documentos($agente->getKnowledgeFids());
+    $antes = $previo[$id]['huella'] ?? huella_documentos($agente->getKnowledgeFids());
+    $faltaban = $previo[$id]['faltaban'] ?? FALSE;
     $fids = [];
 
     foreach ($datos['documentos'] as $nombre) {
@@ -256,7 +333,10 @@ foreach ($plan as $id => $datos) {
 
     $agente->setKnowledgeFids($fids);
 
-    if (huella_documentos($fids) !== $antes) {
+    if (huella_documentos($fids) !== $antes && $faltaban) {
+      printf("  documentos: %d cargados — carga inicial en este entorno, la versión no sube\n", count($fids));
+    }
+    elseif (huella_documentos($fids) !== $antes) {
       $cambio = TRUE;
       printf("  documentos: %d cargados, CAMBIARON\n", count($fids));
     }
