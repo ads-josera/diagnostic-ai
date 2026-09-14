@@ -106,9 +106,9 @@ Lo que hay que hacer, en el hPanel de Hostinger del cliente:
 
 2. Autorizar exactamente esa IP en el panel del cliente.
 
-> La IP `72.167.47.47` que figuraba aquí era del servidor de un plan anterior
-> (28-08-2026). La del servidor de labai.salesbumm.com se comprueba con el
-> paso 1.
+> Comprobado el 14-09-2026 desde el servidor de labai.salesbumm.com: la IP de
+> salida es `72.167.47.47`, la misma que se autorizó el 28-08-2026. Es el mismo
+> servidor; basta con confirmar que sigue en la lista blanca.
 
 
 3. Confirmar que esa pantalla del panel **autoriza** y no **bloquea**. En

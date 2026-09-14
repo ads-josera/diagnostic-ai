@@ -45,8 +45,9 @@ dice **en qué orden** y **con qué datos**, y corrige lo que allí quedó viejo
 | Repositorio | `git@github.com:ads-josera/diagnostic-ai.git` (**privado**) |
 | WordPress del cliente | https://salesbumm.com, con el plugin puente **1.3.0** ya instalado y sus dos secretos ya definidos en su `wp-config.php` |
 
-> La IP del servidor hay que comprobarla en ESTE servidor (paso 1): la
-> `72.167.47.47` de planes anteriores era de otro.
+> La IP de salida del servidor, comprobada desde él el 14-09-2026, es
+> `72.167.47.47`: la misma que se autorizó en el Hostinger del cliente el
+> 28-08-2026. Basta con confirmar que sigue en su lista blanca.
 
 ---
 
