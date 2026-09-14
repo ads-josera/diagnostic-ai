@@ -163,6 +163,12 @@ $databases['default']['default'] = [
   'driver' => 'mysql',
   'prefix' => '',
   'collation' => 'utf8mb4_general_ci',
+  // El nivel que recomienda Drupal: con REPEATABLE READ (el de este MariaDB)
+  // pueden aparecer bloqueos cuando varios alumnos escriben a la vez, y el
+  // informe de estado lo avisa.
+  'init_commands' => [
+    'isolation_level' => 'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
+  ],
 ];
 
 // Generar con: openssl rand -hex 32

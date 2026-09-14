@@ -249,6 +249,19 @@ PHP-FPM (apagar y encender en MultiPHP Manager): si no, el pool sigue en la
 raíz vieja y todo `.php` responde 404 «No input file specified» (ver la sonda
 en `docs/ARRANQUE-PRODUCCION.md`, paso 2).
 
+**Hay una caché nginx delante del sitio**, y no se anuncia: responde
+`Server: nginx` sin cabeceras `X-Cache` ni `Age`. Guarda por dirección exacta
+las respuestas que no traen `Cache-Control`. Se comprobó el 14-09-2026 que
+**respeta `must-revalidate, no-cache, private`**, que es lo que Drupal manda en
+todas sus páginas, así que no sirve a un alumno la pantalla de otro. Dos
+consecuencias prácticas:
+
+- Una sonda o un script PHP suelto (sin `Cache-Control`) puede devolver una
+  versión vieja: para probar, usar un nombre de archivo nuevo o `?v=<algo>`.
+- Si algún día se añade al módulo una respuesta que se salte el
+  `Cache-Control` de Drupal, esa caché la guardaría para todos: comprobarlo
+  antes de desplegar.
+
 ## 3. Secretos y ajustes del entorno
 
 **Antes** de instalar. En cPanel van en **`web/sites/default/settings.local.php`**
@@ -291,6 +304,11 @@ entorno a PHP y a la línea de órdenes, `settings.php` también las lee (`SLD_*
 4. **`sld_use_mock_engine` NO debe existir** en `settings.php`. Si está, los
    diagnósticos se generan con respuestas de prueba. El informe de estado lo
    marca como error, pero conviene comprobarlo antes.
+5. **Aislamiento de transacciones en `READ COMMITTED`**
+   (`init_commands` de la conexión, ver la plantilla del paso 3 del arranque).
+   El MariaDB del servidor viene en `REPEATABLE READ`, que Drupal desaconseja
+   porque provoca bloqueos con escrituras simultáneas; el informe de estado lo
+   avisa como «Transaction isolation level».
 
 ## 4. Base de datos y instalación
 
