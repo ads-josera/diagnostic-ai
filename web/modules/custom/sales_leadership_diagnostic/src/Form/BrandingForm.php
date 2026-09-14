@@ -81,7 +81,11 @@ final class BrandingForm extends ConfigFormBase {
       '#type' => 'details',
       '#title' => $this->t('Colores'),
       '#open' => TRUE,
-      '#description' => $this->t('Los selectores muestran el color que se está usando ahora. Los colores de estado —error, aviso, éxito— no se pueden cambiar: un error debe seguir pareciendo un error aunque la marca sea verde.'),
+      '#description' => $this->t('Los selectores muestran el color que se está usando ahora. Los colores de estado —error, aviso, éxito— no se pueden cambiar: un error debe seguir pareciendo un error aunque la marca sea verde.')
+      // El panel del alumno lleva desde el 13-09-2026 el estilo oscuro «AI
+      // Sales Agents», con paleta fija. Sin este aviso, quien cambiara aquí
+      // el color no lo vería en el panel y creería que el ajuste no funciona.
+      . ' ' . $this->t('El panel del alumno usa el estilo «AI Sales Agents», con su propia paleta fija: estos colores no le afectan.'),
     ];
 
     $form['colores']['color_primary'] = [

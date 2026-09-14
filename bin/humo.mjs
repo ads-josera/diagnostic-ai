@@ -204,18 +204,29 @@ export default async function run(page) {
     await page.goto(`${SITIO}${ruta}`, { waitUntil: 'networkidle' });
 
     const comparacion = await page.evaluate((sel) => {
+      const el = document.querySelector(sel);
+      const efectivo = el ? getComputedStyle(el).getPropertyValue('--sld-color-primary').trim().toLowerCase() : '';
+
+      // Con el estilo «AI Sales Agents» la paleta es fija y Marca no manda:
+      // lo decidió José Raúl el 13-09-2026 (ver css/sld-agentes.css).
+      if (el && el.closest('.sld-home--agentes')) return { agentes: true, efectivo };
+
       const bloque = document.querySelector('style[data-sld-branding]');
       if (!bloque) return { sinMarca: true };
 
       const pedido = (bloque.textContent.match(/--sld-color-primary:\s*(#[0-9a-fA-F]{3,6})/) || [])[1];
-      const el = document.querySelector(sel);
       if (!pedido || !el) return { sinMarca: true };
 
-      return {
-        pedido: pedido.toLowerCase(),
-        efectivo: getComputedStyle(el).getPropertyValue('--sld-color-primary').trim().toLowerCase(),
-      };
+      return { pedido: pedido.toLowerCase(), efectivo };
     }, selector);
+
+    // Se comprueba igual de estricto, contra la paleta fija: si el estilo
+    // dejara de aplicarse, el panel volvería al azul de Marca y esto fallaría.
+    if (comparacion.agentes) {
+      anotar(comparacion.efectivo === '#4ee2f2', `paleta fija del estilo AI Sales Agents: ${quien}`,
+        `el elemento usa ${comparacion.efectivo} y la paleta fija es #4ee2f2`);
+      continue;
+    }
 
     if (comparacion.sinMarca) {
       // Sin marca configurada no hay nada que comprobar: es un estado válido.

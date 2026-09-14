@@ -76,3 +76,19 @@ accounts:
     theme:
       css/sld-base.css: {}
       css/sld-accounts.css: {}
+
+# Estilo «AI Sales Agents»: MUESTRA en el panel del alumno (13-09-2026). Solo
+# la adjunta DiagnosticThemeHooks en esa ruta; ninguna otra pantalla la carga.
+# Depende de las del marco y del panel para cargarse DESPUÉS de ellas.
+agentes:
+  version: 1.x
+  css:
+    theme:
+      css/sld-agentes.css: {}
+  js:
+    js/sld-nodos.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+    - sales_leadership_diagnostic/welcome
+    - sales_leadership_diagnostic/dashboard

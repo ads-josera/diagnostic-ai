@@ -48,6 +48,17 @@ final class DiagnosticThemeHooks {
    */
   private const RESULT_ROUTE = 'sales_leadership_diagnostic.result';
 
+  /**
+   * El panel del alumno, hoy la única pantalla con el estilo nuevo.
+   *
+   * El estilo «AI Sales Agents», el de la landing oscura de la membresía.
+   *
+   * Es una muestra (13-09-2026) para que José Raúl la apruebe antes de llevar
+   * el estilo al resto. Por eso va por ruta y no para todo el marco: las demás
+   * pantallas tienen que seguir exactamente igual mientras tanto.
+   */
+  private const DASHBOARD_ROUTE = 'sales_leadership_diagnostic.dashboard';
+
   private const INNER_ROUTES = [
     'sales_leadership_diagnostic.dashboard',
     'sales_leadership_diagnostic.agent_page',
@@ -411,6 +422,14 @@ final class DiagnosticThemeHooks {
     // `dashboard` que ya adjunta el controlador: una trae el marco y la otra
     // el contenido de la tarjeta.
     $variables['#attached']['library'][] = 'sales_leadership_diagnostic/welcome';
+
+    // El estilo «AI Sales Agents», solo en el panel: la clase la pone la
+    // plantilla del marco y la hoja y la red de nodos las trae la librería.
+    // En cualquier otra ruta no llega ni una cosa ni la otra.
+    if ($this->routeMatch->getRouteName() === self::DASHBOARD_ROUTE) {
+      $variables['sld_tema'] = 'agentes';
+      $variables['#attached']['library'][] = 'sales_leadership_diagnostic/agentes';
+    }
 
     // Sin estas etiquetas, cambiar el fondo o el logotipo no se veria en esta
     // pagina hasta que caducara por otro motivo.

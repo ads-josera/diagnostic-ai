@@ -1,0 +1,443 @@
+/**
+ * @file
+ * Estilo «AI Sales Agents»: MUESTRA en el panel del alumno.
+ *
+ * Tomado de la landing oscura de la membresía (13-09-2026): fondo casi negro,
+ * cian y lima, líneas finas, esquinas casi rectas y etiquetas en letra
+ * técnica. José Raúl lo quiere para las pantallas del alumno; antes de
+ * llevarlo a todas, se enseña en una.
+ *
+ * TODO va acotado a `.sld-home--agentes`, una clase que solo pone
+ * DiagnosticThemeHooks en la ruta del panel, y esta hoja solo se adjunta ahí.
+ * Las demás pantallas no la descargan. Que no cambiaron se comprobó con
+ * `bin/huella-pantallas.mjs`, que compara los estilos calculados de cada
+ * elemento antes y después.
+ *
+ * Adaptado, no copiado: la landing se lee en segundos y el producto durante
+ * minutos. El texto corrido sigue en letra normal y a buen tamaño; la letra
+ * técnica queda para etiquetas, y nunca por debajo de 12 px.
+ */
+
+/* Tipografías servidas desde el propio módulo (licencia OFL, en fonts/): sin
+   depender de Google ni avisarle de cada visita. Variables: un archivo cubre
+   todos los grosores. */
+@font-face {
+  font-family: "Archivo";
+  src: url("../fonts/archivo-latin-var.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fonts/jetbrains-mono-latin-var.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Paleta ---------------------------------------------------------------- */
+
+/* PALETA FIJA: aquí no manda la pantalla «Marca». Lo decidió José Raúl el
+   13-09-2026: el estilo oscuro es la identidad de «AI Sales Agents», con su
+   cian y su lima, y Marca sigue mandando en las pantallas del gestor, el
+   inicio de sesión y la portada. Poner el cian en Marca no era opción: ese
+   color se usa también sobre las pantallas claras del gestor, y cian sobre
+   blanco no se lee. La prueba de humo comprueba esta paleta en el panel.
+
+   Dos clases y no una: sld-base.css declara los tokens claros en `.sld-home`,
+   con la misma fuerza que `.sld-home--agentes`, y ganaría el que se cargue
+   después. Así no depende del orden. `.sld` los vuelve a declarar por dentro,
+   de ahí la segunda línea. */
+.sld-home.sld-home--agentes,
+.sld-home--agentes .sld {
+  --agt-fondo: #06090b;
+  --agt-cian: #4ee2f2;
+  --agt-lima: #a6ff4d;
+  --agt-linea: rgba(78, 226, 242, 0.16);
+  --agt-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --sld-color-primary: #4ee2f2;
+  --sld-color-primary-hover: #a6ff4d;
+  --sld-color-primary-contrast: #04070a;
+
+  --sld-color-bg: #0a1317;
+  --sld-color-surface: #0f1c22;
+  --sld-color-border: rgba(120, 150, 158, 0.24);
+
+  --sld-color-text: #e6f0f1;
+  --sld-color-text-muted: #a9bdc2;
+
+  /* El verde de «va bien» no puede confundirse con el lima de la marca. */
+  --sld-color-success: #5fd39b;
+  --sld-color-warning: #e3b34f;
+  --sld-color-danger: #ff8b7e;
+  --sld-color-info: #4ee2f2;
+
+  --sld-radius: 4px;
+  --sld-radius-sm: 3px;
+  --sld-font: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sld-shadow: 0 18px 40px -26px rgba(78, 226, 242, 0.55);
+}
+
+.sld-home--agentes {
+  background: var(--agt-fondo);
+  color: var(--sld-color-text);
+  font-family: var(--sld-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Los títulos, en Archivo también. El tema fija una tipografía EXPLÍCITA para
+   los encabezados, y eso gana a la heredada: el saludo salía en Metropolis
+   (medido en la huella del 13-09-2026). Los títulos de sección, que van en
+   letra técnica, lo declaran con más fuerza y no se ven afectados. */
+.sld-home--agentes :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--sld-font);
+}
+
+.sld-home--agentes ::selection {
+  background: var(--agt-cian);
+  color: #04070a;
+}
+
+/* Fondo: rejilla, halos y la red de nodos -------------------------------- */
+
+.sld-home--agentes .sld-home__frame--liso {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--agt-fondo);
+}
+
+/* La rejilla se desvanece hacia abajo: acompaña la cabecera y no se mete
+   debajo del texto que se lee. */
+.sld-home--agentes .sld-home__frame--liso::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 44rem;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(78, 226, 242, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(78, 226, 242, 0.055) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(110% 80% at 30% 0%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(110% 80% at 30% 0%, #000 0%, transparent 75%);
+}
+
+.sld-home--agentes .sld-home__frame--liso::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(40rem 40rem at -10% -12%, rgba(78, 226, 242, 0.14), transparent 62%),
+    radial-gradient(36rem 36rem at 108% 55%, rgba(166, 255, 77, 0.07), transparent 65%);
+}
+
+/* El lienzo lo crea js/sld-nodos.js. Decorativo: sin puntero y oculto a los
+   lectores de pantalla. */
+.sld-home--agentes .sld-nodos {
+  position: absolute;
+  inset: 0 0 auto;
+  width: 100%;
+  height: 40rem;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.75;
+  -webkit-mask-image: linear-gradient(#000 35%, transparent);
+  mask-image: linear-gradient(#000 35%, transparent);
+}
+
+/* Barra ------------------------------------------------------------------ */
+
+.sld-home--agentes .sld-home__bar {
+  min-height: 72px;
+  border: 1px solid var(--agt-linea);
+  border-radius: var(--sld-radius);
+  background: rgba(6, 9, 11, 0.72);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.sld-home--agentes .sld-home__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.sld-home--agentes .sld-home__brand img {
+  max-height: 34px;
+}
+
+.sld-home--agentes .sld-home__tag {
+  color: var(--agt-cian);
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* El fondo lo pone la plantilla con el color de acento de la portada. */
+.sld-home--agentes .sld-home__logout {
+  border-radius: var(--sld-radius-sm);
+  color: #04070a;
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Tarjeta ---------------------------------------------------------------- */
+
+.sld-home--agentes .sld-inner-frame.sld-home__card {
+  border: 1px solid rgba(78, 226, 242, 0.2);
+  border-radius: var(--sld-radius);
+  background: linear-gradient(165deg, rgba(13, 23, 28, 0.94), rgba(7, 11, 14, 0.94));
+  box-shadow: 0 40px 100px -50px rgba(0, 0, 0, 0.95);
+}
+
+.sld-home--agentes .sld-inner-frame .sld-dashboard__greeting {
+  color: var(--sld-color-text);
+  font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.sld-home--agentes .sld-dashboard__welcome {
+  font-size: 1.05rem;
+}
+
+/* Los títulos de sección hacen de etiqueta, como en la landing. */
+.sld-home--agentes .sld-dashboard__section-title {
+  margin-bottom: 1.25rem;
+  color: var(--agt-cian);
+  font-family: var(--agt-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  /* En móvil parte en dos líneas: con el interlineado heredado quedaban
+     separadas como dos títulos. */
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+/* Tarjetas de agente ----------------------------------------------------- */
+
+/* Cada agente con su color, como en la landing: el primero cian, el segundo
+   lima. Va por posición porque es una muestra; al llevarlo a todas las
+   pantallas conviene que el color sea un ajuste de cada agente, para que su
+   página y su chat usen el mismo. */
+.sld-home--agentes .sld-dashboard__cards {
+  counter-reset: agente;
+  gap: 1.25rem;
+}
+
+.sld-home--agentes .sld-card {
+  --agt-acento: var(--agt-cian);
+  --agt-acento-rgb: 78, 226, 242;
+  flex-wrap: wrap;
+  /* Las tarjetas se igualan en alto; sin esto el espacio que sobra en la más
+     corta se repartía ENTRE sus filas y abría un hueco bajo la etiqueta. */
+  align-content: flex-start;
+  row-gap: 1.1rem;
+  padding: 1.6rem;
+  border: 1px solid rgba(var(--agt-acento-rgb), 0.24);
+  background: linear-gradient(180deg, rgba(12, 22, 27, 0.85), rgba(7, 11, 14, 0.85));
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sld-home--agentes .sld-dashboard__cards > li:nth-child(even) .sld-card {
+  --agt-acento: var(--agt-lima);
+  --agt-acento-rgb: 166, 255, 77;
+  background: linear-gradient(180deg, rgba(15, 24, 17, 0.85), rgba(7, 11, 14, 0.85));
+}
+
+/* «AGENTE_01». Texto generado y decorativo: la segunda declaración lo oculta
+   a los lectores de pantalla donde el navegador lo admite, y la primera queda
+   para los que no. */
+.sld-home--agentes .sld-card::before {
+  counter-increment: agente;
+  content: "AGENTE_" counter(agente, decimal-leading-zero);
+  content: "AGENTE_" counter(agente, decimal-leading-zero) / "";
+  flex-basis: 100%;
+  padding-left: 0.95rem;
+  background: radial-gradient(circle at 3px 50%, var(--agt-acento) 3px, transparent 3.6px) no-repeat;
+  color: var(--agt-acento);
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+}
+
+.sld-home--agentes .sld-card:hover,
+.sld-home--agentes .sld-card:focus-visible {
+  border-color: rgba(var(--agt-acento-rgb), 0.6);
+  box-shadow: 0 18px 40px -26px rgba(var(--agt-acento-rgb), 0.6);
+  transform: translateY(-3px);
+}
+
+.sld-home--agentes .sld-card:focus-visible {
+  outline: 2px solid var(--agt-acento);
+  outline-offset: 3px;
+}
+
+.sld-home--agentes .sld-card__icon {
+  border: 1px solid rgba(var(--agt-acento-rgb), 0.25);
+  border-radius: var(--sld-radius-sm);
+  background: rgba(var(--agt-acento-rgb), 0.08);
+}
+
+.sld-home--agentes .sld-card__initial {
+  color: var(--agt-acento);
+}
+
+.sld-home--agentes .sld-card__name {
+  color: var(--sld-color-text);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.sld-home--agentes .sld-card__description {
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.sld-home--agentes .sld-card__accounts {
+  color: var(--agt-acento);
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.sld-home--agentes .sld-card__state {
+  color: #8fa6ac;
+  font-weight: 500;
+}
+
+/* Botones y avisos ------------------------------------------------------- */
+
+.sld-home--agentes .sld__button {
+  border-radius: var(--sld-radius-sm);
+  font-family: inherit;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 0 1px rgba(78, 226, 242, 0.5), 0 18px 46px -18px rgba(78, 226, 242, 0.75);
+  transition: background-color 0.16s ease, transform 0.16s ease;
+}
+
+.sld-home--agentes .sld__button:hover {
+  transform: translateY(-2px);
+}
+
+.sld-home--agentes .sld__button--secondary {
+  border-color: rgba(120, 150, 158, 0.35);
+  background: transparent;
+  color: var(--sld-color-text);
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: none;
+}
+
+.sld-home--agentes .sld__button--secondary:hover,
+.sld-home--agentes .sld__button--secondary:focus {
+  border-color: var(--agt-cian);
+  background: rgba(78, 226, 242, 0.08);
+  color: var(--sld-color-text);
+  transform: none;
+}
+
+.sld-home--agentes .sld-inner-frame .sld__notice {
+  box-shadow: none;
+}
+
+/* Lo que recordamos del alumno ------------------------------------------- */
+
+.sld-home--agentes .sld-memory__item {
+  border-color: rgba(120, 150, 158, 0.2);
+  background: rgba(255, 255, 255, 0.015);
+  transition: border-color 0.2s ease;
+}
+
+.sld-home--agentes .sld-memory__item:hover {
+  border-color: rgba(78, 226, 242, 0.35);
+}
+
+.sld-home--agentes .sld-memory__topic {
+  color: var(--agt-cian);
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.sld-home--agentes .sld-memory__content {
+  color: #c7d6da;
+  line-height: 1.6;
+}
+
+.sld-home--agentes .sld-memory__updated {
+  color: #8fa6ac;
+  font-family: var(--agt-mono);
+  font-size: 0.75rem;
+}
+
+/* Pie -------------------------------------------------------------------- */
+
+/* `!important` porque la plantilla pinta el fondo del pie en línea, con el
+   color de banda de la portada (crema), y en línea gana a cualquier regla. */
+.sld-home--agentes .sld-home__footer {
+  padding: 1.75rem 1.5rem;
+  border: 1px solid var(--agt-linea);
+  border-bottom: 0;
+  border-radius: var(--sld-radius) var(--sld-radius) 0 0;
+  background-color: #000000 !important;
+}
+
+.sld-home--agentes .sld-home__footer-logo {
+  max-height: 26px;
+  opacity: 0.85;
+}
+
+.sld-home--agentes .sld-home__strip {
+  height: 3px;
+  background: linear-gradient(90deg, var(--agt-cian), var(--agt-lima));
+}
+
+/* Pantallas estrechas y movimiento reducido ------------------------------ */
+
+@media (max-width: 640px) {
+  .sld-home--agentes .sld-home__tag {
+    display: none;
+  }
+
+  .sld-home--agentes .sld-home__bar {
+    min-height: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sld-home--agentes .sld-card,
+  .sld-home--agentes .sld__button,
+  .sld-home--agentes .sld-memory__item {
+    transition: none;
+  }
+
+  .sld-home--agentes .sld-card:hover,
+  .sld-home--agentes .sld-card:focus-visible,
+  .sld-home--agentes .sld__button:hover {
+    transform: none;
+  }
+}

@@ -25,7 +25,11 @@
  * contenido, que es lo que el alumno viene a leer.
  */
 #}
-<div class="sld-home">
+{#
+  `sld_tema`: el estilo «AI Sales Agents», hoy solo en el panel (muestra del
+  13-09-2026). Sin él, el marco sale exactamente como antes.
+#}
+<div class="sld-home{{ sld_tema ? ' sld-home--' ~ sld_tema }}">
   <div class="sld-home__frame sld-home__frame--liso">
 
     <header class="sld-home__bar">
@@ -34,6 +38,9 @@
           <img src="{{ sld_header_logo }}" alt="{{ 'Salesbumm'|t }}">
         {% else %}
           <span class="sld-home__brand-text">{{ 'Salesbumm'|t }}</span>
+        {% endif %}
+        {% if sld_tema == 'agentes' %}
+          <span class="sld-home__tag">{{ 'AI Sales Agents™'|t }}</span>
         {% endif %}
       </a>
 
@@ -94,8 +101,11 @@
     </main>
 
     <footer class="sld-home__footer" style="background-color: {{ sld_band_color }}">
-      {% if sld_footer_logo %}
-        <img class="sld-home__footer-logo" src="{{ sld_footer_logo }}" alt="{{ 'Salesbumm'|t }}">
+      {# Sobre el pie oscuro del estilo «AI Sales Agents» va el logotipo claro
+         de la barra: el de color está pensado para la banda crema. #}
+      {% set logo_pie = sld_tema == 'agentes' ? sld_header_logo : sld_footer_logo %}
+      {% if logo_pie %}
+        <img class="sld-home__footer-logo" src="{{ logo_pie }}" alt="{{ 'Salesbumm'|t }}">
       {% endif %}
     </footer>
 
