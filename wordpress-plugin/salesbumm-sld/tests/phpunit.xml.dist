@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Pruebas del plugin de WordPress. Se corren con el PHPUnit del proyecto:
+
+    ddev exec vendor/bin/phpunit -c wordpress-plugin/salesbumm-sld/tests/phpunit.xml.dist
+
+  No se incluyen en el .zip que se sube al WordPress del cliente.
+-->
+<phpunit bootstrap="bootstrap.php" colors="true" cacheResult="false">
+  <testsuites>
+    <testsuite name="salesbumm-sld">
+      <directory>.</directory>
+    </testsuite>
+  </testsuites>
+</phpunit>

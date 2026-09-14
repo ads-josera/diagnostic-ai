@@ -11,6 +11,13 @@
 
   <file>.</file>
 
+  <!--
+    Las pruebas simulan funciones de WordPress en el espacio global, cosa que
+    el estándar prohíbe con razón en un plugin de verdad. No se distribuyen:
+    no están en el .zip que se sube al WordPress del cliente.
+  -->
+  <exclude-pattern>tests/*</exclude-pattern>
+
   <rule ref="WordPress"/>
 
   <config name="minimum_wp_version" value="6.0"/>
