@@ -136,7 +136,7 @@ forma visible: los diagnósticos siguen saliendo, los resultados se guardan, y
 el alumno simplemente vuelve a contarlo todo cada vez, sin que nadie sepa por
 qué. Si el cron de Drupal no está programado en el servidor, prográmelo.
 
-    */15 * * * * cd /ruta/al/sitio && vendor/bin/drush cron
+    */15 * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php vendor/bin/drush cron
 
 #### Con la búsqueda encendida, cada MINUTO
 
@@ -148,7 +148,10 @@ Con el cron cada quince minutos, un alumno escribiría y **esperaría hasta un
 cuarto de hora a que su turno arrancara**. Con el cron cada minuto, arranca casi
 en el acto.
 
-    * * * * * cd /ruta/al/sitio && vendor/bin/drush cron
+    * * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php vendor/bin/drush cron
+
+(En este servidor el PHP de la línea de órdenes es 8.1: por eso el cron nombra
+el binario de PHP 8.4 de cPanel.)
 
 Esto es viable aquí porque el servidor es propio. En alojamiento compartido no
 suele permitirse, y sería el argumento para no encender la búsqueda ahí.
@@ -210,9 +213,19 @@ diez sesiones reales, el módulo entero ocupaba menos de 700 KB.
 
 ## 2. Código y dependencias
 
+En el servidor de producción (cPanel, cuenta `labai`) el repositorio vive en
+**`/home/labai/public_html`** y su carpeta `web` es la raíz del dominio. Como
+cPanel ya había dejado archivos en esa carpeta, se sacó con `git init` +
+`remote add` + `fetch` + `checkout` en lugar de `git clone`, y esos archivos se
+excluyen en `.git/info/exclude`. El paso a paso está en
+`docs/ARRANQUE-PRODUCCION.md`.
+
+El PHP de la línea de órdenes es 8.1 y Drupal 11 necesita 8.4: al abrir cada
+sesión de SSH se pone el de cPanel por delante.
+
 ```bash
-git clone git@github.com:ads-josera/diagnostic-ai.git
-cd diagnostic-ai
+export PATH=/opt/cpanel/ea-php84/root/usr/bin:$PATH
+cd /home/labai/public_html
 
 composer --version    # 2.10.3 o superior; si no: composer self-update
 # --no-dev excluye las herramientas de desarrollo. Drush NO: desde el
@@ -221,6 +234,15 @@ composer --version    # 2.10.3 o superior; si no: composer self-update
 composer install --no-dev --optimize-autoloader
 vendor/bin/drush --version
 ```
+
+**PHP 8.4 depende de una línea del `.htaccess`.** cPanel elige la versión de PHP
+del dominio con un bloque `AddHandler` en `web/.htaccess`, y ese archivo lo
+regenera `composer install` a partir del de Drupal. Para que no se pierda, el
+repositorio lo antepone en cada instalación
+(`assets/scaffold/htaccess-cpanel-php84.txt`, declarado en `composer.json` en
+`extra.drupal-scaffold.file-mapping`). Si se cambia la versión de PHP del
+dominio en cPanel, hay que cambiar también ese archivo; si no, el siguiente
+despliegue devolvería el dominio a la versión anterior.
 
 ## 3. Secretos y ajustes del entorno
 
@@ -520,9 +542,12 @@ cliente; Drupal no se toca.
 ## Despliegues posteriores
 
 ```bash
+export PATH=/opt/cpanel/ea-php84/root/usr/bin:$PATH   # PHP 8.4 (§2)
+cd /home/labai/public_html
 drush sql:dump --gzip --result-file=../copia-previa.sql   # SIEMPRE antes
 git pull
 composer install --no-dev --optimize-autoloader
+head -6 web/.htaccess      # el bloque de PHP 8.4 de cPanel sigue arriba
 drush updatedb -y          # aplica los hook_update_N pendientes
 drush config:import -y     # aplica la configuración del repositorio
 drush cache:rebuild

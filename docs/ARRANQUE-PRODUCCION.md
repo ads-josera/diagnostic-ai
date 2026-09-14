@@ -39,7 +39,7 @@ dice **en qué orden** y **con qué datos**, y corrige lo que allí quedó viejo
 | Qué | Valor |
 |---|---|
 | Dominio | **https://labai.salesbumm.com** (ya apunta al servidor) |
-| Raíz del documento | la carpeta **`web`** del repositorio |
+| Raíz del documento | **`/home/labai/public_html/web`**: el repositorio vive en `/home/labai/public_html` (cuenta cPanel `labai`, sin otros dominios; comprobado el 14-09-2026) |
 | Servidor | cPanel con acceso SSH |
 | PHP | **8.4** (el que se usa en desarrollo); mínimo 8.3. El PHP de la **línea de órdenes** debe ser la misma versión que el de la web: el cron corre por línea de órdenes |
 | Repositorio | `git@github.com:ads-josera/diagnostic-ai.git` (**privado**) |
@@ -93,18 +93,47 @@ Seguir `docs/DESPLIEGUE.md` §1. Lo crítico, en orden:
 
 ## Paso 2 — Código
 
+En este servidor el repositorio va **dentro de `/home/labai/public_html`**, de
+modo que su carpeta `web` es la raíz del dominio. La carpeta no está vacía
+(cPanel deja `cgi-bin`, `php.ini`, `.user.ini`, `.well-known`), así que no se
+usa `git clone` sino `git init` + `remote add` + `fetch` + `checkout`, y esos
+archivos de cPanel se conservan y se excluyen en `.git/info/exclude`.
+
+**El PHP de la línea de órdenes del servidor es 8.1** y el del dominio 8.4.
+Composer y drush tienen que correr con el de 8.4. **Al empezar cada sesión de
+SSH** (esta y cualquier despliegue posterior), poner el PHP 8.4 por delante;
+así todas las órdenes `composer` y `vendor/bin/drush` de esta guía lo usan tal
+cual están escritas:
+
 ```bash
-cd ~   # o la carpeta donde vaya el proyecto; su subcarpeta web/ es la raíz del dominio
-git clone git@github.com:ads-josera/diagnostic-ai.git
-cd diagnostic-ai
-composer --version           # debe ser 2.10.3 o superior (CVE-2026-84361)
+export PATH=/opt/cpanel/ea-php84/root/usr/bin:$PATH
+cd /home/labai/public_html
+php -v | head -1              # debe decir PHP 8.4
+composer --version            # 2.10.3 o superior (CVE-2026-84361), y «PHP version 8.4»
+                              # si dice 8.1, el composer de cPanel fija su PHP:
+                              # usar  php $(command -v composer) ...  en su lugar
 composer install --no-dev --optimize-autoloader
-vendor/bin/drush --version   # drush es dependencia de producción: debe responder
+vendor/bin/drush --version    # drush es dependencia de producción
 ```
 
-Si el Composer del servidor es anterior a 2.10.3, actualizarlo antes
-(`composer self-update`): la vulnerabilidad permite ejecutar órdenes al
-instalar un paquete malicioso.
+Si Composer es anterior a 2.10.3, actualizarlo antes (`composer self-update`):
+la vulnerabilidad permite ejecutar órdenes al instalar un paquete malicioso.
+
+**El `.htaccess` y PHP 8.4.** Lo que hace que el dominio corra con PHP 8.4 es
+un bloque que cPanel escribe en `web/.htaccess`. `composer install` regenera
+ese archivo con el de Drupal, y sin el bloque el sitio caería al PHP 8.1 del
+sistema, donde Drupal 11 no funciona. Por eso el repositorio lo añade solo en
+cada `composer install` (`assets/scaffold/htaccess-cpanel-php84.txt`, mapeado
+en `composer.json`). Después de instalar, comprobarlo contra la copia que se
+guardó del original:
+
+```bash
+head -6 web/.htaccess
+diff <(head -6 web/.htaccess) /home/labai/backups/htaccess-cpanel-web-*.bak
+```
+
+Si algún día se cambia la versión de PHP del dominio en cPanel, cambiar
+también ese archivo del repositorio.
 
 ## Paso 3 — Base de datos y `settings.local.php`
 
@@ -237,7 +266,7 @@ En **cPanel → Cron Jobs**, con la ruta real del proyecto y el PHP de la versi�
 correcta:
 
 ```
-* * * * * cd /home/USUARIO/diagnostic-ai && vendor/bin/drush cron >/dev/null 2>&1
+* * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php vendor/bin/drush cron >/dev/null 2>&1
 ```
 
 Es imprescindible: genera los turnos que investigan, escribe la memoria del
@@ -306,9 +335,12 @@ las pruebas, hay que subirlo cuando entren alumnos reales.
 ### Despliegues posteriores
 
 ```bash
+export PATH=/opt/cpanel/ea-php84/root/usr/bin:$PATH   # PHP 8.4 (paso 2)
+cd /home/labai/public_html
 vendor/bin/drush sql:dump --gzip --result-file=../copia-previa.sql
 git pull
 composer install --no-dev --optimize-autoloader
+head -6 web/.htaccess      # el bloque de PHP 8.4 de cPanel sigue arriba
 vendor/bin/drush updatedb -y
 vendor/bin/drush config:import -y
 vendor/bin/drush cache:rebuild

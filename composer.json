@@ -50,6 +50,11 @@
         "drupal-scaffold": {
             "locations": {
                 "web-root": "web/"
+            },
+            "file-mapping": {
+                "[web-root]/.htaccess": {
+                    "prepend": "assets/scaffold/htaccess-cpanel-php84.txt"
+                }
             }
         },
         "installer-paths": {
