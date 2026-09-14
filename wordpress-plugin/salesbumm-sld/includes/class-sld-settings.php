@@ -438,7 +438,7 @@ define( '<?php echo esc_html( $constant ); ?>', '<?php echo esc_html__( 'pega-aq
 								id="sld_course_ids"
 								type="text"
 								class="regular-text"
-								value="<?php echo esc_attr( implode( ', ', $this->get_course_ids() ) ); ?>"
+								value="<?php echo esc_attr( implode( ', ', $this->get_configured_course_ids() ) ); ?>"
 								placeholder="35884, 41002">
 							<p class="description">
 								<?php echo esc_html__( 'IDs de los cursos de LearnDash separados por comas. Poseer CUALQUIERA de ellos concede acceso al diagnóstico, de modo que comprar otro programa designado reactiva al alumno sin tocar esta configuración.', 'salesbumm-sld' ); ?>
@@ -554,9 +554,13 @@ define( '<?php echo esc_html( $constant ); ?>', '<?php echo esc_html__( 'pega-aq
 	/**
 	 * Cursos autorizadores tal como están escritos, sin quitar nada.
 	 *
+	 * Es lo que pinta el campo. Si pintara get_course_ids(), un curso puesto
+	 * también como suscripción desaparecería del campo mientras el aviso pide
+	 * quitarlo de ahí: se vio así en la pantalla el 13-09-2026.
+	 *
 	 * @return int[]
 	 */
-	private function get_configured_course_ids(): array {
+	public function get_configured_course_ids(): array {
 		$raw = (string) get_option( self::OPTION_COURSE_IDS, '' );
 
 		if ( '' === trim( $raw ) ) {

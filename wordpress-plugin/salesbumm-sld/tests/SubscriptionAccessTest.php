@@ -138,6 +138,7 @@ final class SubscriptionAccessTest extends TestCase {
 		$decision = $this->evaluar();
 
 		$this->assertSame( array( self::CURSO ), ( new Settings() )->get_course_ids() );
+		$this->assertSame( array( self::CURSO, self::SUSCRIPCION ), ( new Settings() )->get_configured_course_ids(), 'El campo enseña lo escrito: el aviso pide quitarlo de ahí.' );
 		$this->assertTrue( $decision['has_access'] );
 		$this->assertNull( $decision['expires_at'] );
 	}
