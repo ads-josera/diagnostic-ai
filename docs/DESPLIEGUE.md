@@ -156,7 +156,7 @@ forma visible: los diagnósticos siguen saliendo, los resultados se guardan, y
 el alumno simplemente vuelve a contarlo todo cada vez, sin que nadie sepa por
 qué. Si el cron de Drupal no está programado en el servidor, prográmelo.
 
-    */15 * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d error_log=/home/labai/logs/php-cli-error.log vendor/bin/drush cron
+    */15 * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d error_log=/home/labai/logs/php-cli-error.log vendor/drush/drush/drush.php cron
 
 #### Con la búsqueda encendida, cada MINUTO
 
@@ -168,7 +168,7 @@ Con el cron cada quince minutos, un alumno escribiría y **esperaría hasta un
 cuarto de hora a que su turno arrancara**. Con el cron cada minuto, arranca casi
 en el acto.
 
-    * * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d error_log=/home/labai/logs/php-cli-error.log vendor/bin/drush cron
+    * * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d error_log=/home/labai/logs/php-cli-error.log vendor/drush/drush/drush.php cron
 
 (En este servidor el PHP de la línea de órdenes es 8.1: por eso el cron nombra
 el binario de PHP 8.4 de cPanel.)
