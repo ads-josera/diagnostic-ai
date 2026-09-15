@@ -321,8 +321,9 @@
   margin-top: var(--sld-space-xl);
 }
 
+/* A todo el ancho, como las fichas de debajo: con 60ch quedaba un hueco a la
+   derecha que se leía como un fallo de alineación (José Raúl, 16-09-2026). */
 .sld-memory__intro {
-  max-width: 60ch;
   margin: 0 0 var(--sld-space-md);
 }
 

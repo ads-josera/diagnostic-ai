@@ -47,8 +47,8 @@ final class StudentMemoryController extends ControllerBase {
     $tema = $sld_student_memory->getTopic();
     $sld_student_memory->delete();
 
-    $this->messenger()->addStatus($this->t('Se ha olvidado lo que recordábamos sobre @tema.', [
-      '@tema' => $tema?->label() ?? $this->t('ese tema'),
+    $this->messenger()->addStatus($this->t('Olvidado: @tema.', [
+      '@tema' => $tema?->studentLabel() ?? $this->t('ese dato'),
     ]));
 
     return $this->volverAlPanel();

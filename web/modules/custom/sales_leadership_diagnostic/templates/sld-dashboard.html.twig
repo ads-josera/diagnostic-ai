@@ -87,7 +87,7 @@
           Es un enlace y no un formulario justamente por eso: mirar no cambia
           nada, y no hay motivo para exigir POST ni token.
         #}
-        <h2 class="sld-dashboard__section-title">{{ 'Tus diagnósticos disponibles'|t }}</h2>
+        <h2 class="sld-dashboard__section-title">{{ 'Tus agentes disponibles'|t }}</h2>
 
         <ul class="sld-dashboard__cards">
           {% for agent in agents %}
@@ -165,7 +165,7 @@
     {% elseif can_start %}
       {# Listo, pero sin derecho a ningún agente: no es un fallo del sistema. #}
       <p class="sld__muted">
-        {{ 'Tu cuenta todavía no tiene ningún diagnóstico asignado.'|t }}
+        {{ 'Tu cuenta todavía no tiene ningún agente asignado.'|t }}
       </p>
     {% else %}
       <button type="button" class="sld__button" aria-disabled="true" disabled>
@@ -206,18 +206,18 @@
 {% if not history_is_leftover or history is not empty %}
   <section aria-labelledby="sld-history-title">
     <h2 class="sld-dashboard__section-title" id="sld-history-title">
-      {{ history_is_leftover ? 'Otros diagnósticos'|t : 'Mis diagnósticos'|t }}
+      {{ history_is_leftover ? 'Otras sesiones'|t : 'Mis sesiones'|t }}
     </h2>
 
     {% if history_is_leftover %}
       <p class="sld__muted">
-        {{ 'Diagnósticos que hiciste con agentes que ya no tienes disponibles. Tus resultados siguen siendo tuyos.'|t }}
+        {{ 'Sesiones que hiciste con agentes que ya no tienes disponibles. Tus resultados siguen siendo tuyos.'|t }}
       </p>
     {% endif %}
 
     {% if history is empty %}
       <p class="sld-dashboard__empty">
-        {{ 'Todavía no has realizado ningún diagnóstico.'|t }}
+        {{ 'Todavía no has empezado ninguna sesión.'|t }}
       </p>
     {% else %}
       <div class="sld-dashboard__table-wrapper">
@@ -283,7 +283,7 @@
       </h2>
 
       <p class="sld__muted sld-memory__intro">
-        {{ 'Esto lo hemos ido recogiendo de tus conversaciones para no hacerte repetirlo. Si algo no es correcto, puedes olvidarlo.'|t }}
+        {{ 'Lo que nos has contado en tus conversaciones, para no hacerte repetirlo. Todos tus agentes lo tienen en cuenta. Si algo no es correcto, puedes olvidarlo.'|t }}
       </p>
 
       <ul class="sld-memory__list">
@@ -293,7 +293,11 @@
               <p class="sld-memory__topic">{{ item.topic }}</p>
               <p class="sld-memory__content">{{ item.content }}</p>
               <p class="sld-memory__updated">
-                {{ 'Actualizado el @date'|t({'@date': item.updated}) }}
+                {% if item.source %}
+                  {{ 'Lo aprendió @agente · actualizado el @date'|t({'@agente': item.source, '@date': item.updated}) }}
+                {% else %}
+                  {{ 'Actualizado el @date'|t({'@date': item.updated}) }}
+                {% endif %}
               </p>
             </div>
 

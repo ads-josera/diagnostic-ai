@@ -237,8 +237,14 @@ final class DashboardController extends ControllerBase {
         continue;
       }
 
+      // De qué agente salió. La memoria es del alumno y la leen todos sus
+      // agentes; sin esto parecía cosa del primero (José Raúl, 16-09-2026).
+      // Si el agente ya no existe se omite: el hecho sigue siendo válido.
+      $origen = $this->agents->get($hecho->getSourceAgentId());
+
       $filas[] = [
-        'topic' => $tema->label(),
+        'topic' => $tema->studentLabel(),
+        'source' => $origen?->label(),
         'content' => $hecho->getContent(),
         'updated' => $this->dateFormatter->format($hecho->getChangedTime(), 'custom', 'd/m/Y'),
         'forget_url' => $this->buildForgetUrl((int) $hecho->id()),

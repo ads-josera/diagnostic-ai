@@ -810,9 +810,18 @@ html .sld-page.sld-page--agentes .sld {
   }
 }
 
-/* El resumen y las listas: lo que de verdad se lee. */
+/* Sin guiones automáticos: el tema base los activa y partía palabras en
+   sitios raros («repetir-lo», «madu-rez»). El chat y «Mis cuentas» ya los
+   tenían apagados; esto lo extiende al resto de pantallas del alumno. */
+.sld-home--agentes :is(p, li) {
+  hyphens: manual;
+  overflow-wrap: break-word;
+}
+
+/* El resumen y las listas: lo que de verdad se lee. A todo el ancho, como las
+   cajas de las fugas que van debajo; con 72ch quedaba un hueco a la derecha
+   que parecía un fallo (José Raúl, 16-09-2026). */
 .sld-home--agentes .sld-result__prose {
-  max-width: 72ch;
   color: #d5e1e4;
   font-size: 1.02rem;
   line-height: 1.75;

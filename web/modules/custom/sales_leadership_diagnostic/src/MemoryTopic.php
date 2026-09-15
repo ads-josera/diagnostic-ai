@@ -58,7 +58,28 @@ enum MemoryTopic: string {
   case Objetivos = 'objetivos';
 
   /**
-   * Nombre del tema para el alumno.
+   * Nombre del tema como lo lee el alumno en su panel, hablándole de tú.
+   *
+   * Aparte de label() porque aquel es el que va dentro de la memoria que se le
+   * da al modelo, donde «su empresa» —la del alumno— es lo correcto; en el
+   * panel, que le habla de tú, se leía como un error (José Raúl, 16-09-2026).
+   */
+  public function studentLabel(): TranslatableMarkup {
+    return match ($this) {
+      self::Empresa => new TranslatableMarkup('Tu empresa'),
+      self::Equipo => new TranslatableMarkup('Tu equipo comercial'),
+      self::Icp => new TranslatableMarkup('A quién le vendes'),
+      self::Cuentas => new TranslatableMarkup('Cuentas y oportunidades'),
+      self::Proceso => new TranslatableMarkup('Cómo vendes hoy'),
+      self::Objetivos => new TranslatableMarkup('Tus objetivos y preocupaciones'),
+    };
+  }
+
+  /**
+   * Nombre del tema dentro de la memoria que se le da al modelo.
+   *
+   * También en registros y mensajes de administración (StudentMemory::label).
+   * Para lo que lee el alumno, studentLabel().
    */
   public function label(): TranslatableMarkup {
     return match ($this) {
