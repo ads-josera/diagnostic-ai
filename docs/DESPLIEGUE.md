@@ -86,6 +86,26 @@ prompt y con la búsqueda encendida. Un límite mal puesto no da error de
 configuración: da un turno que muere a mitad, y el alumno solo ve que no pasó
 nada.
 
+**Lo que hay en labai.salesbumm.com (cPanel sin raíz), medido el 15-09-2026.**
+El límite de PHP-FPM no se puede leer desde la cuenta; se midió con una sonda
+que duerme 100 s: respondió 200, así que no corta por debajo de 100 s. El
+turno síncrono más largo observado fue el informe final del agente 1, 52 s. En
+el MultiPHP INI Editor del dominio (que escribe `web/php.ini` y `web/.user.ini`;
+bajo FPM manda el segundo) quedaron:
+
+| Directiva | Valor | Por qué |
+|---|---|---|
+| `max_execution_time` | 300 | El de la tabla de arriba. |
+| `upload_max_filesize` / `post_max_size` | 20M / 24M | La biblioteca de documentos admite 20 MB; con 2M de fábrica PHP rechazaba antes que Drupal. |
+| `error_log` | `/home/labai/logs/php-error.log` | Fuera de la raíz: con el relativo de fábrica (`error_log`) el registro caía en `web/` y se podía descargar. |
+| `session.gc_divisor` | 100 | El pool traía 0 y llenaba el registro de avisos. |
+| `display_errors` | Off | Producción. |
+
+Esos dos archivos no son del repositorio: en el servidor están en
+`.git/info/exclude`. `web/.user.ini` lo protege el `.htaccess` de Drupal (es
+un archivo oculto); `web/php.ini` no, pero bajo FPM no se lee y no contiene
+secretos.
+
 ### La IP del servidor tiene que estar autorizada en el WordPress del cliente
 
 **Requisito previo al despliegue.** El módulo consulta la autorización de cada
