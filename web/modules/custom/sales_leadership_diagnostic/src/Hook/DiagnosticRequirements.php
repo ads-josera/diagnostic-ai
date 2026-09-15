@@ -299,7 +299,7 @@ final class DiagnosticRequirements {
         'title' => $this->t('Diagnostic AI: agentes'),
         'value' => $this->t('Curso no válido'),
         'severity' => RequirementSeverity::Warning,
-        'description' => $this->t('El curso que concede un agente debe ser un solo número de curso de WordPress (la lista de varios cursos va en el plugin). Estos agentes no se ofrecen a ningún alumno hasta corregirlo en su ficha: @lista.', [
+        'description' => $this->t('Los cursos que conceden un agente deben ser números de curso de WordPress separados por comas. Estos agentes no se ofrecen a ningún alumno hasta corregirlo en su ficha: @lista.', [
           '@lista' => implode(' · ', $cursoInvalido),
         ]),
       ];

@@ -169,6 +169,25 @@ final class AgentRegistryTest extends KernelTestBase {
   }
 
   /**
+   * Un agente que se da por varios cursos aparece con cualquiera de ellos.
+   *
+   * Lo pidió José Raúl el 15-09-2026: otro programa puede dar acceso a los
+   * mismos agentes, y con un solo curso por agente habría que duplicarlos.
+   */
+  public function testUnAgenteSeDaPorCualquieraDeSusCursos(): void {
+    $this->almacen()->load('agente_b')->set('course_id', self::CURSO_B . ', 38125')->save();
+
+    $this->assertSame(['agente_b'], $this->agentesDe(['38125']));
+    $this->assertSame(['agente_b'], $this->agentesDe([self::CURSO_B]));
+    $this->assertSame(['agente_a', 'agente_b'], $this->agentesDe([self::CURSO_A, '38125']));
+    $this->assertSame(
+      [self::CURSO_A, self::CURSO_B, '38125'],
+      $this->registro->getCourseIds(),
+      'Se pregunta a WordPress por todos los cursos de todos los agentes.',
+    );
+  }
+
+  /**
    * Identificadores de los agentes que dan unos cursos.
    *
    * @param string[] $cursos

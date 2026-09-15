@@ -44,8 +44,11 @@ final class AgentCourseIdTest extends KernelTestBase {
     return [
       'un número' => ['35884', TRUE],
       'con espacios alrededor' => ['  35884 ', TRUE],
-      'la lista del plugin' => ['35884, 38125, 38128', FALSE],
-      'dos sin espacio' => ['35884,38125', FALSE],
+      'una lista' => ['35884, 38125', TRUE],
+      'una lista sin espacios' => ['35884,38125', TRUE],
+      'una coma de sobra' => ['35884, 38125,', TRUE],
+      'separados por espacio' => ['35884 38125', FALSE],
+      'un trozo que no es número' => ['35884, curso-test', FALSE],
       'texto' => ['curso-test', FALSE],
       'vacío' => ['', FALSE],
     ];
@@ -85,12 +88,20 @@ final class AgentCourseIdTest extends KernelTestBase {
 
     if ($valido) {
       $this->assertArrayNotHasKey('course_id', $errores);
-      $this->assertSame(trim($curso), $estado->getValue('course_id'), 'Se guarda sin los espacios.');
+      $this->assertMatchesRegularExpression('/^\d+(, \d+)*$/', $estado->getValue('course_id'), 'Se guarda normalizado: «35884, 38125».');
     }
     else {
       $this->assertArrayHasKey('course_id', $errores);
-      $this->assertStringContainsString('un solo número', (string) $errores['course_id']);
+      $this->assertStringContainsString('separados por comas', (string) $errores['course_id']);
     }
+  }
+
+  /**
+   * La lista se lee curso a curso, sin repetidos ni huecos.
+   */
+  public function testLaListaSeLeeCursoPorCurso(): void {
+    $this->assertSame(['35884', '38125'], $this->agente(' 35884 ,38125,, 35884 ')->getCourseIds());
+    $this->assertSame([], $this->agente('')->getCourseIds());
   }
 
   /**

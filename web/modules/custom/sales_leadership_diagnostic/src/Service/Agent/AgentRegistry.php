@@ -98,10 +98,12 @@ final class AgentRegistry {
       return [];
     }
 
+    // Basta con uno: un agente que se da por varios cursos aparece al alumno
+    // que tenga cualquiera de ellos.
     return array_filter(
       $this->getUsable(),
       static fn (DiagnosticAgentInterface $a): bool
-        => in_array($a->getCourseId(), $cursos, TRUE),
+        => array_intersect($a->getCourseIds(), $cursos) !== [],
     );
   }
 
@@ -112,10 +114,10 @@ final class AgentRegistry {
    *   Identificadores de curso, sin repetir.
    */
   public function getCourseIds(): array {
-    return array_values(array_unique(array_map(
-      static fn (DiagnosticAgentInterface $a): string => $a->getCourseId(),
-      $this->getUsable(),
-    )));
+    return array_values(array_unique(array_merge([], ...array_map(
+      static fn (DiagnosticAgentInterface $a): array => $a->getCourseIds(),
+      array_values($this->getUsable()),
+    ))));
   }
 
   /**

@@ -5,7 +5,7 @@ dependencies: {  }
 id: sales_leadership_diagnostic
 label: 'Sales Leadership Diagnostic AI'
 version: '1.5'
-course_id: '35884'
+course_id: '38125'
 description: 'Diagnostica tu sistema comercial para identificar nivel de madurez, fugas, riesgos y prioridades de mejora.'
 system_prompt: |-
   ROLE

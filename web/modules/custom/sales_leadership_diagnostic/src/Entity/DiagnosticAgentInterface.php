@@ -22,12 +22,22 @@ interface DiagnosticAgentInterface extends ConfigEntityInterface {
   public function getVersion(): string;
 
   /**
-   * Curso de WordPress que concede este agente.
+   * Cursos de WordPress que conceden este agente, tal como se escribieron.
+   *
+   * Texto separado por comas. Para decidir, usar getCourseIds().
    */
   public function getCourseId(): string;
 
   /**
-   * El curso es un único identificador numérico de WordPress.
+   * Cursos de WordPress que conceden este agente, uno por elemento.
+   *
+   * @return string[]
+   *   Identificadores sin espacios, vacíos ni repetidos.
+   */
+  public function getCourseIds(): array;
+
+  /**
+   * Hay al menos un curso y todos son identificadores numéricos de WordPress.
    */
   public function hasValidCourseId(): bool;
 

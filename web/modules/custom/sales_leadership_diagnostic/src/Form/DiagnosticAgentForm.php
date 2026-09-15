@@ -165,8 +165,8 @@ final class DiagnosticAgentForm extends EntityForm {
 
     $form['course_id'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Curso que lo concede'),
-      '#description' => $this->t('Identificador del curso en WordPress. El alumno que lo haya comprado verá este agente; quien no, no. Debe estar también en la lista de cursos del plugin de WordPress.'),
+      '#title' => $this->t('Cursos que lo conceden'),
+      '#description' => $this->t('Número del curso en WordPress. Si varios cursos dan este agente, sepáralos con comas: 35884, 38125. El alumno que tenga cualquiera de ellos verá el agente; quien no, no. Cada curso debe estar también en la lista de cursos del plugin de WordPress. Usa números de curso, no de lección.'),
       '#default_value' => $agente->getCourseId(),
       '#required' => TRUE,
       '#maxlength' => 64,
@@ -346,19 +346,30 @@ final class DiagnosticAgentForm extends EntityForm {
   /**
    * {@inheritdoc}
    *
-   * El curso se valida aquí y no solo en el informe de estado: la lista de
-   * cursos del plugin admite varios, y copiarla a este campo parece lo
-   * natural. Guardada, deja al agente sin alumnos y sin ningún aviso.
+   * Los cursos se validan aquí y no solo en el informe de estado: un trozo
+   * que no es un número nunca coincidirá con un curso, y guardado deja al
+   * agente sin esos alumnos sin ningún aviso. Se guarda normalizado
+   * («35884, 38125») para que el listado y la exportación lo muestren igual.
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
     parent::validateForm($form, $form_state);
 
-    $curso = trim((string) $form_state->getValue('course_id'));
-    $form_state->setValue('course_id', $curso);
+    $trozos = array_values(array_filter(
+      array_map('trim', explode(',', (string) $form_state->getValue('course_id'))),
+      static fn (string $trozo): bool => $trozo !== '',
+    ));
 
-    if ($curso !== '' && preg_match('/^\d+$/', $curso) !== 1) {
-      $form_state->setErrorByName('course_id', $this->t('Escribe un solo número de curso de WordPress, por ejemplo 35884. Si varios cursos deben dar acceso, ponlos en la lista de cursos del plugin, no aquí; y usa el número del curso, no el de una lección.'));
+    $malos = array_filter($trozos, static fn (string $trozo): bool => preg_match('/^\d+$/', $trozo) !== 1);
+
+    if ($malos !== []) {
+      $form_state->setErrorByName('course_id', $this->t('Escribe números de curso de WordPress separados por comas, por ejemplo 35884, 38125. No es un número de curso: @malos.', [
+        '@malos' => implode(' · ', $malos),
+      ]));
+
+      return;
     }
+
+    $form_state->setValue('course_id', implode(', ', array_unique($trozos)));
   }
 
   /**

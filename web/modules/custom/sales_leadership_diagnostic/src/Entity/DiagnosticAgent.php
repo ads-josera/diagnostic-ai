@@ -238,13 +238,41 @@ final class DiagnosticAgent extends ConfigEntityBase implements DiagnosticAgentI
   /**
    * {@inheritdoc}
    *
-   * Un solo número: el panel compara el curso del agente con los cursos del
-   * alumno tal cual, así que «35884, 38125» no coincide con ninguno y el
-   * alumno entra a un panel vacío sin que nada avise (pasó en producción el
-   * 14-09-2026, copiando a la ficha la lista de cursos del plugin).
+   * El campo guarda la lista como texto separado por comas, para que un valor
+   * de un solo curso, el de siempre, siga siendo válido sin migrar nada.
+   */
+  public function getCourseIds(): array {
+    $cursos = array_map('trim', explode(',', $this->getCourseId()));
+
+    return array_values(array_unique(array_filter(
+      $cursos,
+      static fn (string $curso): bool => $curso !== '',
+    )));
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Cada curso tiene que ser un número. Antes de admitir listas, el panel
+   * comparaba el texto entero, así que «35884, 38125» no coincidía con nada y
+   * el alumno entraba a un panel vacío sin aviso (producción, 14-09-2026).
+   * Lo que se comprueba ahora es que ningún trozo sea algo que nunca podrá
+   * coincidir con un curso: «35884 38125» sin coma, o un nombre.
    */
   public function hasValidCourseId(): bool {
-    return preg_match('/^\d+$/', $this->getCourseId()) === 1;
+    $cursos = $this->getCourseIds();
+
+    if ($cursos === []) {
+      return FALSE;
+    }
+
+    foreach ($cursos as $curso) {
+      if (preg_match('/^\d+$/', $curso) !== 1) {
+        return FALSE;
+      }
+    }
+
+    return TRUE;
   }
 
   /**

@@ -244,7 +244,7 @@ sales_leadership_diagnostic.agent.*:
       label: 'Versión de la metodología'
     course_id:
       type: string
-      label: 'Curso de WordPress que lo concede'
+      label: 'Cursos de WordPress que lo conceden, separados por comas'
     description:
       type: text
       label: 'Descripción interna'
