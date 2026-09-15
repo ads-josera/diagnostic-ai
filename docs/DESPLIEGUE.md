@@ -97,7 +97,7 @@ bajo FPM manda el segundo) quedaron:
 |---|---|---|
 | `max_execution_time` | 300 | El de la tabla de arriba. |
 | `upload_max_filesize` / `post_max_size` | 20M / 24M | La biblioteca de documentos admite 20 MB; con 2M de fábrica PHP rechazaba antes que Drupal. |
-| `error_log` | `/home/labai/logs/php-error.log` | Fuera de la raíz: con el relativo de fábrica (`error_log`) el registro caía en `web/` y se podía descargar. |
+| `error_log` | `/home/labai/logs/php-error.log` | Fuera de la raíz: con el relativo de fábrica (`error_log`) el registro caía en `web/` y se podía descargar. Bajo FPM, el pool de cPanel lo fija por encima de este valor en `/home/labai/logs/labai_salesbumm.com.php.error.log`, también fuera de la raíz: **ese es el registro real de PHP**. |
 | `session.gc_divisor` | 100 | El pool traía 0 y llenaba el registro de avisos. |
 | `display_errors` | Off | Producción. |
 
