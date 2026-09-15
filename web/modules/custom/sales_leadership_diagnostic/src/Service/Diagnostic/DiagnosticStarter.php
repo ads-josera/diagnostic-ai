@@ -165,7 +165,7 @@ final class DiagnosticStarter {
       // El límite de uso se comprueba el último: es el más caro de los cuatro
       // y no tiene sentido consultarlo para alguien a quien ya se va a
       // rechazar por otro motivo.
-      $this->rateLimiter->assertCanStartDiagnostic($uid);
+      $this->rateLimiter->assertCanStartDiagnostic($uid, (string) $agent->id());
 
       // Empezar no cuesta dinero, pero el primer mensaje sí, y sin esto el
       // alumno abriría la conversación, escribiría y se lo rechazarían con el
@@ -182,7 +182,7 @@ final class DiagnosticStarter {
 
       $session = $this->createSession($account, $agent, $externalUserId, $decision->courseId);
 
-      $this->rateLimiter->registerDiagnostic($uid);
+      $this->rateLimiter->registerDiagnostic($uid, (string) $agent->id());
 
       return $session;
     }

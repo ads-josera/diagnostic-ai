@@ -67,27 +67,43 @@ final class RateLimiter {
   }
 
   /**
-   * Comprueba que el alumno puede iniciar otro diagnóstico hoy.
+   * Comprueba que el alumno puede iniciar otra sesión hoy con este agente.
+   *
+   * El límite es por agente desde el 16-09-2026 (decisión de José Raúl). Se
+   * fijó en 3 cuando había un solo agente; contado en total, un alumno que
+   * hacía una sesión con cada uno y quería repetir una se quedaba bloqueado
+   * hasta el día siguiente. El gasto lo acota el tope mensual, no este.
    *
    * @throws \Drupal\sales_leadership_diagnostic\Exception\RateLimitException
    */
-  public function assertCanStartDiagnostic(int $uid): void {
+  public function assertCanStartDiagnostic(int $uid, string $agentId): void {
     $threshold = max(1, (int) $this->security()['max_diagnostics_per_day']);
 
-    if (!$this->flood->isAllowed(self::EVENT_DIAGNOSTIC, $threshold, self::DAY, (string) $uid)) {
+    if (!$this->flood->isAllowed(self::EVENT_DIAGNOSTIC, $threshold, self::DAY, $this->startIdentifier($uid, $agentId))) {
       throw new RateLimitException(sprintf(
-        'Límite diario de diagnósticos superado por el usuario %d: %d por día.',
+        'Límite diario de sesiones superado por el usuario %d con el agente %s: %d por día.',
         $uid,
+        $agentId,
         $threshold,
       ));
     }
   }
 
   /**
-   * Registra un diagnóstico iniciado.
+   * Registra una sesión iniciada con un agente.
    */
-  public function registerDiagnostic(int $uid): void {
-    $this->flood->register(self::EVENT_DIAGNOSTIC, self::DAY, (string) $uid);
+  public function registerDiagnostic(int $uid, string $agentId): void {
+    $this->flood->register(self::EVENT_DIAGNOSTIC, self::DAY, $this->startIdentifier($uid, $agentId));
+  }
+
+  /**
+   * Identificador del contador de inicios: alumno y agente.
+   *
+   * Para reiniciarlo a mano a un alumno: `\Drupal::flood()->clear(
+   * 'sales_leadership_diagnostic.start', '<uid>:<agente>')`.
+   */
+  private function startIdentifier(int $uid, string $agentId): string {
+    return $uid . ':' . $agentId;
   }
 
   /**

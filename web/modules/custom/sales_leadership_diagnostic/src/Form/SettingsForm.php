@@ -397,7 +397,8 @@ final class SettingsForm extends ConfigFormBase {
 
       'max_diagnostics_per_day' => [
         '#type' => 'number',
-        '#title' => $this->t('Diagnósticos que un alumno puede iniciar por día'),
+        '#title' => $this->t('Sesiones que un alumno puede iniciar por día con cada agente'),
+        '#description' => $this->t('Se cuenta por agente y en las últimas 24 horas: con 3, un alumno puede iniciar 3 con cada uno de sus agentes. Retomar una conversación a medias no cuenta. El gasto lo acota el tope mensual, no este límite.'),
         '#min' => 1,
         '#max' => 100,
         '#config_target' => self::CONFIG_NAME . ':security.max_diagnostics_per_day',

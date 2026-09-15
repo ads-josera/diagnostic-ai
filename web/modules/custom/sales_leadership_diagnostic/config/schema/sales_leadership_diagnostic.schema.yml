@@ -155,7 +155,7 @@ sales_leadership_diagnostic.settings:
           label: 'Duración de la ventana de rate limiting (segundos)'
         max_diagnostics_per_day:
           type: integer
-          label: 'Diagnósticos que un alumno puede iniciar por día'
+          label: 'Sesiones que un alumno puede iniciar por día con cada agente'
         max_turns:
           type: integer
           label: 'Turnos máximos por diagnóstico'

@@ -63,7 +63,9 @@ final class StartController extends ControllerBase {
         ['@detalle' => ExceptionRedactor::redact($e)],
       );
 
-      $this->messenger()->addWarning($this->t('Has iniciado varios diagnósticos hoy. Vuelve a intentarlo mañana.'));
+      $this->messenger()->addWarning($this->t('Ya iniciaste varias sesiones con @agente hoy. Vuelve a intentarlo mañana; con tus otros agentes puedes seguir.', [
+        '@agente' => $sld_agent->label(),
+      ]));
 
       return $this->backToDashboard();
     }
