@@ -347,9 +347,11 @@ final class ConversationService {
     // transición «misión termina correctamente → COMPLETED» del §4 de la
     // especificación del cliente, y la hace el backend: el agente no la pide.
     //
-    // Un ensayo del gestor no cierra la misión de nadie: no la abrió.
+    // Un ensayo del gestor no cierra la misión de nadie: no la abrió. Y el
+    // diagnóstico de otro agente tampoco: solo la cierra la sesión que la
+    // abrió.
     if (!(bool) $session->get('is_sandbox')->value) {
-      $this->entitlements->completeMission((int) $session->getOwnerId());
+      $this->entitlements->completeMission((int) $session->getOwnerId(), (int) $session->id());
     }
 
     $this->logger->info('Diagnóstico completado: sesión @id, versión @version.', [

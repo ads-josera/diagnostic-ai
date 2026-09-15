@@ -129,7 +129,7 @@ final class AcceptanceCriteriaTest extends KernelTestBase {
 
     $this->assertSame(MissionState::Active, $servicio->forUser(self::ALUMNO)->state);
 
-    $servicio->completeMission(self::ALUMNO);
+    $servicio->completeMission(self::ALUMNO, 100);
 
     $this->assertSame(MissionState::Completed, $servicio->forUser(self::ALUMNO)->state);
     $this->assertSame(1, $this->container->get(ToolCallRepository::class)->usedInMission(100)['calls']);
@@ -141,7 +141,7 @@ final class AcceptanceCriteriaTest extends KernelTestBase {
   public function testA02ChatNuevoNoPermiteSegundaMision(): void {
     $servicio = $this->entitlements();
     $servicio->startMission(self::ALUMNO, 100);
-    $servicio->completeMission(self::ALUMNO);
+    $servicio->completeMission(self::ALUMNO, 100);
 
     $this->turno(200);
 
@@ -160,7 +160,7 @@ final class AcceptanceCriteriaTest extends KernelTestBase {
   public function testA03CambiarDeEntryModeNoResetea(): void {
     $servicio = $this->entitlements();
     $servicio->startMission(self::ALUMNO, 100);
-    $servicio->completeMission(self::ALUMNO);
+    $servicio->completeMission(self::ALUMNO, 100);
 
     $antes = $servicio->forUser(self::ALUMNO);
 
@@ -187,7 +187,7 @@ final class AcceptanceCriteriaTest extends KernelTestBase {
       'claim' => 'Abrió un centro en Querétaro.',
       'source' => 'https://ejemplo.mx/1',
     ]);
-    $servicio->completeMission(self::ALUMNO);
+    $servicio->completeMission(self::ALUMNO, 100);
 
     $this->turno(200);
     $nombres = array_column($this->container->get(ToolBoxFactory::class)->forTurn()->declarations(), 'name');
@@ -210,7 +210,7 @@ final class AcceptanceCriteriaTest extends KernelTestBase {
 
     $servicio = $this->entitlements();
     $servicio->startMission(self::ALUMNO, 100);
-    $servicio->completeMission(self::ALUMNO);
+    $servicio->completeMission(self::ALUMNO, 100);
 
     $this->assertSame(ResearchAccess::TargetedOnly, $servicio->forUser(self::ALUMNO)->access(1));
 
@@ -259,7 +259,7 @@ final class AcceptanceCriteriaTest extends KernelTestBase {
   public function testA08RenovacionSemanal(): void {
     $servicio = $this->entitlements();
     $servicio->startMission(self::ALUMNO, 100);
-    $servicio->completeMission(self::ALUMNO);
+    $servicio->completeMission(self::ALUMNO, 100);
 
     $this->assertSame(MissionState::Completed, $servicio->forUser(self::ALUMNO)->state);
 
@@ -285,7 +285,7 @@ final class AcceptanceCriteriaTest extends KernelTestBase {
       'claim' => 'Abrió un centro en Querétaro.',
       'source' => 'https://ejemplo.mx/1',
     ]);
-    $servicio->completeMission(self::ALUMNO);
+    $servicio->completeMission(self::ALUMNO, 100);
 
     // Pasa una semana.
     $this->container->get('database')->update('sld_research_entitlement')

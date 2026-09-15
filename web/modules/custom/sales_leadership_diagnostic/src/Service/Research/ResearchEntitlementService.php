@@ -128,8 +128,18 @@ final class ResearchEntitlementService {
    *
    * Después de cerrar, los follow-ups siguen funcionando con la evidencia ya
    * recogida: lo que se acaba es la capacidad de abrir investigación nueva.
+   *
+   * Solo la cierra la conversación que la abrió. Antes bastaba con que el
+   * alumno terminara CUALQUIER diagnóstico: al cerrar el informe del agente de
+   * liderazgo, que no investiga, se quedaba sin la misión de prospección de la
+   * semana (lo encontró Jarvis en producción el 15-09-2026).
+   *
+   * @param int $uid
+   *   Alumno.
+   * @param int $sessionId
+   *   Conversación que termina.
    */
-  public function completeMission(int $uid): void {
+  public function completeMission(int $uid, int $sessionId): void {
     $ahora = $this->time->getRequestTime();
 
     $this->database->update(self::TABLE)
@@ -141,6 +151,7 @@ final class ResearchEntitlementService {
       ->condition('uid', $uid)
       ->condition('period', $this->periodFor($uid))
       ->condition('mission_state', MissionState::Active->value)
+      ->condition('session_id', $sessionId)
       ->execute();
   }
 

@@ -167,7 +167,7 @@ final class EvidenceLedgerTest extends KernelTestBase {
     $entitlements->startMission(self::ALUMNO, 42);
     $this->anotar('Cemex', 'Lo que se averiguó en la misión.');
 
-    $entitlements->completeMission(self::ALUMNO);
+    $entitlements->completeMission(self::ALUMNO, 42);
 
     $this->assertCount(1, $this->ledger()->recall(self::ALUMNO, 'Cemex'));
   }
@@ -189,7 +189,7 @@ final class EvidenceLedgerTest extends KernelTestBase {
 
     $entitlements = $this->container->get(ResearchEntitlementService::class);
     $entitlements->startMission(self::ALUMNO, 42);
-    $entitlements->completeMission(self::ALUMNO);
+    $entitlements->completeMission(self::ALUMNO, 42);
 
     $nombres = array_column(
       $this->container->get(ToolBoxFactory::class)->forTurn()->declarations(),

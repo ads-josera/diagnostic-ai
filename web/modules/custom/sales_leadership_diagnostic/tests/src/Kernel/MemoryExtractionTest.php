@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
+use Drupal\Core\Database\Statement\FetchAs;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSession;
@@ -13,6 +14,7 @@ use Drupal\sales_leadership_diagnostic\MessageRole;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
 use Drupal\sales_leadership_diagnostic\Service\Memory\MemoryExtractor;
 use Drupal\sales_leadership_diagnostic\Service\Memory\StudentMemoryStore;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
 use Drupal\user\Entity\User;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -100,6 +102,7 @@ final class MemoryExtractionTest extends KernelTestBase {
       'sld_diagnostic_message',
       'sld_research_entitlement',
       'sld_evidence',
+      'sld_ai_usage',
     ]);
     $this->installConfig(['sales_leadership_diagnostic']);
 
@@ -135,6 +138,45 @@ final class MemoryExtractionTest extends KernelTestBase {
     $this->assertSame(['empresa', 'equipo'], array_keys($memoria));
     $this->assertSame('agente_gap', $memoria['empresa']->getSourceAgentId());
     $this->assertSame((int) $session->id(), $memoria['empresa']->getSourceSessionId());
+  }
+
+  /**
+   * Lo que cuesta extraer la memoria se anota a nombre de su sesión.
+   *
+   * Hasta el 15-09-2026 la llamada quedaba en el colector sin que nadie la
+   * vaciara: en el cron se perdía o se le cargaba al siguiente turno, que
+   * podía ser de otro alumno, y el tope de gasto no la veía.
+   */
+  public function testElConsumoSeAnotaConSuSesion(): void {
+    $session = $this->crearSesionConversada($this->ana);
+
+    $this->responder([
+      'empresa' => 'Distribuidora de material eléctrico, 40 empleados.',
+      'equipo' => '',
+      'icp' => '',
+      'cuentas' => '',
+      'proceso' => '',
+      'objetivos' => '',
+    ]);
+
+    $this->extractor()->extractFromSession((int) $session->id());
+
+    $filas = $this->container->get('database')
+      ->select('sld_ai_usage', 'u')
+      ->fields('u', ['uid', 'agent', 'session_id', 'purpose'])
+      ->execute()
+      ->fetchAll(FetchAs::Associative);
+
+    $esperada = [
+      'uid' => (string) $this->ana->id(),
+      'agent' => 'agente_gap',
+      'session_id' => (string) $session->id(),
+      'purpose' => 'Memoria extraída',
+    ];
+
+    $this->assertSame([$esperada], $filas);
+
+    $this->assertSame([], $this->container->get(AiUsageCollector::class)->drain(), 'El colector queda vacío: nada pasa al turno siguiente.');
   }
 
   /**

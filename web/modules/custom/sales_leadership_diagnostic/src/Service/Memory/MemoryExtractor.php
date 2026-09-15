@@ -13,6 +13,8 @@ use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Engine\OpenAIClient;
 use Drupal\sales_leadership_diagnostic\Service\Security\ExceptionRedactor;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
 
 /**
  * Saca de una conversación terminada lo que conviene recordar del alumno.
@@ -61,6 +63,8 @@ final class MemoryExtractor {
     private readonly DiagnosticMessageRepository $messages,
     private readonly EntityTypeManagerInterface $entityTypeManager,
     LoggerChannelFactoryInterface $loggerFactory,
+    private readonly AiUsageCollector $usageCollector,
+    private readonly AiUsageRepository $usageRepository,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
   }
@@ -124,16 +128,31 @@ final class MemoryExtractor {
       $transcripcion[] = strtoupper($mensaje->role->value) . ': ' . $mensaje->content;
     }
 
-    $respuesta = $this->client->completeJson(
-      [
-        ['role' => 'system', 'content' => $this->buildInstructions()],
-        ['role' => 'user', 'content' => $this->buildInput($uid, $transcripcion)],
-      ],
-      'student_memory',
-      $this->buildSchema(),
-      'Memoria extraída',
-      self::MAX_TOKENS,
-    );
+    try {
+      $respuesta = $this->client->completeJson(
+        [
+          ['role' => 'system', 'content' => $this->buildInstructions()],
+          ['role' => 'user', 'content' => $this->buildInput($uid, $transcripcion)],
+        ],
+        'student_memory',
+        $this->buildSchema(),
+        'Memoria extraída',
+        self::MAX_TOKENS,
+      );
+    }
+    finally {
+      // El cliente anota cada llamada en un colector que hasta el 15-09-2026
+      // solo vaciaba la conversación. Esto corre en el cron, en el mismo
+      // proceso que los turnos encolados: lo gastado aquí se perdía o se le
+      // cargaba al siguiente turno, que podía ser de otro alumno. Se anota ya,
+      // a nombre de esta sesión, también si la llamada falló.
+      $this->usageRepository->recordAll(
+        $this->usageCollector->drain(),
+        $uid,
+        (string) $session->getAgentId(),
+        (int) $session->id(),
+      );
+    }
 
     return $this->guardar($uid, (string) $session->getAgentId(), (int) $session->id(), $respuesta);
   }

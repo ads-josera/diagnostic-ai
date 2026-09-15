@@ -154,13 +154,33 @@ final class ResearchEntitlementTest extends KernelTestBase {
   public function testAbrirOtroChatTrasCompletarSigueBloqueado(): void {
     $servicio = $this->servicio();
     $servicio->startMission(self::ALUMNO, 100);
-    $servicio->completeMission(self::ALUMNO);
+    $servicio->completeMission(self::ALUMNO, 100);
 
     // Conversación nueva, mismo alumno, misma semana.
     $entitlement = $servicio->forUser(self::ALUMNO);
 
     $this->assertSame(MissionState::Completed, $entitlement->state);
     $this->assertFalse($entitlement->state->canStartMission());
+  }
+
+  /**
+   * El diagnóstico de otro agente no cierra la misión de prospección.
+   *
+   * Producción, 15-09-2026: el alumno terminó el informe del agente de
+   * liderazgo (sesión 2) y con él se cerró la misión que había abierto la
+   * sesión 1 de prospección; su siguiente turno ya gastó una comprobación.
+   */
+  public function testOtraConversacionNoCierraLaMision(): void {
+    $servicio = $this->servicio();
+    $servicio->startMission(self::ALUMNO, 100);
+
+    $servicio->completeMission(self::ALUMNO, 200);
+
+    $this->assertSame(MissionState::Active, $servicio->forUser(self::ALUMNO)->state, 'La cierra solo la conversación que la abrió.');
+
+    $servicio->completeMission(self::ALUMNO, 100);
+
+    $this->assertSame(MissionState::Completed, $servicio->forUser(self::ALUMNO)->state);
   }
 
   /**
@@ -172,7 +192,7 @@ final class ResearchEntitlementTest extends KernelTestBase {
     $this->fijarRechecks(2);
     $servicio = $this->servicio();
     $servicio->startMission(self::ALUMNO, 100);
-    $servicio->completeMission(self::ALUMNO);
+    $servicio->completeMission(self::ALUMNO, 100);
 
     $this->assertSame(ResearchAccess::TargetedOnly, $servicio->forUser(self::ALUMNO)->access(2));
 
@@ -202,7 +222,7 @@ final class ResearchEntitlementTest extends KernelTestBase {
     $this->assertSame(TurnClass::ResearchMission, $clasificador->classify($servicio->forUser(self::ALUMNO), 1));
 
     $servicio->startMission(self::ALUMNO, 100);
-    $servicio->completeMission(self::ALUMNO);
+    $servicio->completeMission(self::ALUMNO, 100);
 
     $this->assertSame(TurnClass::TargetedRecheck, $clasificador->classify($servicio->forUser(self::ALUMNO), 1));
 

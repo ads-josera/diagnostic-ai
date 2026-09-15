@@ -349,6 +349,8 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository'
       - '@entity_type.manager'
       - '@logger.factory'
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector'
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository'
 
   # --- Errores imprevistos ---------------------------------------------------
 
