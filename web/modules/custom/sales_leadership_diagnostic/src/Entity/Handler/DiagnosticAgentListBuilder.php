@@ -90,6 +90,9 @@ final class DiagnosticAgentListBuilder extends ConfigEntityListBuilder {
     if ($entity->getCourseId() === '') {
       $faltan[] = (string) $this->t('el curso');
     }
+    elseif (!$entity->hasValidCourseId()) {
+      $faltan[] = (string) $this->t('un curso válido (un solo número de curso de WordPress)');
+    }
 
     if ($entity->getSystemPrompt() === '') {
       $faltan[] = (string) $this->t('el prompt');

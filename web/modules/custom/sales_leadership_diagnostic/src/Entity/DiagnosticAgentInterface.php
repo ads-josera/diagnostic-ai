@@ -27,6 +27,11 @@ interface DiagnosticAgentInterface extends ConfigEntityInterface {
   public function getCourseId(): string;
 
   /**
+   * El curso es un único identificador numérico de WordPress.
+   */
+  public function hasValidCourseId(): bool;
+
+  /**
    * Descripción interna, para quien administra.
    */
   public function getDescription(): string;

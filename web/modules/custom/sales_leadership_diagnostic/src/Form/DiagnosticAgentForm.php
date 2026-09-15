@@ -345,6 +345,24 @@ final class DiagnosticAgentForm extends EntityForm {
 
   /**
    * {@inheritdoc}
+   *
+   * El curso se valida aquí y no solo en el informe de estado: la lista de
+   * cursos del plugin admite varios, y copiarla a este campo parece lo
+   * natural. Guardada, deja al agente sin alumnos y sin ningún aviso.
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state): void {
+    parent::validateForm($form, $form_state);
+
+    $curso = trim((string) $form_state->getValue('course_id'));
+    $form_state->setValue('course_id', $curso);
+
+    if ($curso !== '' && preg_match('/^\d+$/', $curso) !== 1) {
+      $form_state->setErrorByName('course_id', $this->t('Escribe un solo número de curso de WordPress, por ejemplo 35884. Si varios cursos deben dar acceso, ponlos en la lista de cursos del plugin, no aquí; y usa el número del curso, no el de una lección.'));
+    }
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function save(array $form, FormStateInterface $form_state): int {
     // Se lee ANTES de guardar: después, la entidad ya tiene el nuevo y no

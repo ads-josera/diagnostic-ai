@@ -281,6 +281,30 @@ final class DiagnosticRequirements {
   private function checkAgent(): array {
     $usables = $this->agents->getUsable();
 
+    // Un agente activo con un curso mal escrito no se ofrece a nadie y el
+    // alumno solo ve un panel vacío: se nombra aunque haya otros disponibles.
+    $cursoInvalido = [];
+
+    foreach ($this->entityTypeManager->getStorage('sld_agent')->loadMultiple() as $agente) {
+      if ($agente instanceof DiagnosticAgentInterface
+        && $agente->status()
+        && $agente->getCourseId() !== ''
+        && !$agente->hasValidCourseId()) {
+        $cursoInvalido[] = sprintf('%s («%s»)', $agente->label(), $agente->getCourseId());
+      }
+    }
+
+    if ($cursoInvalido !== []) {
+      return [
+        'title' => $this->t('Diagnostic AI: agentes'),
+        'value' => $this->t('Curso no válido'),
+        'severity' => RequirementSeverity::Warning,
+        'description' => $this->t('El curso que concede un agente debe ser un solo número de curso de WordPress (la lista de varios cursos va en el plugin). Estos agentes no se ofrecen a ningún alumno hasta corregirlo en su ficha: @lista.', [
+          '@lista' => implode(' · ', $cursoInvalido),
+        ]),
+      ];
+    }
+
     if ($usables === []) {
       return [
         'title' => $this->t('Diagnostic AI: agentes'),

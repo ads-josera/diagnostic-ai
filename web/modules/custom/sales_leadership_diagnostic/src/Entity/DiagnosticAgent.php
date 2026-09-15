@@ -237,6 +237,18 @@ final class DiagnosticAgent extends ConfigEntityBase implements DiagnosticAgentI
 
   /**
    * {@inheritdoc}
+   *
+   * Un solo número: el panel compara el curso del agente con los cursos del
+   * alumno tal cual, así que «35884, 38125» no coincide con ninguno y el
+   * alumno entra a un panel vacío sin que nada avise (pasó en producción el
+   * 14-09-2026, copiando a la ficha la lista de cursos del plugin).
+   */
+  public function hasValidCourseId(): bool {
+    return preg_match('/^\d+$/', $this->getCourseId()) === 1;
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function getDescription(): string {
     return trim($this->description);
@@ -338,13 +350,13 @@ final class DiagnosticAgent extends ConfigEntityBase implements DiagnosticAgentI
   /**
    * {@inheritdoc}
    *
-   * Un agente sin curso no puede concederse a nadie, y uno sin prompt no puede
-   * conversar. Se comprueban juntos porque un agente a medias publicado es
-   * peor que uno deshabilitado: aparece y falla.
+   * Un agente sin curso válido no puede concederse a nadie, y uno sin prompt
+   * no puede conversar. Se comprueban juntos porque un agente a medias
+   * publicado es peor que uno deshabilitado: aparece y falla.
    */
   public function isUsable(): bool {
     return $this->status()
-      && $this->getCourseId() !== ''
+      && $this->hasValidCourseId()
       && $this->getSystemPrompt() !== '';
   }
 

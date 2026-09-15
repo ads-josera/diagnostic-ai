@@ -95,13 +95,18 @@ final readonly class AccessDecision {
    * Devuelve una copia marcada como procedente de cache.
    */
   public function fromCache(): self {
+    // Con nombre y completa: la versión posicional se dejó fuera la lista de
+    // cursos, y un alumno con dos cursos veía todos sus agentes en la primera
+    // carga y uno solo en las siguientes (lo encontró Jarvis en producción el
+    // 14-09-2026; toArray() lo había arreglado a medias).
     return new self(
-      $this->granted,
-      $this->courseId,
-      $this->checkedAt,
-      self::SOURCE_CACHE,
-      $this->expiresAt,
-      $this->startedAt,
+      granted: $this->granted,
+      courseId: $this->courseId,
+      checkedAt: $this->checkedAt,
+      source: self::SOURCE_CACHE,
+      expiresAt: $this->expiresAt,
+      startedAt: $this->startedAt,
+      ownedCourses: $this->ownedCourses,
     );
   }
 

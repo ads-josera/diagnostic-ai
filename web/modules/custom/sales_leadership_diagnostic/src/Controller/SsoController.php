@@ -96,13 +96,18 @@ final class SsoController extends ControllerBase {
    * Valida el token entrante y abre sesión.
    */
   public function login(Request $request): RedirectResponse {
+    // Lo primero, antes de que nada escriba en el registro: Drupal guarda con
+    // cada entrada la URI de la petición, y aquí el token lleva el correo y el
+    // nombre del alumno (§43). Redirigir solo protegía los rechazos; una
+    // entrada correcta escribía tres líneas con el token completo (lo vio
+    // Jarvis en producción el 14-09-2026).
+    $token = $this->takeToken($request);
+
     if (!$this->isAllowed($request)) {
       $this->logger->warning('Demasiados intentos de acceso desde una misma dirección.');
 
       return $this->deny(SsoDenialReason::TooManyAttempts);
     }
-
-    $token = (string) $request->query->get('token', '');
 
     try {
       $identity = $this->validator->validate(
@@ -178,6 +183,22 @@ final class SsoController extends ControllerBase {
       ])->toString(),
       302,
     );
+  }
+
+  /**
+   * Lee el token y lo borra de la petición.
+   *
+   * El registro de Drupal toma la URI de `Request::getUri()`, que arma la
+   * cadena de consulta desde `QUERY_STRING`; por eso no basta con quitarlo de
+   * `query`. El resto de parámetros se conserva tal cual.
+   */
+  private function takeToken(Request $request): string {
+    $token = (string) $request->query->get('token', '');
+
+    $request->query->remove('token');
+    $request->server->set('QUERY_STRING', http_build_query($request->query->all()));
+
+    return $token;
   }
 
   /**
