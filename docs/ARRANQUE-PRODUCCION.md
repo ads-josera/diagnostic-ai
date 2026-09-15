@@ -280,8 +280,13 @@ En **cPanel → Cron Jobs**, con la ruta real del proyecto y el PHP de la versi�
 correcta:
 
 ```
-* * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php vendor/bin/drush cron >/dev/null 2>&1
+* * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d error_log=/home/labai/logs/php-cli-error.log vendor/bin/drush cron >/dev/null 2>&1
 ```
+
+Los dos `-d` son porque el PHP de línea de órdenes no lee lo que se pone en el
+MultiPHP INI Editor (eso es solo para la web): sin ellos, cada minuto dejaba
+el aviso «session.gc_divisor must be greater than 0» en un `error_log` dentro
+de `public_html` (visto el 16-09-2026).
 
 Es imprescindible: genera los turnos que investigan, escribe la memoria del
 alumno y desatasca conversaciones. Detalle en DESPLIEGUE §1.
