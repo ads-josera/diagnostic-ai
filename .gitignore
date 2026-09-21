@@ -98,3 +98,6 @@ Thumbs.db
 
 # Transcripciones de bin/bateria-agente1.php: conversaciones simuladas, no código.
 /.bateria/
+
+# Huellas de pantallas de bin/huella-pantallas.mjs: medidas, no codigo.
+/.huella/
