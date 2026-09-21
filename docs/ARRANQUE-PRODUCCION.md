@@ -355,14 +355,22 @@ las pruebas, hay que subirlo cuando entren alumnos reales.
 
 ```bash
 export PATH=/opt/cpanel/ea-php84/root/usr/bin:$PATH   # PHP 8.4 (paso 2)
+export PHP_INI_SCAN_DIR=:/home/labai/.php-ini.d       # ver DESPLIEGUE, «Tres cosas»
 cd /home/labai/public_html
-vendor/bin/drush sql:dump --gzip --result-file=../copia-previa.sql
+vendor/bin/drush sql:dump --gzip --result-file=/home/labai/backups/copia-previa.sql
 git pull
 composer install --no-dev --optimize-autoloader
 vendor/bin/drush updatedb -y
 vendor/bin/drush config:import -y
 vendor/bin/drush cache:rebuild
+ls web/error_log 2>/dev/null && echo 'MOVER a ~/logs: el lote de updatedb lo dejó dentro de la raíz'
 ```
+
+Tres cosas que muerden en cada despliegue y están explicadas en
+`docs/DESPLIEGUE.md`, sección «Tres cosas que aprendimos desplegando 11.4.7»:
+el `error_log` que el lote de `updatedb` deja dentro de `web/`, el aviso de
+«Estado de actualizaciones» que tarda hasta una hora en irse, y el bloque de
+cPanel que `composer install` borra del `.htaccess` (inofensivo bajo PHP-FPM).
 
 Los números de archivo (documentos e icono de cada agente, fondo y logotipos
 de la portada) **no** los toca `config:import`: los protege el módulo

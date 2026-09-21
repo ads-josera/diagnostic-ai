@@ -604,6 +604,34 @@ La excepción son los números de archivo —documentos e icono de cada agente,
 fondo y logotipos de la portada—: los protege `config_ignore`. Los cargadores
 (§6) solo se vuelven a pasar cuando cambian esos archivos en el repositorio.
 
+### Tres cosas que aprendimos desplegando 11.4.7 (21-09-2026)
+
+1. **`updatedb` deja un `error_log` dentro de `web/`.** Lanza un lote en
+   subprocesos que **no heredan** las opciones `-d` de la orden y corren con el
+   directorio de trabajo en `web/`, así que el aviso de `session.gc_divisor`
+   acaba en `web/error_log`, dentro de la raíz pública. Lo mismo hace algún
+   subproceso de `composer install`. El arreglo duradero es un ini propio de la
+   cuenta que sí heredan los subprocesos:
+
+   ```bash
+   mkdir -p ~/.php-ini.d && printf 'session.gc_divisor = 100\nerror_log = /home/labai/logs/php-cli-error.log\n' > ~/.php-ini.d/99-labai.ini
+   echo 'export PHP_INI_SCAN_DIR=:/home/labai/.php-ini.d' >> ~/.bashrc   # los dos puntos conservan los ini del sistema
+   ```
+
+   Mientras no esté, **después de cada despliegue**: `ls web/error_log` y, si
+   aparece, moverlo a `~/logs`. El `.htaccess` de Drupal no protege ese nombre.
+2. **El aviso «Estado de actualizaciones» tarda hasta una hora en irse.** No lo
+   limpia `cache:rebuild`, porque no vive en una caché sino en
+   `keyValueExpirable('update')`. Se recalcula solo, o con
+   `drush php:eval 'update_storage_clear();'` y otra pasada de
+   `core:requirements`. No es que la actualización no se haya aplicado.
+3. **`composer install` borra el bloque de cPanel del `.htaccess`**, con su
+   `AddHandler` y sus directivas INI. Bajo PHP-FPM es **redundante**: el SAPI es
+   `fpm-fcgi`, esos `<IfModule php8_module>` nunca cargan, y los mismos valores
+   están en `web/.user.ini` y `web/php.ini`, que el scaffold no toca. Se
+   comprobó con una sonda el 21-09-2026: 8.4.25, `max_execution_time` 300,
+   `memory_limit` 528M, subida 20M/24M, `session.gc_divisor` 100.
+
 ---
 
 ## Vuelta atrás
