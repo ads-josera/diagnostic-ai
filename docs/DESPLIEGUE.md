@@ -156,7 +156,7 @@ forma visible: los diagnósticos siguen saliendo, los resultados se guardan, y
 el alumno simplemente vuelve a contarlo todo cada vez, sin que nadie sepa por
 qué. Si el cron de Drupal no está programado en el servidor, prográmelo.
 
-    */15 * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d error_log=/home/labai/logs/php-cli-error.log vendor/drush/drush/drush.php cron
+    */15 * * * * cd /home/labai/public_html && PHP_INI_SCAN_DIR=:/home/labai/.php-ini.d /opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d error_log=/home/labai/logs/php-cli-error.log vendor/drush/drush/drush.php cron
 
 #### Con la búsqueda encendida, cada MINUTO
 
@@ -168,7 +168,7 @@ Con el cron cada quince minutos, un alumno escribiría y **esperaría hasta un
 cuarto de hora a que su turno arrancara**. Con el cron cada minuto, arranca casi
 en el acto.
 
-    * * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d error_log=/home/labai/logs/php-cli-error.log vendor/drush/drush/drush.php cron
+    * * * * * cd /home/labai/public_html && PHP_INI_SCAN_DIR=:/home/labai/.php-ini.d /opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d error_log=/home/labai/logs/php-cli-error.log vendor/drush/drush/drush.php cron
 
 (En este servidor el PHP de la línea de órdenes es 8.1: por eso el cron nombra
 el binario de PHP 8.4 de cPanel.)
@@ -606,20 +606,38 @@ fondo y logotipos de la portada—: los protege `config_ignore`. Los cargadores
 
 ### Tres cosas que aprendimos desplegando 11.4.7 (21-09-2026)
 
-1. **`updatedb` deja un `error_log` dentro de `web/`.** Lanza un lote en
-   subprocesos que **no heredan** las opciones `-d` de la orden y corren con el
-   directorio de trabajo en `web/`, así que el aviso de `session.gc_divisor`
-   acaba en `web/error_log`, dentro de la raíz pública. Lo mismo hace algún
-   subproceso de `composer install`. El arreglo duradero es un ini propio de la
-   cuenta que sí heredan los subprocesos:
+1. **`updatedb` dejaba un `error_log` dentro de `web/`. Ya está cerrado en el
+   origen** (21-09-2026). La causa no eran solo los subprocesos: el php.ini del
+   sistema (`/opt/cpanel/ea-php84/root/etc/php.ini`) trae
+   `error_log = error_log` —ruta **relativa**, así que cada proceso deja el
+   archivo en su directorio de trabajo— y `session.gc_divisor = 0`, que es el
+   aviso de arranque. **El PHP de línea de órdenes no lee el `php.ini` de
+   `public_html`**: `php --ini` apunta siempre al del sistema, se lance desde
+   donde se lance. El lote de `updatedb` corre con el directorio en `web/`, y
+   por eso el archivo caía en la raíz pública.
+
+   El arreglo, que sí heredan los subprocesos, es un ini propio de la cuenta:
 
    ```bash
    mkdir -p ~/.php-ini.d && printf 'session.gc_divisor = 100\nerror_log = /home/labai/logs/php-cli-error.log\n' > ~/.php-ini.d/99-labai.ini
    echo 'export PHP_INI_SCAN_DIR=:/home/labai/.php-ini.d' >> ~/.bashrc   # los dos puntos conservan los ini del sistema
    ```
 
-   Mientras no esté, **después de cada despliegue**: `ls web/error_log` y, si
-   aparece, moverlo a `~/logs`. El `.htaccess` de Drupal no protege ese nombre.
+   Dos detalles que costaron una vuelta:
+
+   - **En el cron, la variable va justo antes del binario de PHP**, no al
+     principio de la línea: antes de `* * * * *` es sintaxis inválida, y antes
+     del `cd` no sobrevive al `&&`.
+   - **`.bashrc` no llega a las sesiones no interactivas** (las de un agente,
+     por ejemplo). Quien trabaje así tiene que exportarla en cada llamada, o
+     seguir pasando las opciones con `-d`.
+
+   Curiosidad que despista: `ini_get('session.gc_divisor')` devuelve 100 aunque
+   el ini diga 0, porque PHP rechaza el 0 y cae al valor de fábrica **después**
+   de emitir el aviso. Por eso convivían el warning y el valor correcto.
+
+   Si alguna vez reaparece: `ls web/error_log` y moverlo a `~/logs`. El
+   `.htaccess` de Drupal no protege ese nombre.
 2. **El aviso «Estado de actualizaciones» tarda hasta una hora en irse.** No lo
    limpia `cache:rebuild`, porque no vive en una caché sino en
    `keyValueExpirable('update')`. Se recalcula solo, o con

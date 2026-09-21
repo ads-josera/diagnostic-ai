@@ -280,7 +280,7 @@ En **cPanel → Cron Jobs**, con la ruta real del proyecto y el PHP de la versi�
 correcta:
 
 ```
-* * * * * cd /home/labai/public_html && /opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d error_log=/home/labai/logs/php-cli-error.log vendor/drush/drush/drush.php cron >/dev/null 2>&1
+* * * * * cd /home/labai/public_html && PHP_INI_SCAN_DIR=:/home/labai/.php-ini.d /opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d error_log=/home/labai/logs/php-cli-error.log vendor/drush/drush/drush.php cron >/dev/null 2>&1
 ```
 
 Los dos `-d` son porque el PHP de línea de órdenes no lee lo que se pone en el
