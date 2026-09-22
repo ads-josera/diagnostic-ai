@@ -55,12 +55,33 @@ use Drupal\sales_leadership_diagnostic\Service\Security\RateLimiter;
 final class ConversationService {
 
   /**
-   * Segundos que se espera por el bloqueo antes de rendirse.
+   * Cuánto VIVE el cerrojo del turno síncrono, en segundos.
    *
-   * Es deliberadamente corto: si otro turno está en curso, lo correcto es
-   * decírselo al alumno enseguida, no dejarlo esperando.
+   * Ojo, no es lo que se espera por él: el segundo parámetro de `acquire()`
+   * es la vida del cerrojo. Hasta el 22-09-2026 eran 60 segundos para los dos
+   * caminos, con este mismo comentario diciendo otra cosa, y 60 se quedaba
+   * corto: el informe final del agente 1 tardó 42,6 segundos medido en
+   * producción. Un turno más largo dejaba el cerrojo caducado a mitad, y una
+   * segunda petición de la misma conversación habría generado —y pagado— un
+   * turno en paralelo.
+   *
+   * 300 es el techo real de este camino: `max_execution_time` del servidor.
+   * Más allá no hay petición web que proteger.
    */
-  private const LOCK_TIMEOUT = 60.0;
+  public const LOCK_TTL_SINCRONO = 300.0;
+
+  /**
+   * Cuánto vive el cerrojo del turno que genera la cola, en segundos.
+   *
+   * Vale lo mismo que la reserva que la cola pone sobre el elemento (el
+   * `cron.time` de DiagnosticTurnWorker), y eso es a propósito: son las dos
+   * barreras contra procesar el mismo turno dos veces, y si la del cerrojo
+   * caducara antes, la otra se quedaría sola. `LockTtlTest` lo vigila.
+   *
+   * Importa desde que hay más de un recogedor (22-09-2026): con uno solo, el
+   * cron nunca competía consigo mismo.
+   */
+  public const LOCK_TTL_ENCOLADO = 900.0;
 
   /**
    * Canal de log del módulo.
@@ -103,7 +124,7 @@ final class ConversationService {
     $uid = (int) $session->getOwnerId();
     $lockName = 'sld_session:' . $sessionId;
 
-    if (!$this->lock->acquire($lockName, self::LOCK_TIMEOUT)) {
+    if (!$this->lock->acquire($lockName, self::LOCK_TTL_SINCRONO)) {
       throw new SessionBusyException(sprintf('Ya hay un turno en curso para la sesión %d.', $sessionId));
     }
 
@@ -242,7 +263,7 @@ final class ConversationService {
   public function processQueuedTurn(int $sessionId): void {
     $lockName = 'sld_session:' . $sessionId;
 
-    if (!$this->lock->acquire($lockName, self::LOCK_TIMEOUT)) {
+    if (!$this->lock->acquire($lockName, self::LOCK_TTL_ENCOLADO)) {
       throw new SessionBusyException(sprintf('Ya hay un turno en curso para la sesión %d.', $sessionId));
     }
 

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
+use Drupal\Core\Lock\DatabaseLockBackend;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\Controller\ChatController;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
+use Drupal\sales_leadership_diagnostic\Exception\SessionBusyException;
 use Drupal\sales_leadership_diagnostic\Hook\StuckTurnHooks;
 use Drupal\sales_leadership_diagnostic\Plugin\QueueWorker\DiagnosticTurnWorker;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\ConversationService;
@@ -257,6 +259,72 @@ final class BackgroundTurnTest extends KernelTestBase {
     $this->conversacion()->processQueuedTurn($id);
 
     $this->assertCount(2, $this->conversacion()->getConversation($id), 'Un mensaje del alumno y UNA respuesta.');
+  }
+
+  /**
+   * Un segundo recogedor NO entra mientras el primero trabaja.
+   *
+   * Desde el 22-09-2026 hay dos procesos recogiendo la cola en el servidor, y
+   * con uno solo esto no podía pasar. La reserva que la cola pone sobre el
+   * elemento es la primera barrera; el cerrojo de la conversación es la
+   * segunda, y la que sigue de pie si un turno se pasa de esa reserva.
+   */
+  public function testOtroRecogedorNoEntraMientrasElPrimeroTrabaja(): void {
+    // En las pruebas de kernel, `lock` es un backend NULO que siempre concede
+    // (KernelTestBase lo registra así). Con él esta prueba pasaría sin probar
+    // nada, porque el cerrojo nunca negaría. Se pone el de base de datos, que
+    // es el que corre en el servidor. Su tabla la crea él solo la primera vez
+    // que la necesita, así que no hay que instalar ningún esquema.
+    $this->container->set('lock', new DatabaseLockBackend($this->container->get('database')));
+
+    $this->habilitarBusqueda();
+    $sesion = $this->crearSesion();
+    $this->conversacion()->submitMessage($sesion, 'Investiga Cemex.');
+    $id = (int) $sesion->id();
+
+    // Otro proceso de verdad: un backend de cerrojos propio tiene su propio
+    // identificador, así que su cerrojo es ajeno al del servicio. Pedirlo dos
+    // veces desde el mismo no probaría nada, porque el dueño lo renueva.
+    $otroProceso = new DatabaseLockBackend($this->container->get('database'));
+    $cerrojo = 'sld_session:' . $id;
+
+    $this->assertTrue($otroProceso->acquire($cerrojo, ConversationService::LOCK_TTL_ENCOLADO));
+
+    try {
+      $this->conversacion()->processQueuedTurn($id);
+      $this->fail('Tenía que rebotar: ese turno lo está generando otro proceso.');
+    }
+    catch (SessionBusyException) {
+      // Es lo que se espera.
+    }
+
+    $this->assertCount(
+      1,
+      $this->conversacion()->getConversation($id),
+      'Solo el mensaje del alumno: un segundo turno costaría otra llamada al proveedor y dejaría dos respuestas.',
+    );
+
+    $otroProceso->release($cerrojo);
+  }
+
+  /**
+   * El cerrojo dura al menos lo que la reserva de la cola.
+   *
+   * Las dos barreras tienen que cubrir la misma ventana. Si el cerrojo
+   * caducara antes, un turno más largo que la reserva quedaría sin ninguna: la
+   * cola lo daría por libre y el cerrojo ya no estaría para frenar al
+   * siguiente.
+   */
+  public function testElCerrojoDuraLoQueLaReservaDeLaCola(): void {
+    $definicion = $this->container
+      ->get('plugin.manager.queue_worker')
+      ->getDefinition(DiagnosticTurnWorker::QUEUE);
+
+    $this->assertGreaterThanOrEqual(
+      (float) $definicion['cron']['time'],
+      ConversationService::LOCK_TTL_ENCOLADO,
+      'Con el cerrojo más corto que la reserva, dos recogedores pueden generar —y pagar— el mismo turno.',
+    );
   }
 
   /**
