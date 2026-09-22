@@ -223,7 +223,28 @@
 
     aviso.append(puntos, etiqueta);
     log.appendChild(aviso);
+
+    // Cuanto puede tardar, dicho desde el principio. Medido en produccion el
+    // 22-09-2026: de 26 segundos a 3 minutos y 21, segun cuantas busquedas
+    // encadene el turno. Sin este dato, el contador de busquedas explica QUE
+    // esta pasando pero no si toca esperar o si algo va mal.
+    //
+    // Va FUERA del aviso vivo a proposito: aquel es un role="status" que se
+    // reescribe con cada busqueda, y meter aqui el texto haria que el lector
+    // de pantalla repitiera la frase entera en cada vuelta.
+    const pista = document.createElement('p');
+    pista.className = 'sld-chat__working-hint';
+    pista.textContent = Drupal.t('Las respuestas que investigan suelen tardar entre uno y tres minutos. Puedes dejar esta pantalla abierta.');
+    log.appendChild(pista);
+
     scrollToEnd(log);
+
+    // Los dos se quitan juntos: dejar la pista sola diria que se sigue
+    // esperando algo que ya llego.
+    const quitarAviso = () => {
+      aviso.remove();
+      pista.remove();
+    };
 
     const hasta = Date.now() + ESPERA_MAXIMA;
 
@@ -236,7 +257,7 @@
         const respuesta = await fetch(settings.statusEndpoint, { credentials: 'same-origin' });
 
         if (!respuesta.ok) {
-          aviso.remove();
+          quitarAviso();
           onError(GENERIC_ERROR);
           return null;
         }
@@ -250,7 +271,7 @@
       }
 
       if (!estado.processing) {
-        aviso.remove();
+        quitarAviso();
         return estado;
       }
 
@@ -261,7 +282,7 @@
         : Drupal.t('Investigando');
     }
 
-    aviso.remove();
+    quitarAviso();
     onError(Drupal.t('La investigación está tardando más de lo normal. Recarga la página en unos minutos: el trabajo sigue en marcha y no se ha perdido.'));
 
     return null;

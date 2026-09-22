@@ -461,3 +461,12 @@
   background: var(--sld-color-surface);
   font-size: 0.9rem;
 }
+
+/* Cuanto puede tardar. Es apoyo del indicador de arriba, no un aviso mas: por
+ * eso va atenuado y sin caja, para que no compita con el que se mueve. */
+.sld-chat__working-hint {
+  margin: 0.35rem 0 0;
+  color: var(--sld-color-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
