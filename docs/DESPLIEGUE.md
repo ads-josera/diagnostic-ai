@@ -213,9 +213,33 @@ vez**. Su cabecera explica el procedimiento completo. Se niega a correr con el
 motor real, que sí se paga. El 22-09-2026 se pasaron 200 turnos con tres
 recogedores: 200 respuestas y ningún duplicado.
 
-Lo que ese simulacro no mide —y por eso existe el bloque de cola en la pantalla
-de Consumo— son los tiempos reales y la CPU con varias investigaciones de
-verdad en marcha.
+Lo que ese simulacro **no** mide es justo lo que se le promete al cliente:
+investigaciones de verdad, a la vez, en el servidor de verdad. El motor simulado
+responde en milésimas, así que no dice nada de la memoria, de la CPU, ni de lo
+que tarda el proveedor cuando tres turnos le hablan al mismo tiempo. Para el día
+a día eso se vigila con el bloque de cola de la pantalla de Consumo.
+
+**Para medirlo a propósito está `bin/ensayo-concurrencia.php`, que GASTA
+DINERO**, y por eso exige escribir `SI-GASTA` a mano. Usa las cuentas de Drupal
+que ya existen —no hace falta crear usuarios de WordPress—, encola un turno por
+cuenta en el mismo segundo y se queda sondeando la cola **cada segundo**, que es
+la única forma de medir esto sin engañarse: las marcas de tiempo de
+`sld_ai_usage` son el `getRequestTime` del proceso de drush y ya hicieron
+parecer instantáneo un turno de 45 segundos. Lo que informa:
+
+- lo que **esperó** cada turno hasta que un recogedor lo tomó;
+- cuánto tardó en **generarse**;
+- si los tres se **solaparon** de verdad, que es la pregunta de fondo;
+- que ninguno se generó **dos veces**;
+- el **coste real** y el pico de memoria que se vio con `ps`.
+
+Antes de gastar un céntimo, `cupo`: dice si cada cuenta puede investigar esta
+semana y **aborta si el turno de alguna no se encolaría**, porque entonces se
+ejecutaría dentro del propio proceso del guion —se pagaría igual y no se mediría
+nada—. No borra nada de lo que crea: son conversaciones reales de cuentas
+reales, y quitar sus apuntes de consumo haría que los topes de gasto olvidaran
+dinero ya pagado. Para dejarlo limpio antes de una demo está
+`drush sld:limpiar-pruebas`.
 
 También hay directorio privado que crear, para los documentos de conocimiento:
 
