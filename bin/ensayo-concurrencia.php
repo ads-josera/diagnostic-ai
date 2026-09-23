@@ -857,25 +857,29 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
 
   print "═══ LO QUE SE QUERÍA SABER ═══\n\n";
 
-  // Paralelismo: la ventana en que los tres estaban generándose a la vez.
-  $inicios = [];
-  $finales = [];
+  // Paralelismo. Se informan DOS cifras, y la segunda no es un adorno: los
+  // recogedores entran a los :00, :20 y :40, así que los tres turnos arrancan
+  // escalonados unos 20 s. Para que exista un instante con LOS TRES a la vez,
+  // el primero tiene que durar más de 40 segundos. Con un turno corto —el
+  // agente pregunta en vez de investigar— el solape de los tres sale en cero
+  // aunque los tres recogedores estén trabajando perfectamente, y ese cero se
+  // leería como una avería. El solape de DOS distingue un caso del otro.
+  $ventanas = [];
 
   foreach ($ids as $id) {
     if (isset($hitos[$id]) && $hitos[$id]['reservado'] !== NULL && $hitos[$id]['terminado'] !== NULL) {
-      $inicios[] = $hitos[$id]['reservado'];
-      $finales[] = $hitos[$id]['terminado'];
+      $ventanas[$id] = [$hitos[$id]['reservado'], $hitos[$id]['terminado']];
     }
   }
 
-  if (count($inicios) === count($ids) && $ids !== []) {
-    $solape = min($finales) - max($inicios);
+  if (count($ventanas) === count($ids) && $ids !== []) {
+    $solape = min(array_column($ventanas, 1)) - max(array_column($ventanas, 0));
 
     printf(
       "  En paralelo      %s\n",
       $solape > 0
         ? sprintf('SÍ: los %d se generaron a la vez durante %.0f s', count($ids), $solape)
-        : sprintf('NO: no hubo un solo instante con los %d generándose (faltaron %.0f s)', count($ids), -$solape),
+        : sprintf('los %d a la vez, NO (faltaron %.0f s); mira la línea siguiente antes de concluir nada', count($ids), -$solape),
     );
   }
   else {
@@ -883,9 +887,39 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
 
     printf(
       "  En paralelo      no se puede decir: %s\n",
-      $terminaronTodos && $inicios === []
+      $terminaronTodos && $ventanas === []
         ? 'los turnos empezaron y acabaron entre dos sondeos (motor simulado)'
         : 'alguno no llegó a terminar mientras se miraba',
+    );
+  }
+
+  // Dos a la vez: la pareja que más coincidió. Basta para demostrar que hay
+  // más de un procesador trabajando, que es la pregunta de fondo.
+  $mejorPareja = NULL;
+  $quienes = '';
+  $nombres = array_column($turnos, 'cuenta', 'sesion');
+
+  foreach (array_keys($ventanas) as $uno) {
+    foreach (array_keys($ventanas) as $otro) {
+      if ($uno >= $otro) {
+        continue;
+      }
+
+      $coincidencia = min($ventanas[$uno][1], $ventanas[$otro][1]) - max($ventanas[$uno][0], $ventanas[$otro][0]);
+
+      if ($coincidencia > ($mejorPareja ?? 0)) {
+        $mejorPareja = $coincidencia;
+        $quienes = ($nombres[$uno] ?? $uno) . ' + ' . ($nombres[$otro] ?? $otro);
+      }
+    }
+  }
+
+  if (count($ventanas) > 1) {
+    printf(
+      "  Dos a la vez     %s\n",
+      $mejorPareja === NULL
+        ? 'NO: ni siquiera dos coincidieron, así que se atendieron en serie'
+        : sprintf('sí, %.0f s (%s)', $mejorPareja, $quienes),
     );
   }
 
