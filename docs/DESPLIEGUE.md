@@ -182,6 +182,41 @@ un estado que no admite mensajes. Sin cron, esa conversación queda inutilizable
 para siempre; con él, se recupera sola a los 45 minutos —configurable— y la
 persona puede volver a escribir.
 
+### Tres procesadores, no uno: por qué y cómo comprobarlo
+
+Con solo el cron, un turno encolado espera **hasta un minuto** a que alguien lo
+recoja, y esa espera es tiempo muerto: el alumno mira la pantalla y no pasa
+nada. Medido en producción el 22-09-2026: mediana de 27 segundos y máximo de
+52, sobre turnos que tardan entre 26 segundos y 3 minutos.
+
+Desde ese día hay **tres procesadores**: el cron completo y dos recogedores que
+atienden solo la cola de turnos, a los 20 y a los 40 segundos. La espera máxima
+baja a unos 20 segundos y pueden generarse tres investigaciones a la vez, que
+es lo que hace falta cuando varios alumnos investigan la misma tarde. Las
+líneas están en `docs/ARRANQUE-PRODUCCION.md`, paso 7.
+
+Dos detalles que no se pueden saltar:
+
+- Cada recogedor lleva **su propio archivo de bloqueo** (`flock -n`). Con el
+  mismo, el segundo no arrancaría nunca; sin ninguno, se apilarían tantos como
+  minutos lleve la cola ocupada.
+- Con más de un procesador aparece un riesgo que antes no existía: **que dos
+  tomen el mismo turno**, lo que costaría dos llamadas al proveedor y dejaría
+  dos respuestas seguidas del agente. Lo impiden la reserva que la cola pone
+  sobre el elemento (900 s) y el cerrojo de la conversación, que dura lo mismo
+  a propósito.
+
+**Cómo comprobarlo sin gastar**, en local y con el motor simulado:
+`bin/simulacro-cola.php` encola turnos de mentira para lanzar varios
+recogedores a la vez y después comprueba que cada turno se generó **una sola
+vez**. Su cabecera explica el procedimiento completo. Se niega a correr con el
+motor real, que sí se paga. El 22-09-2026 se pasaron 200 turnos con tres
+recogedores: 200 respuestas y ningún duplicado.
+
+Lo que ese simulacro no mide —y por eso existe el bloque de cola en la pantalla
+de Consumo— son los tiempos reales y la CPU con varias investigaciones de
+verdad en marcha.
+
 También hay directorio privado que crear, para los documentos de conocimiento:
 
     mkdir -p web/sites/default/files-private
