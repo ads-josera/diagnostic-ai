@@ -233,6 +233,18 @@ final class DiagnosticThemeHooks {
           // Cómo va el tope de gasto. Nulo cuando nadie ha fijado uno, que no
           // es lo mismo que estar al 0 %.
           'budget' => NULL,
+          // Cómo va la cola de turnos AHORA. Declararla aquí no es un trámite:
+          // una variable que el controlador pasa pero el enlace de tema no
+          // declara no llega a la plantilla, y allí sale nula. Eso tumbó esta
+          // pantalla con un 500 la primera vez (22-09-2026).
+          'queue' => [
+            'waiting' => 0,
+            'running' => 0,
+            'memory' => 0,
+            'quiet' => TRUE,
+            'level' => 'ok',
+            'longest' => NULL,
+          ],
           'periods' => [],
           // Búsquedas externas. Nulo si no ha habido ninguna: un panel a cero
           // ocupa sitio y no dice nada.

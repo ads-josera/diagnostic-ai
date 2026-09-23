@@ -13,6 +13,7 @@ use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolGateway;
 use Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\QueueHealth;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -50,6 +51,7 @@ final class UsageController extends ControllerBase {
   public function __construct(
     private readonly AiUsageRepository $usage,
     private readonly SpendGuard $spend,
+    private readonly QueueHealth $queue,
     private readonly ToolCallRepository $toolCalls,
     private readonly EvidenceLedger $ledger,
     private readonly AgentRegistry $agents,
@@ -65,6 +67,7 @@ final class UsageController extends ControllerBase {
     return new static(
       $container->get(AiUsageRepository::class),
       $container->get(SpendGuard::class),
+      $container->get(QueueHealth::class),
       $container->get(ToolCallRepository::class),
       $container->get(EvidenceLedger::class),
       $container->get(AgentRegistry::class),
@@ -93,6 +96,7 @@ final class UsageController extends ControllerBase {
       '#attached' => ['library' => ['sales_leadership_diagnostic/usage']],
       '#cache' => ['max-age' => 0],
       '#budget' => $this->presupuesto(),
+      '#queue' => $this->estadoDeLaCola(),
       '#periods' => $this->periodos($dias),
       '#has_data' => $total['calls'] > 0,
       '#totals' => $this->totales($total, $sinCache),
@@ -135,6 +139,45 @@ final class UsageController extends ControllerBase {
       // guardián. Si la pantalla marcara antes o después que el registro,
       // habría dos verdades sobre lo mismo.
       'warn' => !$estado['blocked'] && $estado['percent'] >= 80,
+    ];
+  }
+
+  /**
+   * Cómo va la cola de turnos, listo para pintar.
+   *
+   * Responde a la pregunta que se hace quien opera cuando alguien dice que
+   * «va lento»: ¿está esperando cola o está investigando de verdad? El
+   * 22-09-2026 esa pregunta no se podía contestar sin entrar al servidor.
+   *
+   * Los umbrales salen de lo medido ese día en producción: un turno con
+   * investigación tarda entre 26 segundos y 3 minutos, y la espera de arranque
+   * es de 30 como mucho. Así que dos minutos esperando ya es cola de verdad, y
+   * cinco significa que los recogedores no dan abasto.
+   *
+   * @return array<string, mixed>
+   *   Cifras y estado para la plantilla.
+   */
+  private function estadoDeLaCola(): array {
+    $cola = $this->queue->snapshot();
+
+    $nivel = 'ok';
+
+    if ($cola->esperaMasLarga >= 300) {
+      $nivel = 'alerta';
+    }
+    elseif ($cola->esperaMasLarga >= 120) {
+      $nivel = 'aviso';
+    }
+
+    return [
+      'waiting' => $cola->esperando,
+      'running' => $cola->enCurso,
+      'memory' => $cola->memoriaPendiente,
+      'quiet' => $cola->tranquila(),
+      'level' => $nivel,
+      'longest' => $cola->esperaMasLarga > 0
+        ? $this->dates->formatInterval($cola->esperaMasLarga, 1)
+        : NULL,
     ];
   }
 

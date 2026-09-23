@@ -32,6 +32,15 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 final class MemoryExtractionWorker extends QueueWorkerBase implements ContainerFactoryPluginInterface {
 
   /**
+   * Nombre de la cola.
+   *
+   * Por el mismo motivo que en DiagnosticTurnWorker: una cadena suelta
+   * repetida en varios sitios no falla si se escribe mal, simplemente deja de
+   * procesarse y nadie se entera. Estaba escrita a mano en quien encola.
+   */
+  public const QUEUE = 'sld_memory_extraction';
+
+  /**
    * El servicio que hace el trabajo.
    *
    * @var \Drupal\sales_leadership_diagnostic\Service\Memory\MemoryExtractor

@@ -21,6 +21,7 @@ use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticContext;
 use Drupal\sales_leadership_diagnostic\Plugin\QueueWorker\DiagnosticTurnWorker;
+use Drupal\sales_leadership_diagnostic\Plugin\QueueWorker\MemoryExtractionWorker;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory;
 use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
@@ -403,7 +404,7 @@ final class ConversationService {
     }
 
     $this->queueFactory
-      ->get('sld_memory_extraction')
+      ->get(MemoryExtractionWorker::QUEUE)
       ->createItem(['session_id' => (int) $session->id()]);
   }
 

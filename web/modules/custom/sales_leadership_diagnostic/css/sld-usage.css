@@ -391,3 +391,53 @@
 .sld-usage__dot--denied {
   background: var(--sld-color-warning);
 }
+
+/*
+ * La cola de investigación: lo único de esta pantalla que habla del AHORA.
+ *
+ * Comparte forma con el presupuesto a propósito —misma caja, mismo filete de
+ * color a la izquierda cuando algo va mal— porque las dos responden a la misma
+ * pregunta: ¿puedo estar tranquilo? Tener dos formas distintas para lo mismo es
+ * lo que hace que una pantalla se lea como dos.
+ */
+.sld-usage__queue {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: var(--sld-space-md);
+  padding: var(--sld-space-md) var(--sld-space-lg);
+  border: 1px solid var(--sld-color-border);
+  border-radius: var(--sld-radius);
+  background: var(--sld-color-bg);
+}
+
+.sld-usage__queue-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem var(--sld-space-md);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sld-usage__queue-note {
+  margin: 0;
+  color: var(--sld-color-text-muted);
+  font-size: 0.85rem;
+}
+
+.sld-usage__queue--aviso {
+  border-color: color-mix(in srgb, var(--sld-color-warning) 45%, var(--sld-color-border));
+  box-shadow: inset 3px 0 0 var(--sld-color-warning);
+}
+
+.sld-usage__queue--alerta {
+  border-color: color-mix(in srgb, var(--sld-color-danger) 45%, var(--sld-color-border));
+  box-shadow: inset 3px 0 0 var(--sld-color-danger);
+}
+
+/* Cuando hay cola de verdad, el texto deja de ser un apunte al margen. */
+.sld-usage__queue--aviso .sld-usage__queue-note,
+.sld-usage__queue--alerta .sld-usage__queue-note {
+  color: var(--sld-color-text);
+  font-weight: 500;
+}

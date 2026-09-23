@@ -49,6 +49,45 @@
     </div>
   {% endif %}
 
+  {#
+    La cola, antes del periodo: es lo único de esta pantalla que habla del
+    AHORA. Todo lo demás es historia, y quien entra porque «va lento» necesita
+    esto y no las cifras del mes.
+  #}
+  <div class="sld-usage__queue sld-usage__queue--{{ queue.level }}">
+    <div class="sld-usage__queue-head">
+      <strong>{{ 'Cola de investigación'|t }}</strong>
+      <span class="sld-usage__aside">
+        {% if queue.quiet %}
+          {{ 'Sin turnos pendientes'|t }}
+        {% else %}
+          {{ '@esperando esperando · @curso generándose'|t({
+            '@esperando': queue.waiting,
+            '@curso': queue.running,
+          }) }}
+        {% endif %}
+      </span>
+    </div>
+
+    <p class="sld-usage__queue-note">
+      {% if queue.quiet %}
+        {{ 'Los turnos que investigan se generan en segundo plano. Ahora mismo no hay ninguno en marcha.'|t }}
+      {% elseif queue.longest %}
+        {{ 'El que más lleva esperando: @tiempo.'|t({'@tiempo': queue.longest}) }}
+        {% if queue.level == 'alerta' %}
+          {{ 'Es demasiado: los recogedores no dan abasto.'|t }}
+        {% elseif queue.level == 'aviso' %}
+          {{ 'Empieza a haber cola.'|t }}
+        {% endif %}
+      {% else %}
+        {{ 'Todo lo pendiente está ya generándose.'|t }}
+      {% endif %}
+      {% if queue.memory %}
+        {{ '@cuantas extracciones de memoria pendientes.'|t({'@cuantas': queue.memory}) }}
+      {% endif %}
+    </p>
+  </div>
+
   <div class="sld-usage__periods" role="group" aria-label="{{ 'Periodo'|t }}">
     {% for period in periods %}
       {% if period.active %}
