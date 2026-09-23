@@ -236,7 +236,12 @@ parecer instantáneo un turno de 45 segundos. Lo que informa:
 Antes de gastar un céntimo, `cupo`: dice si cada cuenta puede investigar esta
 semana y **aborta si el turno de alguna no se encolaría**, porque entonces se
 ejecutaría dentro del propio proceso del guion —se pagaría igual y no se mediría
-nada—. No borra nada de lo que crea: son conversaciones reales de cuentas
+nada—. `cupo` **solo lee**, y eso hubo que arreglarlo: la primera versión
+preguntaba por el cupo con los servicios del módulo, y esos CREAN la fila de la
+semana si no existe. No gasta dinero ni cupo, pero es una escritura en
+producción, y se había anunciado como una lectura; ahora la fila se lee a mano y
+la decisión se reconstruye con el mismo DTO que usa el módulo, para no copiar
+sus reglas. No borra nada de lo que crea: son conversaciones reales de cuentas
 reales, y quitar sus apuntes de consumo haría que los topes de gasto olvidaran
 dinero ya pagado. Para dejarlo limpio antes de una demo está
 `drush sld:limpiar-pruebas`.

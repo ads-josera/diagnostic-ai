@@ -39,7 +39,8 @@
  *
  * Uso:
  * @code
- *   # 1. Ver si las cuentas pueden investigar esta semana. NO GASTA.
+ *   # 1. Ver si las cuentas pueden investigar esta semana.
+ *   #    NO GASTA Y NO ESCRIBE: solo lee.
  *   drush php:script bin/ensayo-concurrencia.php -- cupo
  *
  *   # 2. Lanzar los tres turnos y quedarse mirando (hasta 8 minutos).
@@ -94,10 +95,12 @@ declare(strict_types=1);
 
 use Drupal\Core\Queue\DatabaseQueue;
 use Drupal\Core\Site\Settings;
+use Drupal\sales_leadership_diagnostic\DTO\Entitlement;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 use Drupal\sales_leadership_diagnostic\MessageRole;
+use Drupal\sales_leadership_diagnostic\MissionState;
 use Drupal\sales_leadership_diagnostic\Plugin\QueueWorker\DiagnosticTurnWorker;
 use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\ConversationService;
@@ -105,6 +108,7 @@ use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManage
 use Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory;
 use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
+use Drupal\sales_leadership_diagnostic\Service\Search\SearchProviderInterface;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use Drupal\user\UserInterface;
 
@@ -208,24 +212,68 @@ function ensayo_cuentas(string $lista): array {
 }
 
 /**
+ * Si la búsqueda externa está encendida en todo el sitio.
+ *
+ * Es la primera de las tres puertas de `ToolBoxFactory`: el interruptor del
+ * módulo y que haya llave de buscador. Se mira aparte porque el arreglo es
+ * distinto del de las otras dos, y porque así el aviso no culpa a una cuenta
+ * de algo que es de los ajustes.
+ */
+function ensayo_buscador_encendido(): bool {
+  return (bool) \Drupal::config('sales_leadership_diagnostic.settings')->get('search.enabled')
+    && \Drupal::service(SearchProviderInterface::class)->isAvailable();
+}
+
+/**
  * Qué puede hacer una cuenta esta semana, y si su turno se encolaría.
+ *
+ * **No escribe nada**, y eso costó una corrección: la primera versión llamaba a
+ * `forUser()` y a `mayResearch()`, y los dos CREAN la fila de la semana en
+ * `sld_research_entitlement` si aún no existe. No gasta dinero ni cupo —es la
+ * misma fila que nacería al entrar el alumno—, pero es una escritura en
+ * producción, y esto se había anunciado como una lectura. Lo vio Jarvis leyendo
+ * el guion antes de ejecutarlo, el 23-09-2026.
+ *
+ * Así que la fila se lee a mano y la decisión se reconstruye con el DTO de
+ * verdad, no con reglas copiadas: si mañana cambian las condiciones para
+ * investigar, cambian en un solo sitio.
  *
  * @param \Drupal\user\UserInterface $cuenta
  *   Alumno.
- * @param string $agenteId
+ * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface $agente
  *   Agente con el que se va a ensayar.
+ * @param bool $buscador
+ *   Si la búsqueda está encendida en el sitio.
  *
  * @return array<string, string|int|bool|float|null>
  *   Una fila lista para imprimir.
  */
-function ensayo_estado_de_cuenta(UserInterface $cuenta, string $agenteId): array {
+function ensayo_estado_de_cuenta(UserInterface $cuenta, DiagnosticAgentInterface $agente, bool $buscador): array {
   $uid = (int) $cuenta->id();
   $entitlements = \Drupal::service(ResearchEntitlementService::class);
-  $herramientas = \Drupal::service(ToolBoxFactory::class);
   $gasto = \Drupal::service(SpendGuard::class);
 
-  $entitlement = $entitlements->forUser($uid);
-  $acceso = $entitlement->access($entitlements->maxRechecks());
+  // `periodFor()` sí es lectura: calcula la semana ISO en la zona de la
+  // persona y no toca la base.
+  $periodo = $entitlements->periodFor($uid);
+  $maxRechecks = $entitlements->maxRechecks();
+
+  $fila = \Drupal::database()->select('sld_research_entitlement', 'e')
+    ->fields('e', ['mission_state', 'rechecks_used'])
+    ->condition('uid', $uid)
+    ->condition('period', $periodo)
+    ->execute()
+    ->fetchAssoc();
+
+  // Sin fila, la semana está entera: es exactamente lo que crearía `forUser()`.
+  $entitlement = new Entitlement(
+    uid: $uid,
+    period: $periodo,
+    state: MissionState::tryFrom((string) ($fila['mission_state'] ?? '')) ?? MissionState::Available,
+    rechecksUsed: (int) ($fila['rechecks_used'] ?? 0),
+  );
+
+  $acceso = $entitlement->access($maxRechecks);
   $suyo = $gasto->statusForUser($uid);
 
   // Una conversación suya todavía «procesando» significa que hay un turno
@@ -242,11 +290,13 @@ function ensayo_estado_de_cuenta(UserInterface $cuenta, string $agenteId): array
     'nombre' => $cuenta->getAccountName(),
     'uid' => $uid,
     'zona' => $cuenta->getTimeZone() ?: '(la del sitio)',
-    'periodo' => $entitlement->period,
+    'periodo' => $periodo,
     'mision' => $entitlement->state->value,
-    'rechecks' => $entitlement->rechecksUsed . '/' . $entitlements->maxRechecks(),
+    'sinFila' => $fila === FALSE,
+    'rechecks' => $entitlement->rechecksUsed . '/' . $maxRechecks,
     'acceso' => $acceso->value,
-    'encolaria' => $herramientas->mayResearch($uid, $agenteId),
+    // Las tres puertas, en el mismo orden que en producción.
+    'encolaria' => $buscador && $agente->canSearch() && $acceso->allowsAnything(),
     'gastado' => $suyo === NULL ? NULL : (float) $suyo['spent'],
     'tope' => $suyo === NULL ? NULL : (float) $suyo['limit'],
     'pendientes' => $pendientes,
@@ -380,13 +430,15 @@ function ensayo_pico_de_memoria(): ?float {
  *   Lo que devolvió ensayo_estado_de_cuenta() por cada cuenta.
  * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface $agente
  *   Agente con el que se va a ensayar.
+ * @param bool $buscador
+ *   Si la búsqueda está encendida en el sitio.
  * @param bool $forzar
  *   Cierto para lanzar aunque la cola traiga trabajo ajeno.
  *
  * @return array<int, string>
  *   Los motivos para no lanzar. Vacío si se puede.
  */
-function ensayo_reparos(array $estados, DiagnosticAgentInterface $agente, bool $forzar): array {
+function ensayo_reparos(array $estados, DiagnosticAgentInterface $agente, bool $buscador, bool $forzar): array {
   $reparos = [];
 
   // Un turno solo se encola si PUEDE investigar, y eso depende de tres cosas
@@ -394,18 +446,15 @@ function ensayo_reparos(array $estados, DiagnosticAgentInterface $agente, bool $
   // el agente se configura, la búsqueda global se enciende y el cupo semanal
   // se espera. Cuando todas se resumían en «la cuenta no puede investigar», el
   // aviso culpaba a la cuenta de algo que era de los ajustes.
+  if (!$buscador) {
+    $reparos[] = 'La búsqueda externa está apagada en los ajustes del módulo o falta la llave del buscador: ningún turno pasaría por la cola.';
+  }
+
   if (!$agente->canSearch()) {
     $reparos[] = sprintf(
       'El agente «%s» no tiene la búsqueda concedida, así que NINGUNO de sus turnos pasa por la cola. Este ensayo solo tiene sentido con el agente que investiga.',
       $agente->label(),
     );
-  }
-  elseif (array_filter(array_column($estados, 'encolaria')) === [] && $estados !== []) {
-    $cupoLibre = array_filter($estados, static fn (array $estado): bool => $estado['acceso'] !== 'NOT_AVAILABLE');
-
-    if ($cupoLibre !== []) {
-      $reparos[] = 'Ninguna cuenta encolaría aunque su cupo esté libre: la búsqueda está apagada en los ajustes del módulo o falta la llave del buscador.';
-    }
   }
 
   foreach ($estados as $estado) {
@@ -648,6 +697,10 @@ function ensayo_imprimir_cupo(array $estados): void {
       $estado['encolaria'] ? 'sí' : 'NO — se ejecutaría al vuelo',
     );
 
+    if ($estado['sinFila'] === TRUE) {
+      printf("%18s  (aún no tiene fila de esta semana; nace sola cuando entra)\n", '');
+    }
+
     if ($estado['pendientes'] > 0) {
       printf("%18s OJO: %d conversación(es) suyas siguen «procesando».\n", '', $estado['pendientes']);
     }
@@ -830,18 +883,26 @@ if ($accion === 'cupo' || $accion === 'lanzar') {
     return;
   }
 
+  $buscador = ensayo_buscador_encendido();
   $estados = [];
 
   foreach ($encontradas['cuentas'] as $nombre => $cuenta) {
-    $estados[$nombre] = ensayo_estado_de_cuenta($cuenta, $agenteId);
+    $estados[$nombre] = ensayo_estado_de_cuenta($cuenta, $agente, $buscador);
   }
 }
 
 if ($accion === 'cupo') {
-  printf("Agente: %s · busca: %s · motor: %s\n", $agente->label(), $agente->canSearch() ? 'sí' : 'NO', $simulado ? 'SIMULADO (no se paga)' : 'REAL (se paga)');
+  printf(
+    "Agente: %s · busca: %s · buscador del sitio: %s · motor: %s\n",
+    $agente->label(),
+    $agente->canSearch() ? 'sí' : 'NO',
+    $buscador ? 'encendido' : 'APAGADO',
+    $simulado ? 'SIMULADO (no se paga)' : 'REAL (se paga)',
+  );
+  print "Esta orden solo lee: no crea conversaciones, no escribe cupos y no llama a nadie.\n";
   ensayo_imprimir_cupo($estados);
 
-  $reparos = ensayo_reparos($estados, $agente, ($opciones['forzar'] ?? '') === 'si');
+  $reparos = ensayo_reparos($estados, $agente, $buscador, ($opciones['forzar'] ?? '') === 'si');
 
   print "\n";
   print $reparos === []
@@ -863,7 +924,7 @@ if ($accion === 'lanzar') {
     ? "MOTOR SIMULADO: ensayo en seco. No se paga nada y los tiempos no significan nada.\n"
     : "MOTOR REAL: a partir de aquí se paga.\n";
 
-  $reparos = ensayo_reparos($estados, $agente, ($opciones['forzar'] ?? '') === 'si');
+  $reparos = ensayo_reparos($estados, $agente, $buscador, ($opciones['forzar'] ?? '') === 'si');
 
   if ($reparos !== []) {
     print "\nABORTADO sin gastar un céntimo:\n  · " . implode("\n  · ", $reparos) . "\n";
@@ -877,7 +938,20 @@ if ($accion === 'lanzar') {
 
   print "\nEncolando…\n";
 
+  $herramientas = \Drupal::service(ToolBoxFactory::class);
+
   foreach ($encontradas['cuentas'] as $nombre => $cuenta) {
+    // La última palabra la tiene quien decide de verdad, no la foto que se
+    // tomó hace un momento: entre el `cupo` y este instante alguien pudo entrar
+    // y gastar su misión. Se pregunta cuenta por cuenta, justo antes de
+    // mandar el mensaje, porque un turno que no se encola se ejecuta aquí y se
+    // paga.
+    if (!$herramientas->mayResearch((int) $cuenta->id(), $agente->id())) {
+      printf("\n  PARADA antes de gastar: %s ya no puede investigar. No se lanzan los demás.\n", $nombre);
+
+      break;
+    }
+
     $sesion = ensayo_crear_sesion($cuenta, $agente);
     $antes = microtime(TRUE);
     $respuesta = $conversacion->submitMessage($sesion, $mensaje);
