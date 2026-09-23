@@ -220,9 +220,11 @@ que tarda el proveedor cuando tres turnos le hablan al mismo tiempo. Para el dí
 a día eso se vigila con el bloque de cola de la pantalla de Consumo.
 
 **Para medirlo a propósito está `bin/ensayo-concurrencia.php`, que GASTA
-DINERO**, y por eso exige escribir `SI-GASTA` a mano. Usa las cuentas de Drupal
-que ya existen —no hace falta crear usuarios de WordPress—, encola un turno por
-cuenta en el mismo segundo y se queda sondeando la cola **cada segundo**, que es
+DINERO**, y por eso exige escribir `SI-GASTA` a mano. Usa tres cuentas de Drupal
+hechas para esto —no hace falta crear usuarios de WordPress, y tampoco se gasta
+la misión semanal de ningún alumno de prueba: el turno abre la misión de quien
+lo manda, así que medir con la cuenta de una demo la deja sin semana—, y encola
+un turno por cuenta en el mismo segundo y se queda sondeando la cola **cada segundo**, que es
 la única forma de medir esto sin engañarse: las marcas de tiempo de
 `sld_ai_usage` son el `getRequestTime` del proceso de drush y ya hicieron
 parecer instantáneo un turno de 45 segundos. Lo que informa:
@@ -231,7 +233,13 @@ parecer instantáneo un turno de 45 segundos. Lo que informa:
 - cuánto tardó en **generarse**;
 - si los tres se **solaparon** de verdad, que es la pregunta de fondo;
 - que ninguno se generó **dos veces**;
-- el **coste real** y el pico de memoria que se vio con `ps`.
+- el **coste real** y el pico de memoria, leído con `ps` y acotado a los
+  procesos de PHP **de esta cuenta del servidor**, con el comando al lado para
+  poder auditarlo. Las dos acotaciones costaron sendas correcciones: en un
+  alojamiento compartido `ps -eo` trae los procesos de todas las cuentas —el
+  cron de otra ocupaba 73 MB, al lado justo de los 72,7 que habíamos medido—, y
+  filtrar por la palabra «drush» cuela los envoltorios (`flock … sh -c`, el
+  bucle del cron), que ocupan tres megas y harían mentir la cifra a la baja.
 
 Antes de gastar un céntimo, `cupo`: dice si cada cuenta puede investigar esta
 semana y **aborta si el turno de alguna no se encolaría**, porque entonces se

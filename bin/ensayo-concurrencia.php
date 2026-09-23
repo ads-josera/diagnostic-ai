@@ -52,7 +52,8 @@
  *
  * Opciones, en cualquier orden y con la forma `clave=valor`:
  *
- * - `cuentas=` nombres separados por comas. Por defecto, las tres de prueba.
+ * - `cuentas=` nombres separados por comas. Por defecto, tres cuentas hechas
+ *   para esto, que hay que crear una vez (el guion dice cómo si faltan).
  * - `agente=` por defecto `prospecting_diagnostic`, el único que investiga.
  * - `mensaje=` el primer mensaje del alumno. El de fábrica trae territorio y
  *   cliente ideal para que el agente pueda salir a buscar en el primer turno.
@@ -75,9 +76,13 @@
  *   agente. Dos significan dos llamadas pagadas y dos respuestas seguidas en
  *   la pantalla del alumno.
  * - **Coste real**: lo que quedó anotado en `sld_ai_usage` para esas sesiones.
- * - **Pico de memoria**: lo máximo que se vio en los procesos de PHP mientras
- *   duraba, leído con `ps`. Es una observación externa y aproximada; si el
- *   alojamiento no deja ejecutar `ps`, lo dice en lugar de inventarlo.
+ * - **Pico de memoria**: lo máximo que se vio, mientras duraba, en los procesos
+ *   de drush DE ESTA CUENTA del servidor —el cron y los recogedores—, leído con
+ *   `ps` y con el comando al lado para poder auditarlo. Es una observación
+ *   externa y aproximada; si el alojamiento no deja ejecutar `ps`, lo dice en
+ *   lugar de inventarlo. Acotarlo a la cuenta propia no es un detalle: en un
+ *   alojamiento compartido, `ps -eo` trae los procesos de todas, y el de otra
+ *   cuenta se colaba con nuestra etiqueta.
  *
  * QUÉ NO HACE:
  *
@@ -126,10 +131,18 @@ use Drupal\user\UserInterface;
  */
 function ensayo_por_defecto(string $clave): string|int {
   return match ($clave) {
-    // Las tres cuentas de Drupal que ya existen en producción. No se crea
-    // ninguna: el camino del alumno —botón, SSO, panel— ya está comprobado y
-    // no es lo que se mide aquí.
-    'cuentas' => 'alumno.demo,sld_wp_33,sld_wp_411',
+    // Tres cuentas hechas para este ensayo, y no las de los alumnos de prueba.
+    // La razón es que el turno abre la MISIÓN DE LA SEMANA de quien lo manda:
+    // medir con la cuenta de alguien le gasta su investigación, y si esa cuenta
+    // es la de una demo, la demo llega con la semana ya gastada. Tampoco se
+    // crean usuarios de WordPress: el camino del alumno —botón, SSO, panel— ya
+    // está comprobado y no es lo que se mide aquí.
+    //
+    // A cambio, estas cuentas no arrastran memoria del alumno ni historial de
+    // cuentas, así que su contexto es algo más corto que el de un alumno con
+    // recorrido. La diferencia es pequeña —el prompt lo dominan los documentos
+    // del agente, que son los mismos— pero conviene saberlo al leer el coste.
+    'cuentas' => 'ensayo.cola1,ensayo.cola2,ensayo.cola3',
 
     // El único agente que sale a investigar, y por tanto el único cuyos turnos
     // pasan por la cola.
@@ -386,37 +399,78 @@ function ensayo_sesiones(array $ids): array {
 }
 
 /**
- * El proceso de PHP que más memoria está ocupando, en MB.
+ * El proceso propio de drush que más memoria ocupa, y cuál es.
  *
  * Es una observación DESDE FUERA, con `ps`, y por eso puede no estar
- * disponible: en algunos alojamientos `shell_exec` está desactivado o `ps`
- * solo ve los procesos propios. Cuando no se puede medir devuelve null, que
- * el informe traduce por «no medido». Un cero sería mentira.
+ * disponible: en algunos alojamientos `shell_exec` está desactivado o `ps` solo
+ * ve los procesos propios. Cuando no se puede medir devuelve null, que el
+ * informe traduce por «no medido». Un cero sería mentira.
+ *
+ * Mira SOLO los procesos de esta cuenta del servidor y solo los de drush, y
+ * eso costó una corrección. La primera versión usaba `ps -eo`, que en un
+ * alojamiento compartido ve los procesos de TODAS las cuentas, y filtraba por
+ * la palabra «php»: el cron de otra cuenta del mismo servidor ocupaba 73 MB y
+ * se llevaba el máximo, justo al lado de los 72,7 MB que habíamos medido para
+ * un turno. Una cifra ajena, plausible y con nuestra etiqueta. Lo vio Jarvis
+ * leyendo el guion, el 23-09-2026.
+ *
+ * Devuelve también el comando, para que el número se pueda auditar en lugar de
+ * creerlo.
+ *
+ * @return array{mb: float, que: string}|null
+ *   Lo ocupado y por quién, o null si no se pudo medir.
  */
-function ensayo_pico_de_memoria(): ?float {
-  $salida = @shell_exec('ps -eo rss=,args= 2>/dev/null');
+function ensayo_pico_de_memoria(): ?array {
+  // El uid lo resuelve el propio intérprete de órdenes: `getmyuid()` de PHP
+  // devuelve el dueño del ARCHIVO, no el del proceso, y aquí harían falta dos
+  // cosas distintas que se parecen mucho.
+  $salida = @shell_exec('ps -o rss=,args= -u "$(id -u)" 2>/dev/null');
 
   if (!is_string($salida) || trim($salida) === '') {
     return NULL;
   }
 
   $mayor = 0;
+  $quien = '';
 
   foreach (explode("\n", $salida) as $linea) {
     if (!preg_match('/^\s*(\d+)\s+(.*)$/', $linea, $partes)) {
       continue;
     }
 
-    // Solo procesos de PHP, y nunca este mismo: el vigilante no es lo que se
-    // está midiendo.
-    if (!str_contains($partes[2], 'php') || str_contains($partes[2], 'ensayo-concurrencia')) {
+    // Los que generan turnos son el cron y los recogedores, todos por drush.
+    // Este mismo guion queda fuera: el vigilante no es lo que se mide.
+    if (!str_contains($partes[2], 'drush') || str_contains($partes[2], 'ensayo-concurrencia')) {
       continue;
     }
 
-    $mayor = max($mayor, (int) $partes[1]);
+    // Y tiene que ser PHP DE VERDAD, no algo que lleve «drush» escrito. Los
+    // envoltorios —el `flock … sh -c` de cada recogedor, el bucle del cron—
+    // mencionan drush en su línea de órdenes y ocupan tres megas. Si el
+    // muestreo pilla el envoltorio y no a su hijo, el pico saldría en 3 MB con
+    // la etiqueta de «pico de memoria»: una cifra tranquilizadora y falsa. Se
+    // mira el ejecutable, que es lo único que distingue al proceso que trabaja.
+    $ejecutable = basename(strtok($partes[2], ' ') ?: '');
+
+    if (preg_match('/^php[0-9.]*$/', $ejecutable) !== 1) {
+      continue;
+    }
+
+    if ((int) $partes[1] > $mayor) {
+      $mayor = (int) $partes[1];
+      $quien = trim($partes[2]);
+    }
   }
 
-  return $mayor === 0 ? NULL : round($mayor / 1024, 1);
+  if ($mayor === 0) {
+    return NULL;
+  }
+
+  return [
+    'mb' => round($mayor / 1024, 1),
+    // Recortado: la línea entera trae rutas largas y opciones que no aportan.
+    'que' => mb_substr(preg_replace('/\s+/', ' ', $quien) ?? '', 0, 90),
+  ];
 }
 
 /**
@@ -551,7 +605,7 @@ function ensayo_crear_sesion(UserInterface $cuenta, DiagnosticAgentInterface $ag
  * @param int $segundos
  *   Cuánto mirar como mucho.
  *
- * @return array<int, array{reservado: float|null, terminado: float|null, memoria: float|null}>
+ * @return array<int, array{reservado: float|null, terminado: float|null, memoria: array{mb: float, que: string}|null}>
  *   Hitos de cada sesión y el pico de memoria observado.
  */
 function ensayo_vigilar(array $turnos, int $segundos): array {
@@ -583,8 +637,8 @@ function ensayo_vigilar(array $turnos, int $segundos): array {
     $estados = ensayo_sesiones($ids);
     $memoria = ensayo_pico_de_memoria();
 
-    if ($memoria !== NULL) {
-      $pico = max($pico ?? 0, $memoria);
+    if ($memoria !== NULL && $memoria['mb'] > ($pico['mb'] ?? 0)) {
+      $pico = $memoria;
     }
 
     $terminados = 0;
@@ -651,7 +705,7 @@ function ensayo_vigilar(array $turnos, int $segundos): array {
         $reservados,
         count($enCola) - $reservados,
         $terminados,
-        $memoria === NULL ? '' : sprintf(', %.0f MB de pico', $pico),
+        $pico === NULL ? '' : sprintf(', %.0f MB de pico', $pico['mb']),
       );
     }
 
@@ -723,7 +777,7 @@ function ensayo_imprimir_cupo(array $estados): void {
  *
  * @param array<int, int> $ids
  *   Conversaciones del ensayo.
- * @param array<int, array{reservado: float|null, terminado: float|null, memoria: float|null}> $hitos
+ * @param array<int, array{reservado: float|null, terminado: float|null, memoria: array{mb: float, que: string}|null}> $hitos
  *   Lo que vio el vigilante, si lo hubo.
  * @param array<int, array{sesion: int, cuenta: string, encolado: float}> $turnos
  *   Lo lanzado, si se lanzó en esta misma ejecución.
@@ -847,7 +901,9 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
   $memoria = $hitos === [] ? NULL : reset($hitos)['memoria'] ?? NULL;
   printf(
     "  Pico de memoria  %s\n",
-    $memoria === NULL ? 'no medido (ps no disponible en esta máquina)' : sprintf('%.1f MB en el proceso de PHP más grande', $memoria),
+    $memoria === NULL
+      ? 'no medido (ps no disponible, o no se vio ningún proceso de drush)'
+      : sprintf('%.1f MB · %s', $memoria['mb'], $memoria['que']),
   );
 
   printf("  Coste del ensayo %.4f USD, sin contar las búsquedas de Tavily\n", $costeTotal);
@@ -879,6 +935,23 @@ if ($accion === 'cupo' || $accion === 'lanzar') {
 
   if ($encontradas['faltan'] !== []) {
     printf("No existen estas cuentas: %s\n", implode(', ', $encontradas['faltan']));
+    print "\nSi son las del ensayo, se crean una vez y se quedan (no son alumnos,\n";
+    print "no entran por WordPress y no tienen curso: solo sirven para medir):\n\n";
+
+    foreach ($encontradas['faltan'] as $nombre) {
+      printf(
+        "  drush user:create %s --mail=\"%s@ensayo.invalid\" --password=\"$(openssl rand -base64 18)\"\n",
+        $nombre,
+        $nombre,
+      );
+    }
+
+    print "\nY conviene darles la zona horaria de los alumnos, porque la semana de\n";
+    print "investigación se calcula en la de cada quien:\n\n";
+    printf(
+      "  drush php:eval 'foreach ([%s] as \$n) { \$c = user_load_by_name(\$n); \$c->set(\"timezone\", \"America/Mexico_City\")->save(); }'\n",
+      implode(', ', array_map(static fn (string $n): string => '"' . $n . '"', $encontradas['faltan'])),
+    );
 
     return;
   }
