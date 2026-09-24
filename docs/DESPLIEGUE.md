@@ -885,7 +885,28 @@ fondo y logotipos de la portada—: los protege `config_ignore`. Los cargadores
    `fpm-fcgi`, esos `<IfModule php8_module>` nunca cargan, y los mismos valores
    están en `web/.user.ini` y `web/php.ini`, que el scaffold no toca. Se
    comprobó con una sonda el 21-09-2026: 8.4.25, `max_execution_time` 300,
-   `memory_limit` 528M, subida 20M/24M, `session.gc_divisor` 100.
+   subida 20M/24M, `session.gc_divisor` 100.
+
+   **Los dos `memory_limit`, que son distintos y se ponen en sitios distintos:**
+
+   | Dónde | Valor | Se pone en | Para qué |
+   |---|---|---|---|
+   | Web | **512M** (24-09-2026) | MultiPHP INI Editor | Peticiones del navegador |
+   | Consola | **256M** (23-09-2026) | `~/.php-ini.d/99-labai.ini` | Cron y recogedores: los que investigan |
+
+   El del web estuvo en 756M y se bajó a 512 porque `pm.max_children` es 10 y
+   10 × 756M son 7,5 GB teóricos contra 4,4 GB libres. **No se bajó a 256M a
+   propósito**: el proceso web atiende una petición normal con 50 MB, pero
+   también recibe **los documentos de metodología, de hasta 20 MB por archivo**,
+   y los convierte a texto; ese caso sí pide bastante más, y recortarlo ahí
+   fallaría justo el día que se suba un documento grande.
+
+   Después de cambiarlo en MultiPHP, **comprobarlo en
+   `/admin/reports/status`**, fila «Límite de memoria»: esa página la sirve el
+   proceso web, así que enseña el valor que de verdad está cargado. Si sigue
+   apareciendo el viejo, hay que reaplicar PHP-FPM desde MultiPHP Manager, la
+   misma lección del 14-09 con la raíz del documento. Verificado así el
+   24-09-2026: dice 512M.
 
 ---
 
