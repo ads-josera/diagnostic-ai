@@ -283,6 +283,31 @@ verdad tardó **112 s** e hizo **14 búsquedas** con 688 826 tokens de entrada, 
 los que el 98 % venían de caché; costó **0,2530 USD**. Un `queue:run` haciendo
 ese turno ocupó **70,6 MB**, y el cron del minuto 79 MB.
 
+**Y con DOS investigaciones completas a la vez** (mismo día, 19:04): se
+solaparon **87 segundos**, una en el recogedor `b` y otra en el cron, y
+**ninguna se alargó** —108 s con 16 búsquedas y 87 s con 8, contra los 112 s con
+14 del turno que corrió solo—. Costaron 0,2459 y 0,2152 USD. La memoria llegó a
+**146 MB entre los dos** y a 165 MB en el instante en que además arrancó un
+tercer proceso que no encontró trabajo y salió en menos de un segundo. La
+**CPU quedó prácticamente ociosa**: carga 0,33 de media en cinco minutos sobre
+cuatro núcleos, y ninguno de los dos procesos acumuló un segundo de CPU en 108
+de reloj. Un turno de investigación pasa casi todo su tiempo esperando al
+proveedor y al buscador, no calculando.
+
+Eso responde a «¿se degrada con varios alumnos?»: con dos a la vez, no. Y deja
+un aviso esperado en el registro —«Attempting to re-run cron while it is already
+running»— porque la pasada del cron seguía ocupada con su turno; Drupal descarta
+la duplicada y no queda bloqueo huérfano.
+
+**Cuidado con qué límite se compara la memoria.** `memory_limit` se aplica **a
+cada proceso**, no a la suma; la suma es lo que se compara con la RAM libre del
+servidor. En consola el límite eran 128 MB y el proceso mayor llegó a **80,4 MB
+de RSS**, un 63 %, con una misión de dieciséis búsquedas. El RSS incluye el
+propio intérprete, así que el montón de PHP va por debajo, pero el margen no es
+holgado para una misión más grande: **conviene subir el límite de consola a 256
+MB**, que con tres o cuatro procesos a la vez sigue siendo una fracción de los
+4,4 GB libres.
+
 **El cron del minuto es un cuarto procesador, y el más rápido.** El trabajador
 declara `cron: ['time' => 900]`, así que una pasada del cron puede estar hasta
 quince minutos vaciando la cola, de uno en uno. Con turnos cortos se lo lleva
