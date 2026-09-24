@@ -797,11 +797,31 @@ fondo y logotipos de la portada—: los protege `config_ignore`. Los cargadores
    El arreglo, que sí heredan los subprocesos, es un ini propio de la cuenta:
 
    ```bash
-   mkdir -p ~/.php-ini.d && printf 'session.gc_divisor = 100\nerror_log = /home/labai/logs/php-cli-error.log\n' > ~/.php-ini.d/99-labai.ini
+   mkdir -p ~/.php-ini.d && printf 'session.gc_divisor = 100\nerror_log = /home/labai/logs/php-cli-error.log\nmemory_limit = 256M\n' > ~/.php-ini.d/99-labai.ini
    echo 'export PHP_INI_SCAN_DIR=:/home/labai/.php-ini.d' >> ~/.bashrc   # los dos puntos conservan los ini del sistema
    ```
 
-   Dos detalles que costaron una vuelta:
+   **`memory_limit = 256M` (23-09-2026).** Es el límite de CONSOLA, el que
+   gobierna al cron y a los recogedores, y no tiene nada que ver con el del web
+   —que se pone en MultiPHP y estaba en 756M—. Estaba en 128M, y el proceso que
+   hace una investigación llegó a 80,4 MB de RSS con dieciséis búsquedas. El RSS
+   no es lo que cuenta `memory_limit`, que solo mide el montón de PHP y va por
+   debajo, así que el margen real era mejor de lo que parecía; se subió de todos
+   modos porque una misión completa puede hacer **cuarenta** búsquedas y traer
+   160 000 caracteres, y cruzar el límite mata el turno a mitad **con las
+   búsquedas ya pagadas**. Es el fallo más caro posible y el seguro cuesta una
+   línea.
+
+   Comprobado con la misma invocación del cron (`php:eval ini_get(…)`), y
+   también tal como lo lanzan los recogedores, con la variable delante de
+   `flock`: llega a PHP igual. Sin la variable devuelve 128M, que es la señal de
+   que esa invocación no está leyendo el archivo, no de que el cambio no exista.
+
+   **El respaldo del ini va FUERA de `~/.php-ini.d/`.** PHP carga todo lo que
+   acabe en `.ini` dentro de ese directorio, así que una copia mal nombrada se
+   convierte en configuración activa.
+
+   Tres detalles que costaron una vuelta:
 
    - **En el cron, la variable va justo antes del binario de PHP**, no al
      principio de la línea: antes de `* * * * *` es sintaxis inválida, y antes
@@ -809,6 +829,10 @@ fondo y logotipos de la portada—: los protege `config_ignore`. Los cargadores
    - **`.bashrc` no llega a las sesiones no interactivas** (las de un agente,
      por ejemplo). Quien trabaje así tiene que exportarla en cada llamada, o
      seguir pasando las opciones con `-d`.
+   - **Y por lo mismo, un `php -r` en la consola de alguien engaña**: si su
+     `.bashrc` ya exporta la variable, el ini se lee y el valor sale bien, lo que
+     hace parecer que la variable no hace falta. El cron no lee `.bashrc`, así
+     que sí hace falta, en cada línea.
 
    Curiosidad que despista: `ini_get('session.gc_divisor')` devuelve 100 aunque
    el ini diga 0, porque PHP rechaza el 0 y cae al valor de fábrica **después**
