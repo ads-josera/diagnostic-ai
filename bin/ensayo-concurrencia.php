@@ -488,9 +488,50 @@ function ensayo_pico_de_memoria(): ?array {
 
   return [
     'mb' => round($mayor / 1024, 1),
-    // Recortado: la línea entera trae rutas largas y opciones que no aportan.
-    'que' => mb_substr(preg_replace('/\s+/', ' ', $quien) ?? '', 0, 90),
+    'que' => ensayo_comando_corto($quien),
   ];
+}
+
+/**
+ * Deja de un comando lo único que distingue quién trabajó.
+ *
+ * Recortar la línea por el principio no sirve: lo que ocupa son la ruta
+ * absoluta del binario y las dos opciones `-d` del cron, y lo que distingue al
+ * cron de un recogedor está AL FINAL. Cortando a noventa caracteres, el informe
+ * decía `/opt/cpanel/ea-php84/root/usr/bin/php -d session.gc_divisor=100 -d
+ * error_log=/home/labai/l` y no se sabía cuál de los cuatro procesos era. Lo
+ * vio Jarvis el 23-09-2026, comparando la cifra con su propio muestreo.
+ *
+ * Así que se quitan las opciones y las rutas, y queda `php drush.php cron` o
+ * `php drush.php queue:run sld_diagnostic_turn`, que es la respuesta.
+ */
+function ensayo_comando_corto(string $comando): string {
+  $piezas = preg_split('/\s+/', trim($comando)) ?: [];
+  $limpio = [];
+  $saltar = FALSE;
+
+  foreach ($piezas as $pieza) {
+    if ($saltar) {
+      $saltar = FALSE;
+
+      continue;
+    }
+
+    // `-d clave=valor` viene en dos piezas; `-dclave=valor`, en una.
+    if ($pieza === '-d') {
+      $saltar = TRUE;
+
+      continue;
+    }
+
+    if (str_starts_with($pieza, '-d')) {
+      continue;
+    }
+
+    $limpio[] = str_contains($pieza, '/') ? basename($pieza) : $pieza;
+  }
+
+  return mb_substr(implode(' ', $limpio), 0, 120);
 }
 
 /**
@@ -795,8 +836,9 @@ function ensayo_turnos_de_sesiones(array $ids, bool $conBase = TRUE): array {
     ];
 
     if ($conBase) {
-      // Lo que ya había antes de este turno.
+      // Lo que ya había antes de este turno, para poder restarlo.
       $fila['antes'] = ensayo_respuestas_de($id);
+      $fila['metricas'] = ensayo_metricas_de($id);
     }
 
     $turnos[] = $fila;
@@ -821,6 +863,45 @@ function ensayo_respuestas_de(int $id): int {
     ->countQuery()
     ->execute()
     ->fetchField();
+}
+
+/**
+ * Lo consumido por una conversación hasta este instante.
+ *
+ * Se toma ANTES de mandar el mensaje y se resta después, porque estas cifras
+ * son ACUMULADAS por conversación. Sin restar, el informe llamaba «coste del
+ * ensayo» a la suma del ensayo más toda su preparación: el 23-09-2026 dijo
+ * 0,3399 USD cuando los turnos medidos habían costado 0,08 y el resto era de
+ * los turnos de calentamiento. Lo vio Jarvis sumando a mano.
+ *
+ * @return array{llamadas: int, usd: float, entrada: int, cache: int, salida: int, busquedas: int, caracteres: int}
+ *   Los contadores de esa conversación.
+ */
+function ensayo_metricas_de(int $id): array {
+  $bd = \Drupal::database();
+
+  $u = $bd->query(
+    'SELECT COUNT(*) n, COALESCE(SUM(cost_usd), 0) usd, COALESCE(SUM(input_tokens), 0) it, COALESCE(SUM(cached_input_tokens), 0) ct, COALESCE(SUM(output_tokens), 0) ot FROM {sld_ai_usage} WHERE session_id = :s',
+    [':s' => $id],
+  )->fetchObject();
+
+  // Solo `buscar_web`: sin el filtro, las anotaciones del ledger cuentan como
+  // búsquedas y el número sale inflado. Ya pasó una vez, y era un número que
+  // acabó en un documento para el cliente.
+  $h = $bd->query(
+    'SELECT COUNT(*) n, COALESCE(SUM(retrieved_chars), 0) chars FROM {sld_tool_call} WHERE session_id = :s AND allowed = 1 AND tool = :t',
+    [':s' => $id, ':t' => 'buscar_web'],
+  )->fetchObject();
+
+  return [
+    'llamadas' => (int) $u->n,
+    'usd' => (float) $u->usd,
+    'entrada' => (int) $u->it,
+    'cache' => (int) $u->ct,
+    'salida' => (int) $u->ot,
+    'busquedas' => (int) $h->n,
+    'caracteres' => (int) $h->chars,
+  ];
 }
 
 /**
@@ -896,11 +977,12 @@ function ensayo_imprimir_cupo(array $estados): void {
  *   Conversaciones del ensayo.
  * @param array<int, array{reservado: float|null, terminado: float|null, memoria: array{mb: float, que: string}|null}> $hitos
  *   Lo que vio el vigilante, si lo hubo.
- * @param array<int, array{sesion: int, cuenta: string, encolado: float}> $turnos
- *   Lo lanzado, si se lanzó en esta misma ejecución.
+ * @param array<int, array{sesion: int, cuenta: string, encolado: float, antes?: int, metricas?: array<string, float|int>}> $turnos
+ *   Lo lanzado, si se lanzó en esta misma ejecución. Cuando trae la foto de
+ *   antes, las cifras que se informan son las DEL TURNO; sin ella, solo se
+ *   puede informar el total de la conversación, y se dice.
  */
 function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void {
-  $bd = \Drupal::database();
   $estados = ensayo_sesiones($ids);
   $porSesion = array_column($turnos, 'cuenta', 'sesion');
   $encolados = array_column($turnos, 'encolado', 'sesion');
@@ -908,31 +990,35 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
   // entonces lo que se informa es el total de la conversación. Se dice, en vez
   // de llamar «respuestas del turno» a otra cosa: en una conversación con
   // historia, el total daría «duplicado» sin que hubiera ninguno.
-  $base = array_column($turnos, 'antes', 'sesion');
+  $base2 = array_column($turnos, 'antes', 'sesion');
   $hayBase = $turnos !== [] && array_key_exists('antes', reset($turnos));
 
-  $costeTotal = 0.0;
+  $costeDelDisparo = 0.0;
+  $costeAcumulado = 0.0;
   $duplicadas = [];
   $sinRespuesta = [];
+  $base = array_column($turnos, 'metricas', 'sesion');
 
   print "\n═══ TURNO A TURNO ═══\n\n";
 
   foreach ($ids as $id) {
-    $u = $bd->query(
-      'SELECT COUNT(*) n, COALESCE(SUM(cost_usd), 0) usd, COALESCE(SUM(input_tokens), 0) it, COALESCE(SUM(cached_input_tokens), 0) ct, COALESCE(SUM(output_tokens), 0) ot FROM {sld_ai_usage} WHERE session_id = :s',
-      [':s' => $id],
-    )->fetchObject();
+    $ahora = ensayo_metricas_de($id);
+    $antes = $base[$id] ?? NULL;
 
-    // Solo `buscar_web`: sin el filtro, las anotaciones del ledger cuentan
-    // como búsquedas y el número sale inflado. Ya pasó una vez, y era un
-    // número que acabó en un documento para el cliente.
-    $h = $bd->query(
-      'SELECT COUNT(*) n, COALESCE(SUM(retrieved_chars), 0) chars FROM {sld_tool_call} WHERE session_id = :s AND allowed = 1 AND tool = :t',
-      [':s' => $id, ':t' => 'buscar_web'],
-    )->fetchObject();
+    // Lo del turno medido es la diferencia. Estas cifras son acumuladas por
+    // conversación, así que sin restar se informaría también lo que costó
+    // llevarla hasta aquí.
+    $delta = $ahora;
 
-    $costeTotal += (float) $u->usd;
-    $respuestas = $estados[$id]['respuestas'] - ($base[$id] ?? 0);
+    if ($antes !== NULL) {
+      foreach ($ahora as $clave => $valor) {
+        $delta[$clave] = $valor - $antes[$clave];
+      }
+    }
+
+    $costeDelDisparo += (float) $delta['usd'];
+    $costeAcumulado += (float) $ahora['usd'];
+    $respuestas = $estados[$id]['respuestas'] - ($base2[$id] ?? 0);
 
     if ($respuestas === 0) {
       $sinRespuesta[] = $id;
@@ -951,16 +1037,12 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
 
       // Que no se viera la reserva no significa que no la hubiera: si el turno
       // empezó y acabó entre dos sondeos, el elemento desapareció sin pasar por
-      // un estado observable. Con el motor real no ocurre —el turno más corto
-      // medido fueron 26 s—, pero con el simulado ocurre siempre, y confundir
-      // «demasiado rápido para verse» con «nadie lo tomó» haría leer un ensayo
-      // correcto como un fallo.
+      // un estado observable.
       $rapido = $hitos[$id]['reservado'] === NULL && $hitos[$id]['terminado'] !== NULL;
 
       if ($rapido) {
         // Sin haber visto la reserva, las dos cifras no se pueden separar, y
-        // una etiqueta tiene que contar lo que dice contar: poner ese total
-        // bajo «esperó» sería llamar espera a la espera más la generación.
+        // una etiqueta tiene que contar lo que dice contar.
         printf(
           "    encolado→final   %.0f s, espera y generación juntas (nunca se vio reservado)\n",
           $hitos[$id]['terminado'] - $encolados[$id],
@@ -978,9 +1060,31 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
       $respuestas,
       $respuestas === 1 || !$hayBase ? '' : '  ← REVISAR',
     );
-    printf("    llamadas         %d al modelo · %d búsquedas (%s caracteres)\n", (int) $u->n, (int) $h->n, number_format((int) $h->chars));
-    printf("    tokens           %s de entrada (%d %% de caché) · %s de salida\n", number_format((int) $u->it), $u->it ? (int) round(100 * $u->ct / $u->it) : 0, number_format((int) $u->ot));
-    printf("    coste            %.4f USD\n\n", (float) $u->usd);
+    printf(
+      "    llamadas         %d al modelo · %d búsquedas (%s caracteres)\n",
+      $delta['llamadas'],
+      $delta['busquedas'],
+      number_format($delta['caracteres']),
+    );
+    printf(
+      "    tokens           %s de entrada (%d %% de caché) · %s de salida\n",
+      number_format($delta['entrada']),
+      $delta['entrada'] > 0 ? (int) round(100 * $delta['cache'] / $delta['entrada']) : 0,
+      number_format($delta['salida']),
+    );
+
+    if ($antes === NULL || $antes['usd'] <= 0.0) {
+      printf("    coste            %.4f USD\n\n", (float) $delta['usd']);
+    }
+    else {
+      // Las dos cifras juntas, porque las dos se usan para cosas distintas: la
+      // del turno para comparar turnos, y la de la conversación para el tope.
+      printf(
+        "    coste            %.4f USD este turno · %.4f en toda la conversación\n\n",
+        (float) $delta['usd'],
+        (float) $ahora['usd'],
+      );
+    }
   }
 
   print "═══ LO QUE SE QUERÍA SABER ═══\n\n";
@@ -1080,7 +1184,13 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
       : sprintf('%.1f MB · %s', $memoria['mb'], $memoria['que']),
   );
 
-  printf("  Coste del ensayo %.4f USD, sin contar las búsquedas de Tavily\n", $costeTotal);
+  printf("  Coste del disparo %.4f USD: SOLO los turnos que se acaban de medir\n", $costeDelDisparo);
+
+  if (abs($costeAcumulado - $costeDelDisparo) > 0.0001) {
+    printf("  Coste acumulado  %.4f USD en estas conversaciones, preparación incluida\n", $costeAcumulado);
+  }
+
+  print "  (las búsquedas del buscador van aparte y no se pueden medir desde aquí)\n";
 
   $global = \Drupal::service(SpendGuard::class)->statusGlobal();
 
@@ -1357,6 +1467,7 @@ if ($accion === 'lanzar') {
 
     $sesion = $fila['sesion'] ?? ensayo_crear_sesion($fila['usuario'], $agente);
     $yaTenia = ensayo_respuestas_de((int) $sesion->id());
+    $yaGastado = ensayo_metricas_de((int) $sesion->id());
     $antes = microtime(TRUE);
     $respuesta = $conversacion->submitMessage($sesion, $mensaje);
 
@@ -1365,6 +1476,7 @@ if ($accion === 'lanzar') {
       'cuenta' => $fila['cuenta'],
       'encolado' => microtime(TRUE),
       'antes' => $yaTenia,
+      'metricas' => $yaGastado,
     ];
 
     printf("  %s → sesión %d en %.2f s\n", $fila['cuenta'], $sesion->id(), microtime(TRUE) - $antes);

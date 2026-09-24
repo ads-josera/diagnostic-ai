@@ -261,7 +261,25 @@ estuviera esperando) e imprime lo último que dijo el agente, que es lo que
 decide la respuesta siguiente. Cuando las tres están a punto de investigar,
 `lanzar` con `sesiones=` dispara los tres turnos largos a la vez.
 
-Ese mismo día salieron dos lecciones que valen para cualquier medición desde
+**El cron del minuto es un cuarto procesador, y el más rápido.** El trabajador
+declara `cron: ['time' => 900]`, así que una pasada del cron puede estar hasta
+quince minutos vaciando la cola, de uno en uno. Con turnos cortos se lo lleva
+todo él y los recogedores de los :20 y :40 llegan a una cola vacía —comprobado
+en el registro el 23-09-2026, dos veces—. Con turnos largos sí encuentran
+trabajo, que es para lo que están. Dos consecuencias prácticas:
+
+- **Las horas de reserva no demuestran paralelismo por sí solas.** Un solo
+  proceso que va tomando elementos conforme los termina produce el mismo patrón
+  escalonado que tres procesos distintos. Lo que lo demuestra es el
+  **solapamiento** —dos generándose en el mismo instante—, o mirar en el
+  registro qué proceso hizo cada turno.
+- Mientras el cron está ocupado con turnos largos, **el resto de su trabajo
+  espera**: la extracción de memoria y la recuperación de conversaciones
+  atascadas van en la misma pasada. No es grave —nada de eso es urgente— pero
+  explica los avisos de «cron ya en marcha» de una tarde con mucha
+  investigación.
+
+Ese mismo día salieron cuatro lecciones que valen para cualquier medición desde
 drush:
 
 - **`ps` hay que pedirlo con `-ww`.** Drush exporta `COLUMNS=80` y `ps` obedece
@@ -273,6 +291,14 @@ drush:
 - **Un duplicado se cuenta contra una foto previa, no contra el total.** Contar
   todas las respuestas de la conversación solo vale si acaba de nacer; sobre una
   conversación con historia, el total grita «duplicado» sin que haya ninguno.
+- **El coste y los tokens también son acumulados por conversación.** El informe
+  llamó «coste del ensayo» a 0,3399 USD cuando los turnos medidos habían costado
+  0,08 y el resto era de los turnos de calentamiento. Se resta la misma foto
+  previa, y se dan las dos cifras separadas.
+- **Al recortar un comando para enseñarlo, recórtalo por el principio.** Lo que
+  distingue al cron de un recogedor está al final de la línea; lo que ocupa son
+  la ruta del binario y las opciones `-d`. Se quitan esas y queda
+  `php drush.php queue:run sld_diagnostic_turn`, que es la respuesta.
 
 Antes de gastar un céntimo, `cupo`: dice si cada cuenta puede investigar esta
 semana y **aborta si el turno de alguna no se encolaría**, porque entonces se
