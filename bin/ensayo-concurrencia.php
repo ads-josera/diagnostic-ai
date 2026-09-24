@@ -1133,10 +1133,12 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
     );
   }
 
-  // Dos a la vez: la pareja que más coincidió. Basta para demostrar que hay
-  // más de un procesador trabajando, que es la pregunta de fondo.
-  $mejorPareja = NULL;
-  $quienes = '';
+  // Dos a la vez: TODAS las parejas que coincidieron, no solo la mejor. Basta
+  // una para demostrar que hay más de un procesador generando, que es la
+  // pregunta de fondo; y enseñarlas todas evita la impresión de que solo hubo
+  // un par de suerte. El 23-09-2026 el informe citó una pareja de 6 s cuando
+  // había otra de 5, y hubo que sacarla del registro a mano.
+  $parejas = [];
   $nombres = array_column($turnos, 'cuenta', 'sesion');
 
   foreach (array_keys($ventanas) as $uno) {
@@ -1147,19 +1149,25 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
 
       $coincidencia = min($ventanas[$uno][1], $ventanas[$otro][1]) - max($ventanas[$uno][0], $ventanas[$otro][0]);
 
-      if ($coincidencia > ($mejorPareja ?? 0)) {
-        $mejorPareja = $coincidencia;
-        $quienes = ($nombres[$uno] ?? $uno) . ' + ' . ($nombres[$otro] ?? $otro);
+      if ($coincidencia > 0) {
+        $parejas[sprintf(
+          '%s+%s %.0f s',
+          $nombres[$uno] ?? $uno,
+          $nombres[$otro] ?? $otro,
+          $coincidencia,
+        )] = $coincidencia;
       }
     }
   }
 
   if (count($ventanas) > 1) {
+    arsort($parejas);
+
     printf(
       "  Dos a la vez     %s\n",
-      $mejorPareja === NULL
+      $parejas === []
         ? 'NO: ni siquiera dos coincidieron, así que se atendieron en serie'
-        : sprintf('sí, %.0f s (%s)', $mejorPareja, $quienes),
+        : 'sí: ' . implode(' · ', array_keys($parejas)),
     );
   }
 

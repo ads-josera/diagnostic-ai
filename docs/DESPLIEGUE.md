@@ -261,6 +261,25 @@ estuviera esperando) e imprime lo último que dijo el agente, que es lo que
 decide la respuesta siguiente. Cuando las tres están a punto de investigar,
 `lanzar` con `sesiones=` dispara los tres turnos largos a la vez.
 
+**COMPROBADO EN PRODUCCIÓN el 23-09-2026: dos procesos distintos generan turnos
+a la vez.** Lo dicen tres fuentes que coinciden, no solo el informe:
+
+- el solapamiento medido: la sesión 17 se generó de 18:44:41 a 18:46:34 y,
+  dentro de esa ventana, otras dos se generaron y terminaron;
+- el registro de Drupal, donde las llamadas al proveedor de dos sesiones se
+  entrelazan (18:45:03 una, 18:45:08 la otra);
+- los PID: el recogedor `b` (queue:run) hizo el turno de investigación —112 s,
+  14 búsquedas, 6 llamadas— mientras el cron del minuto hacía los otros dos.
+
+El recogedor `a` llegó cuatro décimas antes de que se encolara nada y a la
+siguiente pasada encontró la cola vacía, lo que también es información: el
+reparto depende de cuándo cae el trabajo, no de un turno rotatorio.
+
+Números medidos ese día, útiles para dimensionar: un turno que investiga de
+verdad tardó **112 s** e hizo **14 búsquedas** con 688 826 tokens de entrada, de
+los que el 98 % venían de caché; costó **0,2530 USD**. Un `queue:run` haciendo
+ese turno ocupó **70,6 MB**, y el cron del minuto 79 MB.
+
 **El cron del minuto es un cuarto procesador, y el más rápido.** El trabajador
 declara `cron: ['time' => 900]`, así que una pasada del cron puede estar hasta
 quince minutos vaciando la cola, de uno en uno. Con turnos cortos se lo lleva
