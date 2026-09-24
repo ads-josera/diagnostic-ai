@@ -773,6 +773,26 @@ drush config:import -y     # aplica la configuración del repositorio
 drush cache:rebuild
 ```
 
+**Los dos topes de gasto son la excepción, y a propósito.**
+`spending.global_limit` y `spending.per_user_limit` están en `config_ignore`, así
+que los cambia quien administra en
+`/admin/config/salesbumm/diagnostic` y **un `config:import` no los pisa**. La
+razón es que un tope es una decisión operativa, no una línea de código: si
+alguien lo sube a 150 porque hay treinta y cinco alumnos, un despliegue no puede
+devolverlo a 30 y dejar a la mitad de la clase sin turnos a mediados de mes.
+Comprobado el 24-09-2026 con un import de verdad: el valor puesto a mano
+sobrevive y `config:status` sigue diciendo que no hay diferencias.
+
+Dos cosas que hay que saber de ese arreglo:
+
+- **El patrón va a la clave, no al bloque entero** (`…settings:spending.global_limit`).
+  Ignorar `spending` completo impediría que un ajuste NUEVO que añadamos por
+  código llegara nunca a producción.
+- **La lista de `config_ignore` se guarda ordenada alfabéticamente.** Si se
+  añade un patrón a mano en el archivo del repositorio y no se respeta ese
+  orden, `config:status` marca diferencia para siempre por el orden, no por el
+  contenido.
+
 `config:import` **sobrescribe** la configuración del servidor con la del
 repositorio. Si alguien cambió algo desde la interfaz y no se exportó, se
 pierde. Antes de un despliegue, comprobar `drush config:status` para ver si hay

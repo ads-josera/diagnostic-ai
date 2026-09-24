@@ -7,3 +7,5 @@ ignored_config_entities:
   - 'sales_leadership_diagnostic.home:background_fid'
   - 'sales_leadership_diagnostic.home:logo_color_fid'
   - 'sales_leadership_diagnostic.home:logo_light_fid'
+  - 'sales_leadership_diagnostic.settings:spending.global_limit'
+  - 'sales_leadership_diagnostic.settings:spending.per_user_limit'
