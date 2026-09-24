@@ -233,9 +233,12 @@ parecer instantáneo un turno de 45 segundos. Lo que informa:
 - cuánto tardó en **generarse**;
 - si los tres se **solaparon** de verdad, que es la pregunta de fondo;
 - que ninguno se generó **dos veces**;
-- el **coste real** y el pico de memoria, leído con `ps` y acotado a los
+- el **coste real** y la memoria, leída con `ps` y acotada a los
   procesos de PHP **de esta cuenta del servidor**, con el comando al lado para
-  poder auditarlo. Las dos acotaciones costaron sendas correcciones: en un
+  poder auditarlo. Se informa la **suma de todos ellos** y cuántos eran, además
+  del mayor: la pregunta de capacidad es cuánto pesan varias investigaciones a
+  la vez —dos recogedores de 70 MB son 140—, y el mayor solo contestaba a otra
+  pregunta. Las dos acotaciones costaron sendas correcciones: en un
   alojamiento compartido `ps -eo` trae los procesos de todas las cuentas —el
   cron de otra ocupaba 73 MB, al lado justo de los 72,7 que habíamos medido—, y
   filtrar por la palabra «drush» cuela los envoltorios (`flock … sh -c`, el

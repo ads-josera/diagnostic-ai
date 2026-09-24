@@ -410,25 +410,27 @@ function ensayo_sesiones(array $ids): array {
 }
 
 /**
- * El proceso propio de drush que más memoria ocupa, y cuál es.
+ * Lo que ocupan, juntos, los procesos propios de drush, y cuál es el mayor.
+ *
+ * Da la SUMA y no solo el mayor porque la pregunta de capacidad es cuánto pesan
+ * varias investigaciones a la vez: dos recogedores de 70 MB son 140, y eso es
+ * lo que hay que comparar con lo que el servidor tiene libre. Informar solo el
+ * mayor contestaba a otra pregunta.
  *
  * Es una observación DESDE FUERA, con `ps`, y por eso puede no estar
  * disponible: en algunos alojamientos `shell_exec` está desactivado o `ps` solo
  * ve los procesos propios. Cuando no se puede medir devuelve null, que el
  * informe traduce por «no medido». Un cero sería mentira.
  *
- * Mira SOLO los procesos de esta cuenta del servidor y solo los de drush, y
- * eso costó una corrección. La primera versión usaba `ps -eo`, que en un
+ * Mira SOLO los procesos de esta cuenta del servidor y solo los de drush, y eso
+ * costó una corrección. La primera versión usaba `ps -eo`, que en un
  * alojamiento compartido ve los procesos de TODAS las cuentas, y filtraba por
- * la palabra «php»: el cron de otra cuenta del mismo servidor ocupaba 73 MB y
- * se llevaba el máximo, justo al lado de los 72,7 MB que habíamos medido para
- * un turno. Una cifra ajena, plausible y con nuestra etiqueta. Lo vio Jarvis
- * leyendo el guion, el 23-09-2026.
+ * la palabra «php»: el cron de otra cuenta ocupaba 73 MB y se llevaba el
+ * máximo, justo al lado de los 72,7 MB que habíamos medido para un turno. Una
+ * cifra ajena, plausible y con nuestra etiqueta. Lo vio Jarvis leyendo el
+ * guion, el 23-09-2026.
  *
- * Devuelve también el comando, para que el número se pueda auditar en lugar de
- * creerlo.
- *
- * @return array{mb: float, que: string}|null
+ * @return array{mayor: float, que: string, suma: float, cuantos: int}|null
  *   Lo ocupado y por quién, o null si no se pudo medir.
  */
 function ensayo_pico_de_memoria(): ?array {
@@ -439,8 +441,10 @@ function ensayo_pico_de_memoria(): ?array {
   //   dentro de drush cada línea se corta a los 80 caracteres. En el servidor
   //   la palabra «drush» aparece hacia el carácter 115 de la línea del cron, o
   //   sea justo detrás del corte: el filtro no encontraba nada y el informe
-  //   decía «no medido» con toda la razón aparente. Lo encontró Jarvis el
-  //   23-09-2026, midiéndolo: 80 caracteres dentro de drush, 1018 con `-ww`.
+  //   decía «no medido» con toda la razón aparente. Lo encontró Jarvis
+  //   midiéndolo: 80 caracteres dentro de drush, 1018 con `-ww`. El recorte
+  //   cortaba además el nombre de este guion, así que la exclusión de más abajo
+  //   fallaba y el vigilante se medía A SÍ MISMO.
   // - el uid lo resuelve el propio intérprete de órdenes, porque `getmyuid()`
   //   de PHP devuelve el dueño del ARCHIVO y no el del proceso, y aquí hacían
   //   falta dos cosas distintas que se parecen mucho.
@@ -451,6 +455,8 @@ function ensayo_pico_de_memoria(): ?array {
   }
 
   $mayor = 0;
+  $suma = 0;
+  $cuantos = 0;
   $quien = '';
 
   foreach (explode("\n", $salida) as $linea) {
@@ -476,19 +482,24 @@ function ensayo_pico_de_memoria(): ?array {
       continue;
     }
 
+    $cuantos++;
+    $suma += (int) $partes[1];
+
     if ((int) $partes[1] > $mayor) {
       $mayor = (int) $partes[1];
       $quien = trim($partes[2]);
     }
   }
 
-  if ($mayor === 0) {
+  if ($cuantos === 0) {
     return NULL;
   }
 
   return [
-    'mb' => round($mayor / 1024, 1),
+    'mayor' => round($mayor / 1024, 1),
     'que' => ensayo_comando_corto($quien),
+    'suma' => round($suma / 1024, 1),
+    'cuantos' => $cuantos,
   ];
 }
 
@@ -666,8 +677,8 @@ function ensayo_crear_sesion(UserInterface $cuenta, DiagnosticAgentInterface $ag
  * @param int $segundos
  *   Cuánto mirar como mucho.
  *
- * @return array<int, array{reservado: float|null, terminado: float|null, memoria: array{mb: float, que: string}|null}>
- *   Hitos de cada sesión y el pico de memoria observado.
+ * @return array<int, array{reservado: float|null, terminado: float|null, memoria: array{mayor: float, que: string, suma: float, cuantos: int}|null}>
+ *   Hitos de cada sesión y el instante de más memoria observado.
  */
 function ensayo_vigilar(array $turnos, int $segundos): array {
   $ids = array_column($turnos, 'sesion');
@@ -699,7 +710,9 @@ function ensayo_vigilar(array $turnos, int $segundos): array {
     $estados = ensayo_sesiones($ids);
     $memoria = ensayo_pico_de_memoria();
 
-    if ($memoria !== NULL && $memoria['mb'] > ($pico['mb'] ?? 0)) {
+    // Se guarda el instante de más carga SUMADA, no el del proceso más gordo:
+    // lo que estrecha el servidor es el total de lo que corre a la vez.
+    if ($memoria !== NULL && $memoria['suma'] > ($pico['suma'] ?? 0)) {
       $pico = $memoria;
     }
 
@@ -770,7 +783,7 @@ function ensayo_vigilar(array $turnos, int $segundos): array {
         $reservados,
         count($enCola) - $reservados,
         $terminados,
-        $pico === NULL ? '' : sprintf(', %.0f MB de pico', $pico['mb']),
+        $pico === NULL ? '' : sprintf(', %.0f MB en %d proceso(s)', $pico['suma'], $pico['cuantos']),
       );
     }
 
@@ -975,7 +988,7 @@ function ensayo_imprimir_cupo(array $estados): void {
  *
  * @param array<int, int> $ids
  *   Conversaciones del ensayo.
- * @param array<int, array{reservado: float|null, terminado: float|null, memoria: array{mb: float, que: string}|null}> $hitos
+ * @param array<int, array{reservado: float|null, terminado: float|null, memoria: array{mayor: float, que: string, suma: float, cuantos: int}|null}> $hitos
  *   Lo que vio el vigilante, si lo hubo.
  * @param array<int, array{sesion: int, cuenta: string, encolado: float, antes?: int, metricas?: array<string, float|int>}> $turnos
  *   Lo lanzado, si se lanzó en esta misma ejecución. Cuando trae la foto de
@@ -1185,12 +1198,21 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
   }
 
   $memoria = $hitos === [] ? NULL : reset($hitos)['memoria'] ?? NULL;
-  printf(
-    "  Pico de memoria  %s\n",
-    $memoria === NULL
-      ? 'no medido (ps no disponible, o no se vio ningún proceso de drush)'
-      : sprintf('%.1f MB · %s', $memoria['mb'], $memoria['que']),
-  );
+
+  if ($memoria === NULL) {
+    print "  Memoria          no medida (ps no disponible, o ningún proceso de drush a la vista)\n";
+  }
+  elseif ($memoria['cuantos'] > 1) {
+    printf(
+      "  Memoria          hasta %.1f MB entre %d procesos de drush a la vez\n",
+      $memoria['suma'],
+      $memoria['cuantos'],
+    );
+    printf("                   el mayor, %.1f MB: %s\n", $memoria['mayor'], $memoria['que']);
+  }
+  else {
+    printf("  Memoria          %.1f MB en un solo proceso: %s\n", $memoria['mayor'], $memoria['que']);
+  }
 
   printf("  Coste del disparo %.4f USD: SOLO los turnos que se acaban de medir\n", $costeDelDisparo);
 
