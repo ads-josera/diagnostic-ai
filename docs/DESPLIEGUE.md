@@ -241,6 +241,39 @@ parecer instantáneo un turno de 45 segundos. Lo que informa:
   filtrar por la palabra «drush» cuela los envoltorios (`flock … sh -c`, el
   bucle del cron), que ocupan tres megas y harían mentir la cifra a la baja.
 
+**Para medir concurrencia hacen falta turnos LARGOS, y los largos son los que
+investigan.** Se aprendió gastando 0,28 USD el 23-09-2026: con una conversación
+recién creada el agente contesta **preguntando** —cero búsquedas, 150 tokens de
+salida—, el turno dura entre cuatro y ocho segundos, y la primera pasada del
+cron vacía la cola antes de que entre el recogedor de los :20. El ensayo salió
+«en serie» sin que eso dijera nada de cuántos procesadores hay. Así que el
+camino es en tres pasos:
+
+```bash
+drush php:script bin/ensayo-concurrencia.php -- crear
+drush php:script bin/ensayo-concurrencia.php -- conversar 14 "tu respuesta" SI-GASTA
+drush php:script bin/ensayo-concurrencia.php -- lanzar SI-GASTA sesiones=14,15,16 mensaje="adelante"
+```
+
+`conversar` avanza **una** conversación, espera a los recogedores de verdad (no
+drena la cola, que se llevaría por delante el turno de cualquier alumno que
+estuviera esperando) e imprime lo último que dijo el agente, que es lo que
+decide la respuesta siguiente. Cuando las tres están a punto de investigar,
+`lanzar` con `sesiones=` dispara los tres turnos largos a la vez.
+
+Ese mismo día salieron dos lecciones que valen para cualquier medición desde
+drush:
+
+- **`ps` hay que pedirlo con `-ww`.** Drush exporta `COLUMNS=80` y `ps` obedece
+  esa variable, así que cada línea se corta a los 80 caracteres. En el servidor
+  la palabra «drush» aparece hacia el 115 de la línea del cron: el filtro no
+  encontraba nada y el informe decía «no medido» con toda la razón aparente. El
+  recorte además cortaba el nombre del propio guion, así que se colaba a sí
+  mismo como el proceso más grande.
+- **Un duplicado se cuenta contra una foto previa, no contra el total.** Contar
+  todas las respuestas de la conversación solo vale si acaba de nacer; sobre una
+  conversación con historia, el total grita «duplicado» sin que haya ninguno.
+
 Antes de gastar un céntimo, `cupo`: dice si cada cuenta puede investigar esta
 semana y **aborta si el turno de alguna no se encolaría**, porque entonces se
 ejecutaría dentro del propio proceso del guion —se pagaría igual y no se mediría

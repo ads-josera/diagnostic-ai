@@ -167,18 +167,29 @@ function ensayo_por_defecto(string $clave): string|int {
 /**
  * Separa la acción, lo posicional y las opciones `clave=valor`.
  *
+ * `SI-GASTA` se saca aparte y no cuenta como argumento posicional: si contara,
+ * escribirlo antes o después cambiaría de sitio los demás, y eso convierte una
+ * autorización en una trampa.
+ *
  * @param array $extra
  *   Lo que llegó tras el `--` de drush.
  *
- * @return array{0: string, 1: array<int, string>, 2: array<string, string>}
- *   Acción, argumentos sueltos y opciones.
+ * @return array{0: string, 1: array<int, string>, 2: array<string, string>, 3: bool}
+ *   Acción, argumentos sueltos, opciones y si se autorizó el gasto.
  */
 function ensayo_argumentos(array $extra): array {
   $sueltos = [];
   $opciones = [];
+  $gasta = FALSE;
 
   foreach ($extra as $pieza) {
     $pieza = (string) $pieza;
+
+    if ($pieza === 'SI-GASTA') {
+      $gasta = TRUE;
+
+      continue;
+    }
 
     if (str_contains($pieza, '=')) {
       [$clave, $valor] = explode('=', $pieza, 2);
@@ -192,7 +203,7 @@ function ensayo_argumentos(array $extra): array {
 
   $accion = array_shift($sueltos) ?? 'ayuda';
 
-  return [$accion, $sueltos, $opciones];
+  return [$accion, $sueltos, $opciones, $gasta];
 }
 
 /**
@@ -421,10 +432,19 @@ function ensayo_sesiones(array $ids): array {
  *   Lo ocupado y por quién, o null si no se pudo medir.
  */
 function ensayo_pico_de_memoria(): ?array {
-  // El uid lo resuelve el propio intérprete de órdenes: `getmyuid()` de PHP
-  // devuelve el dueño del ARCHIVO, no el del proceso, y aquí harían falta dos
-  // cosas distintas que se parecen mucho.
-  $salida = @shell_exec('ps -o rss=,args= -u "$(id -u)" 2>/dev/null');
+  // Dos detalles, y sin los dos esta función devuelve null creyendo que no hay
+  // nada que medir:
+  //
+  // - `-ww`: drush exporta COLUMNS=80 y `ps` obedece esa variable, así que
+  //   dentro de drush cada línea se corta a los 80 caracteres. En el servidor
+  //   la palabra «drush» aparece hacia el carácter 115 de la línea del cron, o
+  //   sea justo detrás del corte: el filtro no encontraba nada y el informe
+  //   decía «no medido» con toda la razón aparente. Lo encontró Jarvis el
+  //   23-09-2026, midiéndolo: 80 caracteres dentro de drush, 1018 con `-ww`.
+  // - el uid lo resuelve el propio intérprete de órdenes, porque `getmyuid()`
+  //   de PHP devuelve el dueño del ARCHIVO y no el del proceso, y aquí hacían
+  //   falta dos cosas distintas que se parecen mucho.
+  $salida = @shell_exec('ps -ww -o rss=,args= -u "$(id -u)" 2>/dev/null');
 
   if (!is_string($salida) || trim($salida) === '') {
     return NULL;
@@ -611,6 +631,7 @@ function ensayo_crear_sesion(UserInterface $cuenta, DiagnosticAgentInterface $ag
 function ensayo_vigilar(array $turnos, int $segundos): array {
   $ids = array_column($turnos, 'sesion');
   $porSesion = array_column($turnos, 'cuenta', 'sesion');
+  $base = array_column($turnos, 'antes', 'sesion');
   $arranque = microtime(TRUE);
 
   $hitos = [];
@@ -662,11 +683,11 @@ function ensayo_vigilar(array $turnos, int $segundos): array {
       if ($fuera && $quieto && $hitos[$id]['terminado'] === NULL) {
         $hitos[$id]['terminado'] = $ahora;
         printf(
-          "  %5.1fs  %s: terminó en «%s» con %d respuesta(s)\n",
+          "  %5.1fs  %s: terminó en «%s» con %d respuesta(s) nueva(s)\n",
           $transcurrido,
           $etiqueta,
           $estados[$id]['estado'],
-          $estados[$id]['respuestas'],
+          $estados[$id]['respuestas'] - ($base[$id] ?? 0),
         );
       }
 
@@ -685,7 +706,10 @@ function ensayo_vigilar(array $turnos, int $segundos): array {
     }
 
     if ($terminados === count($ids)) {
-      printf("\n  Los %d terminaron a los %.1f s.\n", $terminados, microtime(TRUE) - $arranque);
+      printf(
+        $terminados === 1 ? "\n  Terminó a los %.1f s.\n" : "\n  Los %d terminaron a los %.1f s.\n",
+        ...($terminados === 1 ? [microtime(TRUE) - $arranque] : [$terminados, microtime(TRUE) - $arranque]),
+      );
 
       break;
     }
@@ -717,6 +741,99 @@ function ensayo_vigilar(array $turnos, int $segundos): array {
   }
 
   return $hitos;
+}
+
+/**
+ * Los ids de una lista separada por comas.
+ *
+ * @return array<int, int>
+ *   Los que eran números, sin ceros.
+ */
+function ensayo_ids(string $lista): array {
+  return array_values(array_filter(array_map('intval', explode(',', $lista))));
+}
+
+/**
+ * Las conversaciones dadas, con el nombre de su dueño.
+ *
+ * Es lo que esperan el vigilante y el informe. El instante de encolado se pone
+ * aquí, al llamar, porque quien llama lo hace justo después de mandar.
+ *
+ * @param array<int, int> $ids
+ *   Conversaciones.
+ * @param bool $conBase
+ *   Falso para no tomar la foto de respuestas previas. Se usa al releer un
+ *   ensayo ya corrido: allí la foto de AHORA no dice nada del turno que
+ *   interesa, y ponerla haría que el informe afirmara lo que no sabe.
+ *
+ * @return array<int, array{sesion: int, cuenta: string, encolado: float, antes?: int}>
+ *   Una fila por conversación.
+ */
+function ensayo_turnos_de_sesiones(array $ids, bool $conBase = TRUE): array {
+  $duenos = \Drupal::database()->select('sld_diagnostic_session', 's')
+    ->fields('s', ['id', 'uid'])
+    ->condition('id', $ids, 'IN')
+    ->execute()
+    ->fetchAllKeyed();
+
+  $nombres = [];
+  $cuentas = \Drupal::entityTypeManager()->getStorage('user')
+    ->loadMultiple(array_unique(array_map('intval', $duenos)));
+
+  foreach ($cuentas as $cuenta) {
+    $nombres[(int) $cuenta->id()] = $cuenta->getAccountName();
+  }
+
+  $turnos = [];
+  $ahora = microtime(TRUE);
+
+  foreach ($ids as $id) {
+    $fila = [
+      'sesion' => $id,
+      'cuenta' => $nombres[(int) ($duenos[$id] ?? 0)] ?? ('sesión ' . $id),
+      'encolado' => $ahora,
+    ];
+
+    if ($conBase) {
+      // Lo que ya había antes de este turno.
+      $fila['antes'] = ensayo_respuestas_de($id);
+    }
+
+    $turnos[] = $fila;
+  }
+
+  return $turnos;
+}
+
+/**
+ * Cuántas respuestas del agente tiene ya una conversación.
+ *
+ * Se toma ANTES de mandar el mensaje, y de ahí sale el único número que
+ * demuestra que no hubo duplicado: las respuestas NUEVAS. Contar el total solo
+ * vale si la conversación acaba de nacer, y desde que se puede medir sobre
+ * conversaciones ya empezadas —que es lo que hace falta para que el agente
+ * investigue— el total daba «duplicado» en cuanto había un turno anterior.
+ */
+function ensayo_respuestas_de(int $id): int {
+  return (int) \Drupal::database()->select(DiagnosticMessageRepository::TABLE, 'm')
+    ->condition('session_id', $id)
+    ->condition('role', MessageRole::Assistant->value)
+    ->countQuery()
+    ->execute()
+    ->fetchField();
+}
+
+/**
+ * Lo último que dijo el agente en una conversación.
+ *
+ * `conversar` lo imprime porque es lo que decide la respuesta siguiente: sin
+ * verlo, avanzar la conversación es adivinar.
+ */
+function ensayo_ultima_respuesta(int $id): string {
+  $mensajes = \Drupal::service(ConversationService::class)->getConversation($id);
+  $ultimo = end($mensajes);
+
+  return $ultimo === FALSE ? '(sin respuesta)' : $ultimo->content;
 }
 
 /**
@@ -787,6 +904,12 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
   $estados = ensayo_sesiones($ids);
   $porSesion = array_column($turnos, 'cuenta', 'sesion');
   $encolados = array_column($turnos, 'encolado', 'sesion');
+  // Sin la foto de antes no se puede saber qué respuesta es de este turno, y
+  // entonces lo que se informa es el total de la conversación. Se dice, en vez
+  // de llamar «respuestas del turno» a otra cosa: en una conversación con
+  // historia, el total daría «duplicado» sin que hubiera ninguno.
+  $base = array_column($turnos, 'antes', 'sesion');
+  $hayBase = $turnos !== [] && array_key_exists('antes', reset($turnos));
 
   $costeTotal = 0.0;
   $duplicadas = [];
@@ -809,7 +932,7 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
     )->fetchObject();
 
     $costeTotal += (float) $u->usd;
-    $respuestas = $estados[$id]['respuestas'];
+    $respuestas = $estados[$id]['respuestas'] - ($base[$id] ?? 0);
 
     if ($respuestas === 0) {
       $sinRespuesta[] = $id;
@@ -849,7 +972,12 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
       }
     }
 
-    printf("    respuestas       %d%s\n", $respuestas, $respuestas === 1 ? '' : '  ← REVISAR');
+    printf(
+      "    %-16s %d%s\n",
+      $hayBase ? 'respuestas' : 'respuestas (total)',
+      $respuestas,
+      $respuestas === 1 || !$hayBase ? '' : '  ← REVISAR',
+    );
     printf("    llamadas         %d al modelo · %d búsquedas (%s caracteres)\n", (int) $u->n, (int) $h->n, number_format((int) $h->chars));
     printf("    tokens           %s de entrada (%d %% de caché) · %s de salida\n", number_format((int) $u->it), $u->it ? (int) round(100 * $u->ct / $u->it) : 0, number_format((int) $u->ot));
     printf("    coste            %.4f USD\n\n", (float) $u->usd);
@@ -872,7 +1000,13 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
     }
   }
 
-  if (count($ventanas) === count($ids) && $ids !== []) {
+  if (count($ids) < 2) {
+    // Con una sola conversación no hay concurrencia que medir, y una línea que
+    // dice «no se puede decir» donde no había nada que decir se lee como si
+    // algo hubiera fallado. `conversar` avanza de una en una.
+    $ventanas = [];
+  }
+  elseif (count($ventanas) === count($ids)) {
     $solape = min(array_column($ventanas, 1)) - max(array_column($ventanas, 0));
 
     printf(
@@ -882,14 +1016,16 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
         : sprintf('los %d a la vez, NO (faltaron %.0f s); mira la línea siguiente antes de concluir nada', count($ids), -$solape),
     );
   }
-  else {
+  elseif ($ids !== []) {
     $terminaronTodos = $hitos !== [] && array_filter(array_column($hitos, 'terminado')) !== [];
 
     printf(
       "  En paralelo      no se puede decir: %s\n",
-      $terminaronTodos && $ventanas === []
-        ? 'los turnos empezaron y acabaron entre dos sondeos (motor simulado)'
-        : 'alguno no llegó a terminar mientras se miraba',
+      match (TRUE) {
+        $hitos === [] => 'esto solo relee lo guardado; el reparto en el tiempo se mide al lanzar',
+        $terminaronTodos && $ventanas === [] => 'los turnos empezaron y acabaron entre dos sondeos (motor simulado)',
+        default => 'alguno no llegó a terminar mientras se miraba',
+      },
     );
   }
 
@@ -925,7 +1061,11 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
 
   printf(
     "  Duplicados       %s\n",
-    $duplicadas === [] ? 'ninguno: una respuesta por conversación' : 'HAY: ' . implode(' · ', $duplicadas),
+    match (TRUE) {
+      !$hayBase => 'no se puede decir: sin la foto de antes, lo que se cuenta es el total',
+      $duplicadas === [] => 'ninguno: una respuesta nueva por conversación',
+      default => 'HAY: ' . implode(' · ', $duplicadas),
+    },
   );
 
   if ($sinRespuesta !== []) {
@@ -952,7 +1092,7 @@ function ensayo_informe(array $ids, array $hitos = [], array $turnos = []): void
 }
 
 // El guion empieza aquí.
-[$accion, $sueltos, $opciones] = ensayo_argumentos($extra ?? []);
+[$accion, $sueltos, $opciones, $gasta] = ensayo_argumentos($extra ?? []);
 
 $simulado = Settings::get(DiagnosticEngineFactory::MOCK_SETTING) === TRUE;
 $agenteId = $opciones['agente'] ?? (string) ensayo_por_defecto('agente');
@@ -964,7 +1104,10 @@ if ($accion !== 'ayuda' && $agente === NULL) {
   return;
 }
 
-if ($accion === 'cupo' || $accion === 'lanzar') {
+$conSesiones = ensayo_ids((string) ($opciones['sesiones'] ?? ''));
+$necesitaCuentas = $accion === 'cupo' || $accion === 'crear' || ($accion === 'lanzar' && $conSesiones === []);
+
+if ($necesitaCuentas) {
   $encontradas = ensayo_cuentas($opciones['cuentas'] ?? (string) ensayo_por_defecto('cuentas'));
 
   if ($encontradas['faltan'] !== []) {
@@ -1019,8 +1162,109 @@ if ($accion === 'cupo') {
   return;
 }
 
+if ($accion === 'crear') {
+  print "Creo una conversación por cuenta y no mando ningún mensaje: esto no gasta.\n\n";
+
+  $ids = [];
+
+  foreach ($encontradas['cuentas'] as $nombre => $cuenta) {
+    $sesion = ensayo_crear_sesion($cuenta, $agente);
+    $ids[] = (int) $sesion->id();
+
+    printf("  %s → sesión %s\n", $nombre, $sesion->id());
+  }
+
+  printf("\nSesiones: %s\n\n", implode(',', $ids));
+  print "Ahora se conversa una por una, hasta que el agente esté a punto de\n";
+  print "investigar. Cada respuesta suya se lee antes de contestarle:\n\n";
+  printf("  conversar %d \"lo que le contestas\" SI-GASTA\n", $ids[0] ?? 0);
+  print "\nY cuando las tres estén en ese punto, el disparo simultáneo:\n\n";
+  printf("  lanzar SI-GASTA sesiones=%s mensaje=\"adelante, investiga\"\n", implode(',', $ids));
+
+  return;
+}
+
+if ($accion === 'leer') {
+  $ids = ensayo_ids((string) ($sueltos[0] ?? ''));
+
+  if ($ids === []) {
+    print "Hacen falta los ids de sesión, separados por comas.\n";
+
+    return;
+  }
+
+  foreach ($ids as $id) {
+    printf("\n═══ sesión %d ═══\n", $id);
+
+    foreach (\Drupal::service(ConversationService::class)->getConversation($id) as $mensaje) {
+      printf("\n### %s\n%s\n", strtoupper($mensaje->role->value), $mensaje->content);
+    }
+  }
+
+  return;
+}
+
+if ($accion === 'conversar') {
+  $id = (int) ($sueltos[0] ?? 0);
+  $texto = trim((string) ($sueltos[1] ?? ''));
+
+  if ($id === 0 || $texto === '') {
+    print "Uso: conversar <sesión> \"lo que le contestas\" SI-GASTA\n";
+
+    return;
+  }
+
+  if (!$simulado && !$gasta) {
+    print "ABORTADO: un turno es una llamada al proveedor y se paga.\n";
+    print "Si estás de acuerdo, repite añadiendo SI-GASTA.\n";
+
+    return;
+  }
+
+  $sesion = \Drupal::entityTypeManager()->getStorage('sld_diagnostic_session')->load($id);
+
+  if ($sesion === NULL) {
+    printf("No existe la sesión %d.\n", $id);
+
+    return;
+  }
+
+  if (!$sesion->getStatus()->acceptsMessages()) {
+    printf("La sesión %d está en «%s» y no admite mensajes.\n", $id, $sesion->getStatus()->value);
+
+    return;
+  }
+
+  // Esta parte NO mide concurrencia: avanza la conversación. Por eso va de una
+  // en una y se espera a que los recogedores del servidor hagan su trabajo, en
+  // lugar de drenar la cola aquí: drenarla procesaría también el turno de
+  // cualquier alumno que estuviera esperando, dentro de este proceso y con la
+  // identidad equivocada.
+  // La foto de cuántas respuestas hay se toma ANTES de mandar, o la del propio
+  // turno contaría como preexistente y el duplicado se volvería invisible.
+  $turnos = ensayo_turnos_de_sesiones([$id]);
+  $respuesta = \Drupal::service(ConversationService::class)->submitMessage($sesion, $texto);
+  // El instante que vale es este: cuando el elemento ya está en la cola.
+  $turnos[0]['encolado'] = microtime(TRUE);
+
+  if (!empty($respuesta['processing'])) {
+    $hitos = ensayo_vigilar($turnos, (int) ($opciones['vigilar'] ?? 300));
+    ensayo_informe([$id], $hitos, $turnos);
+  }
+  else {
+    print "\nEse turno no pasó por la cola: se generó en el acto.\n";
+    ensayo_informe([$id], [], $turnos);
+  }
+
+  print "\nOJO: las cifras de arriba son de TODA la conversación, no de este turno.\n";
+  print "\n─── lo último que dijo el agente ───\n\n";
+  print ensayo_ultima_respuesta($id) . "\n";
+
+  return;
+}
+
 if ($accion === 'lanzar') {
-  if (!$simulado && !in_array('SI-GASTA', $sueltos, TRUE)) {
+  if (!$simulado && !$gasta) {
     print "ABORTADO: esto llama al proveedor con dinero real, una vez por cuenta.\n";
     print "Mira antes «cupo». Si estás de acuerdo, repite con SI-GASTA al final.\n";
 
@@ -1031,6 +1275,60 @@ if ($accion === 'lanzar') {
     ? "MOTOR SIMULADO: ensayo en seco. No se paga nada y los tiempos no significan nada.\n"
     : "MOTOR REAL: a partir de aquí se paga.\n";
 
+  $buscador = ensayo_buscador_encendido();
+  $aLanzar = [];
+
+  // Dos maneras de llegar hasta aquí, y la segunda existe por lo que pasó el
+  // 23-09-2026: con conversaciones nuevas el agente contesta PREGUNTANDO —no
+  // investiga—, los turnos duran entre cuatro y ocho segundos y el primer
+  // proceso que llega vacía la cola antes de que entre el siguiente recogedor.
+  // El ensayo salió «en serie» sin que eso dijera nada de cuántos procesadores
+  // hay. Para medir concurrencia hacen falta turnos largos, y los turnos largos
+  // son los que investigan: hay que llevar cada conversación hasta ese punto
+  // antes de disparar las tres a la vez.
+  if ($conSesiones !== []) {
+    $almacenSesiones = \Drupal::entityTypeManager()->getStorage('sld_diagnostic_session');
+    $almacenCuentas = \Drupal::entityTypeManager()->getStorage('user');
+    $estados = [];
+
+    foreach ($conSesiones as $id) {
+      $sesion = $almacenSesiones->load($id);
+
+      if ($sesion === NULL) {
+        printf("No existe la sesión %d.\n", $id);
+
+        return;
+      }
+
+      if (!$sesion->getStatus()->acceptsMessages()) {
+        printf(
+          "La sesión %d está en «%s» y no admite mensajes: no se lanza nada.\n",
+          $id,
+          $sesion->getStatus()->value,
+        );
+
+        return;
+      }
+
+      $cuenta = $almacenCuentas->load((int) $sesion->getOwnerId());
+
+      if ($cuenta === NULL) {
+        printf("La sesión %d no tiene dueño legible.\n", $id);
+
+        return;
+      }
+
+      $nombre = $cuenta->getAccountName();
+      $estados[$nombre] = ensayo_estado_de_cuenta($cuenta, $agente, $buscador);
+      $aLanzar[] = ['cuenta' => $nombre, 'usuario' => $cuenta, 'sesion' => $sesion];
+    }
+  }
+  else {
+    foreach ($encontradas['cuentas'] as $nombre => $cuenta) {
+      $aLanzar[] = ['cuenta' => $nombre, 'usuario' => $cuenta, 'sesion' => NULL];
+    }
+  }
+
   $reparos = ensayo_reparos($estados, $agente, $buscador, ($opciones['forzar'] ?? '') === 'si');
 
   if ($reparos !== []) {
@@ -1040,36 +1338,36 @@ if ($accion === 'lanzar') {
   }
 
   $conversacion = \Drupal::service(ConversationService::class);
+  $herramientas = \Drupal::service(ToolBoxFactory::class);
   $mensaje = trim((string) ($opciones['mensaje'] ?? ensayo_por_defecto('mensaje')));
   $turnos = [];
 
   print "\nEncolando…\n";
 
-  $herramientas = \Drupal::service(ToolBoxFactory::class);
-
-  foreach ($encontradas['cuentas'] as $nombre => $cuenta) {
+  foreach ($aLanzar as $fila) {
     // La última palabra la tiene quien decide de verdad, no la foto que se
-    // tomó hace un momento: entre el `cupo` y este instante alguien pudo entrar
-    // y gastar su misión. Se pregunta cuenta por cuenta, justo antes de
-    // mandar el mensaje, porque un turno que no se encola se ejecuta aquí y se
-    // paga.
-    if (!$herramientas->mayResearch((int) $cuenta->id(), $agente->id())) {
-      printf("\n  PARADA antes de gastar: %s ya no puede investigar. No se lanzan los demás.\n", $nombre);
+    // tomó hace un momento: entre el «cupo» y este instante alguien pudo entrar
+    // y gastar su misión. Se pregunta cuenta por cuenta, justo antes de mandar
+    // el mensaje, porque un turno que no se encola se ejecuta aquí y se paga.
+    if (!$herramientas->mayResearch((int) $fila['usuario']->id(), $agente->id())) {
+      printf("\n  PARADA antes de gastar: %s ya no puede investigar. No se lanzan los demás.\n", $fila['cuenta']);
 
       break;
     }
 
-    $sesion = ensayo_crear_sesion($cuenta, $agente);
+    $sesion = $fila['sesion'] ?? ensayo_crear_sesion($fila['usuario'], $agente);
+    $yaTenia = ensayo_respuestas_de((int) $sesion->id());
     $antes = microtime(TRUE);
     $respuesta = $conversacion->submitMessage($sesion, $mensaje);
 
     $turnos[] = [
       'sesion' => (int) $sesion->id(),
-      'cuenta' => $nombre,
+      'cuenta' => $fila['cuenta'],
       'encolado' => microtime(TRUE),
+      'antes' => $yaTenia,
     ];
 
-    printf("  %s → sesión %d en %.2f s\n", $nombre, $sesion->id(), microtime(TRUE) - $antes);
+    printf("  %s → sesión %d en %.2f s\n", $fila['cuenta'], $sesion->id(), microtime(TRUE) - $antes);
 
     // Si este turno NO se encoló, se acaba de ejecutar aquí mismo y se ha
     // pagado. Se para en seco en lugar de repetirlo con las demás: el ensayo
@@ -1106,7 +1404,7 @@ if ($accion === 'informe') {
     return;
   }
 
-  ensayo_informe($ids);
+  ensayo_informe($ids, [], ensayo_turnos_de_sesiones($ids, FALSE));
 
   return;
 }
@@ -1114,11 +1412,19 @@ if ($accion === 'informe') {
 print <<<AYUDA
 Mide tres investigaciones simultáneas en producción. GASTA DINERO.
 
-  cupo                 qué puede hacer cada cuenta esta semana. No gasta.
-  lanzar SI-GASTA      encola un turno por cuenta y se queda mirando.
-  informe <ids>        vuelve a sacar las cifras de un ensayo ya corrido.
+  cupo                        qué puede cada cuenta esta semana. Solo lee.
+  crear                       una conversación por cuenta, sin mensajes. No gasta.
+  conversar <id> "…" SI-GASTA  avanza UNA conversación y enseña qué contestó.
+  leer <ids>                  vuelca las conversaciones enteras.
+  lanzar SI-GASTA             encola un turno por cuenta y se queda mirando.
+  informe <ids>               vuelve a sacar las cifras de un ensayo ya corrido.
 
-Opciones: cuentas= agente= mensaje= vigilar= forzar=si
+Opciones: cuentas= sesiones= agente= mensaje= vigilar= forzar=si
+
+Para medir concurrencia hacen falta turnos LARGOS, y los largos son los que
+investigan. Con una conversación nueva el agente contesta preguntando y el turno
+dura segundos, así que el camino es: crear · conversar hasta que esté a punto de
+investigar · lanzar con sesiones= para disparar las tres a la vez.
 
 El detalle —qué mide cada número, y qué NO mide— está en la cabecera de este
 archivo.
