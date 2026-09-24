@@ -849,6 +849,21 @@ fondo y logotipos de la portada—: los protege `config_ignore`. Los cargadores
    - **`.bashrc` no llega a las sesiones no interactivas** (las de un agente,
      por ejemplo). Quien trabaje así tiene que exportarla en cada llamada, o
      seguir pasando las opciones con `-d`.
+   - **Y lo mismo vale para el PATH, que decide con qué PHP corre drush.** El
+     PHP de la consola de este servidor es 8.1 y el del dominio es 8.4; la guía
+     de arranque resuelve eso con un `export PATH` al empezar la sesión de SSH,
+     pero una sesión de agente tampoco lo tiene. Ahí `vendor/bin/drush` arranca
+     con 8.1, se queja de la versión mínima y **no hace nada** —falla del lado
+     seguro, pero falla—. En cualquier texto escrito para que lo ejecute un
+     agente, la orden va completa:
+
+     ```bash
+     cd /home/labai/public_html && PHP_INI_SCAN_DIR=:/home/labai/.php-ini.d \
+       /opt/cpanel/ea-php84/root/usr/bin/php vendor/drush/drush/drush.php <orden>
+     ```
+
+     Pasó el 24-09-2026: un despliegue escrito con `drush` a secas no corrió, y
+     hubo que repetirlo entero con la forma larga.
    - **Y por lo mismo, un `php -r` en la consola de alguien engaña**: si su
      `.bashrc` ya exporta la variable, el ini se lee y el valor sale bien, lo que
      hace parecer que la variable no hace falta. El cron no lee `.bashrc`, así
