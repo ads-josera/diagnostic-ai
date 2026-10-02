@@ -103,3 +103,31 @@ contra el correo del cliente. Lo que hay que mirar, por orden:
 2. Cuántas señales llevan fuente, y si la fuente es una página concreta.
 3. Si aparece **algún comprador con nombre y cargo**, que es donde más clara
    fue la diferencia.
+
+## Lo que salió (02-10-2026, conversación 30, cuenta de Omar)
+
+Se repitió el mismo caso —«Deloitte Ecuador», «Ecuador»— en conversación nueva.
+Contra los tres puntos de arriba, y contra el correo del cliente:
+
+| | Lo que falló | ChatGPT | Ahora |
+|---|---|---|---|
+| Cuentas cribadas | **1** | 10 | **10**, las diez nombradas en el pool auditable |
+| Compradores con nombre y cargo | 0 | 2 | **5** |
+| Fuentes enlazadas en lo que se lee | 0 | 13 | **0** |
+
+La misión: `research_budget: AVAILABLE` por primera vez en una sesión real, 13
+búsquedas, 10 resultados por consulta, **10 621 caracteres por consulta** frente
+a 3 664, 138 077 en total —el 86 % del tope viejo, que habría chocado—, cero
+denegaciones, cero errores, 0,569 USD y 3 min 8 s.
+
+Las dos primeras causas quedaron cerradas y la segunda ganó al punto de
+comparación. La tercera fila no la arregló este cambio, y no era la materia
+prima: **era el contrato**. Pedía las urls en `accounts[].sources` —que sí se
+pintan como enlaces en la pantalla del resultado— y al `message`, lo único que
+se lee en el chat, no le pedía ninguna. El agente obedecía citando en prosa.
+Está en su propio commit, con el espejo de este documento bajo prueba.
+
+**Leer páginas enteras sigue fuera**, y ahora con más razón: con diez
+resultados y `advanced` el pack se sostiene en las dos filas que dependían de la
+materia prima. La siguiente medición que decide eso es si las fuentes citadas
+son páginas concretas y suficientes, no cuántos caracteres trae cada una.
