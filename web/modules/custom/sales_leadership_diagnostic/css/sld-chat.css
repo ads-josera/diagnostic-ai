@@ -419,7 +419,40 @@
   border: 1px solid var(--sld-color-border);
   text-align: start;
   vertical-align: top;
+}
+
+/*
+ * El texto de una celda se parte en líneas; solo los encabezados no.
+ *
+ * Hasta el 02-10-2026 todas las celdas llevaban `nowrap`, que servía para la
+ * tabla de madurez —cifras cortas como «1/10»— y destrozaba la del Weekly GOLD
+ * Pack: su columna «Razón breve» es una frase, así que la tabla crecía de lado,
+ * la frase quedaba cortada en el borde de la burbuja y nada avisaba de que
+ * hubiera más. Lo cortado era justo el porqué de cada cuenta.
+ *
+ * El ancho mínimo evita el extremo contrario en el móvil: una columna aplastada
+ * a una palabra por renglón. Es corto a propósito —con 8rem, una columna que
+ * solo dice «SILVER» ocupaba lo mismo que una frase y volvía a empujar la
+ * tercera fuera de la pantalla—. Si las columnas no caben ni así, la tabla se
+ * desplaza dentro de su caja, como antes.
+ */
+.sld-chat__bubble th {
   white-space: nowrap;
+}
+
+.sld-chat__bubble td {
+  min-width: 5rem;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+/* En el móvil cada píxel de relleno se le quita al texto: con el de escritorio,
+   una tabla de tres columnas se pasaba 5px del borde de la burbuja. */
+@media (max-width: 30rem) {
+  .sld-chat__bubble th,
+  .sld-chat__bubble td {
+    padding-inline: 0.4rem;
+  }
 }
 
 .sld-chat__bubble th {
