@@ -6,6 +6,9 @@ namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
 use Drupal\Core\Queue\QueueInterface;
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\sales_leadership_diagnostic\DTO\DiagnosticContext;
+use Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn;
+use Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineInterface;
 use Drupal\sales_leadership_diagnostic\Service\Research\CitationAudit;
 use Drupal\sales_leadership_diagnostic\Service\Research\CitationAuditInterface;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
@@ -244,6 +247,78 @@ final class ConversationServiceTest extends KernelTestBase {
         ->get('status')->value,
       'La sesión tiene que quedar cerrada, no a medias.',
     );
+  }
+
+  /**
+   * Al entregar el Pack, sus fuentes quedan enlazadas en lo que se guarda.
+   *
+   * La plataforma las añade a partir de `accounts[].sources`, porque pedírselo
+   * al agente le quitaba la búsqueda de compradores (medido el 02-10-2026). Se
+   * comprueba en lo GUARDADO y no solo en lo que se pinta en el momento: al
+   * recargar la conversación, lo que se lee es lo guardado.
+   */
+  public function testAlEntregarElPackSusFuentesQuedanEnlazadas(): void {
+    $this->container->set('sales_leadership_diagnostic.engine', new class() implements DiagnosticEngineInterface {
+
+      /**
+       * {@inheritdoc}
+       */
+      public function process(DiagnosticContext $context): DiagnosticTurn {
+        return new DiagnosticTurn(
+          message: "Weekly GOLD Pack\n\nMabe abre planta.",
+          completed: TRUE,
+          result: [
+            'summary' => 'Pack',
+            'accounts' => [[
+              'name' => 'Mabe Ecuador',
+              'sources' => [['url' => 'https://www.eluniverso.com/mabe-planta', 'label' => 'Nueva planta', 'published' => '']],
+            ],
+            ],
+          ],
+          raw: [],
+        );
+      }
+
+    });
+
+    $session = $this->crearSesion('agente_gap');
+    $respuesta = $this->container->get(ConversationService::class)->submitMessage($session, 'Haz el trabajo por mí');
+
+    $this->assertStringContainsString('href="https://www.eluniverso.com/mabe-planta"', $respuesta['message_html']);
+
+    $conversacion = $this->container->get(ConversationService::class)->getConversation((int) $session->id());
+    $guardado = end($conversacion);
+    $this->assertStringContainsString('https://www.eluniverso.com/mabe-planta', $guardado->content);
+    $this->assertStringContainsString('Fuentes por cuenta', $guardado->content);
+  }
+
+  /**
+   * Un turno que no entrega el Pack no recibe fuentes.
+   *
+   * A media conversación el agente pregunta; añadirle una sección de fuentes
+   * ahí sería ruido, aunque el turno trajera algo parecido a un resultado.
+   */
+  public function testUnTurnoQueNoEntregaNoRecibeFuentes(): void {
+    $this->container->set('sales_leadership_diagnostic.engine', new class() implements DiagnosticEngineInterface {
+
+      /**
+       * {@inheritdoc}
+       */
+      public function process(DiagnosticContext $context): DiagnosticTurn {
+        return new DiagnosticTurn(
+          message: '¿Cuál es tu empresa?',
+          completed: FALSE,
+          result: ['accounts' => [['name' => 'X', 'sources' => [['url' => 'https://a.ec/x', 'label' => 'x']]]]],
+          raw: [],
+        );
+      }
+
+    });
+
+    $session = $this->crearSesion('agente_gap');
+    $respuesta = $this->container->get(ConversationService::class)->submitMessage($session, 'Hola');
+
+    $this->assertStringNotContainsString('Fuentes por cuenta', $respuesta['message_html']);
   }
 
   /**

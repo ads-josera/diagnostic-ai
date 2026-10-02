@@ -172,3 +172,29 @@ devolvió la búsqueda, sin reescribir una letra.
 Y cuando todo cuadra, la revisión ahora también lo dice (`citas_respaldadas`, en
 nivel informativo), para que «revisó y no encontró nada» deje de verse igual que
 «no se ejecutó».
+
+## El modelo investiga, la plataforma enlaza (02-10-2026, 16:10)
+
+La frase quitada no era la causa. Con el bloque de enlaces en el contrato, el
+agente se saltó la ronda de búsqueda de compradores en **0 de 3** misiones, también
+sin la frase. Con el contrato anterior, en una misión de control con el mismo
+mensaje y la cuenta limpia, la hizo: 16 búsquedas, 4 a ejecutivos concretos, 4
+compradores con nombre. Y la de las 11:38 también: 2 de 2.
+
+| Contrato | Misiones | Ronda de compradores | Fuentes enlazadas en el texto |
+|---|---|---|---|
+| Sin bloque de enlaces | 2 | 2 de 2 | 5 de 14 |
+| Con bloque de enlaces | 3 | 0 de 3 | 10 de 11, 7 de 7, 11 de 12 |
+
+Cinco misiones no prueban la causa, pero el cambio de comportamiento coincide
+exactamente con el bloque y con nada más. Qué parte del bloque lo provoca no se
+aisló; la sospecha es que exigir un enlace junto a cada nombre y cargo le hace
+preferir no nombrar.
+
+La salida no era elegir entre compradores y enlaces, sino **dejar de pedirle al
+modelo un trabajo de la plataforma**. El contrato vuelve al de `eda301b`, y al
+entregar el Pack la plataforma añade «Fuentes por cuenta» a partir de
+`accounts[].sources`, que el agente llena igual. Se guarda con el mensaje.
+
+Lo que se cede: los enlaces van agrupados por cuenta al final, no pegados a cada
+frase. El agente sigue poniendo algunos en el texto por su cuenta.

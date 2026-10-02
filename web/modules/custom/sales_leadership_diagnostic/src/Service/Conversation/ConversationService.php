@@ -109,6 +109,7 @@ final class ConversationService {
     private readonly ResearchEntitlementService $entitlements,
     private readonly ToolBoxFactory $tools,
     private readonly CitationAuditInterface $citations,
+    private readonly SourcesAppendix $sources,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -329,7 +330,18 @@ final class ConversationService {
 
     $turn = $this->engine->process($context);
 
-    $this->messages->append($sessionId, MessageRole::Assistant, $turn->message, $turn->raw);
+    // Al entregar, la plataforma añade las fuentes de cada cuenta, enlazadas.
+    // No se le pide al modelo: medido el 02-10-2026, pedírselo le hacía dejar
+    // de buscar a los compradores. Se guarda con el mensaje para que siga ahí
+    // al recargar la conversación. Ver SourcesAppendix.
+    $mensaje = $turn->message;
+    $fuentes = $turn->completed ? $this->sources->build($turn->result) : '';
+
+    if ($fuentes !== '') {
+      $mensaje = rtrim($mensaje) . "\n\n" . $fuentes;
+    }
+
+    $this->messages->append($sessionId, MessageRole::Assistant, $mensaje, $turn->raw);
 
     $resultId = $this->finalizeSession($session, $turn);
 
@@ -340,7 +352,7 @@ final class ConversationService {
 
     return [
       'processing' => FALSE,
-      'message_html' => $this->markdown->render($turn->message),
+      'message_html' => $this->markdown->render($mensaje),
       'session_status' => $session->getStatus()->value,
       'completed' => $turn->completed,
       'result_id' => $resultId,
