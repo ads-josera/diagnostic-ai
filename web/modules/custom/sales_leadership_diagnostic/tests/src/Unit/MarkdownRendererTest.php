@@ -28,6 +28,99 @@ final class MarkdownRendererTest extends UnitTestCase {
   private MarkdownRenderer $renderer;
 
   /**
+   * Una fuente citada conserva su enlace, que es el entregable.
+   *
+   * Hasta el 02-10-2026 no: <a> estaba fuera de la lista blanca y el filtro se
+   * comía la URL dejando solo el texto. El pack del agente de prospección vive
+   * de que cada señal se pueda comprobar, y el cliente lo comparó con uno
+   * lleno de fuentes enlazadas. El nuestro pareció palabrería.
+   */
+  public function testUnaFuenteCitadaConservaSuEnlace(): void {
+    $html = $this->renderer->render('[SAP News Center](https://news.sap.com/x)');
+
+    $this->assertStringContainsString('href="https://news.sap.com/x"', $html);
+    $this->assertStringContainsString('SAP News Center', $html);
+  }
+
+  /**
+   * Y se ve a dónde lleva, que es lo que desactiva el engaño.
+   *
+   * Un enlace es peligroso cuando el texto dice una cosa y el destino es otra.
+   * Con el dominio impreso al lado, la persona lo ve antes de pulsar.
+   */
+  public function testElDominioDelDestinoSiempreSeVe(): void {
+    $html = $this->renderer->render('[www.deloitte.com](https://malo.example/robar)');
+
+    $this->assertStringContainsString('(malo.example)', $html);
+  }
+
+  /**
+   * El «www.» se quita como PREFIJO, no como un puñado de caracteres.
+   *
+   * `ltrim($host, 'www.')` parecía servir y convertía «wired.com» en
+   * «ired.com»: un dominio mal escrito al lado de un enlace es peor que no
+   * ponerlo, porque invita a desconfiar de la fuente correcta.
+   */
+  public function testElDominioNoSeRecortaDeMas(): void {
+    $this->assertStringContainsString(
+      '(wired.com)',
+      $this->renderer->render('[Wired](https://wired.com/a)'),
+    );
+    $this->assertStringContainsString(
+      '(primicias.ec)',
+      $this->renderer->render('[Primicias](https://www.primicias.ec/b)'),
+    );
+  }
+
+  /**
+   * Si el texto ya es el dominio, no se repite.
+   */
+  public function testNoSeRepiteElDominioSiYaEstaEnElTexto(): void {
+    $html = $this->renderer->render('[news.sap.com](https://news.sap.com/x)');
+
+    $this->assertStringNotContainsString('(news.sap.com)', $html);
+  }
+
+  /**
+   * Un enlace que no sea http o https pierde el enlace y conserva el texto.
+   *
+   * Y no queda una etiqueta vacía: el primer intento comprobaba «<a » con
+   * espacio, y cuando el filtro ya había quitado el href la etiqueta era «<a>»
+   * sin espacio, se saltaba el saneado y el ancla vacía llegaba a la pantalla.
+   */
+  #[DataProvider('enlacesQueNoDebenSobrevivir')]
+  public function testUnEnlacePeligrosoSoloDejaSuTexto(string $markdown, string $texto): void {
+    $html = $this->renderer->render($markdown);
+
+    $this->assertStringNotContainsString('<a', $html);
+    $this->assertStringContainsString($texto, $html);
+  }
+
+  /**
+   * Protocolos que no deben acabar en un enlace.
+   *
+   * @return array<string, array{string, string}>
+   *   Markdown y el texto que debe sobrevivir.
+   */
+  public static function enlacesQueNoDebenSobrevivir(): array {
+    return [
+      'javascript' => ['[pulsa](javascript:alert(1))', 'pulsa'],
+      'archivo local' => ['[archivo](file:///etc/passwd)', 'archivo'],
+      'datos' => ['[imagen](data:text/html;base64,PHNjcmlwdD4=)', 'imagen'],
+    ];
+  }
+
+  /**
+   * Un enlace permitido se abre fuera y sin dejar pasar la página de destino.
+   */
+  public function testElEnlaceSeAbreFueraSinReferencia(): void {
+    $html = $this->renderer->render('[Primicias](https://primicias.ec/x)');
+
+    $this->assertStringContainsString('rel="nofollow noopener noreferrer"', $html);
+    $this->assertStringContainsString('target="_blank"', $html);
+  }
+
+  /**
    * Una tabla del informe se convierte en tabla de verdad.
    *
    * El informe final del cliente trae una de diez filas —la madurez por
@@ -100,8 +193,11 @@ final class MarkdownRendererTest extends UnitTestCase {
       'script suelto' => ['<script>alert(1)</script>'],
       'script en una celda' => ["| a | b |\n|---|---|\n| <script>alert(1)</script> | x |"],
       'imagen con onerror' => ['<img src=x onerror=alert(1)>'],
-      'enlace de phishing' => ['[Pulsa aquí](https://malo.example/robar)'],
-      'enlace dentro de una celda' => ["| a |\n|---|\n| [ir](https://malo.example) |"],
+      // Los enlaces http(s) ya NO están aquí: desde el 02-10-2026 se permiten,
+      // porque la evidencia del Pack vive de ellos. Lo que los hace seguros no
+      // es prohibirlos sino enseñar su destino, y eso lo fijan las pruebas
+      // testElDominioDelDestinoSiempreSeVe y la del rel/target.
+      // Lo que sigue prohibido es todo lo demás.
       'protocolo javascript' => ['[x](javascript:alert(1))'],
       'iframe' => ['<iframe src=https://malo.example></iframe>'],
       'celda con onclick' => ["| <td onclick=alert(1)>x</td> |\n|---|\n| y |"],
@@ -179,7 +275,6 @@ final class MarkdownRendererTest extends UnitTestCase {
       'imagen con onerror' => ['imagen con onerror', '<img src=x onerror=alert(1)>'],
       'iframe' => ['iframe', '<iframe src="https://evil.test"></iframe>'],
       'enlace javascript' => ['enlace javascript', '[pulsa](javascript:alert(1))'],
-      'enlace normal' => ['enlace normal', '[Salesbumm](https://salesbumm.com)'],
       'div con onclick' => ['div con onclick', '<div onclick="robar()">texto</div>'],
       'style con expresion' => ['style con expresion', '<style>body{display:none}</style>'],
       'svg con onload' => ['svg con onload', '<svg onload=alert(1)></svg>'],
@@ -194,15 +289,24 @@ final class MarkdownRendererTest extends UnitTestCase {
   /**
    * Los enlaces se eliminan incluso siendo legítimos.
    *
-   * Es una decisión deliberada, no un descuido: un enlace generado por un
-   * modelo es un vector de phishing y un diagnóstico conversacional no
-   * necesita emitirlos. El test la fija para que nadie la relaje sin querer.
+   * Hasta el 02-10-2026 esta prueba decía lo contrario: que no se emitía
+   * NINGÚN enlace, ni siquiera legítimo. Era deliberado y el motivo seguía
+   * siendo cierto —un enlace de un modelo es un vector de phishing—, pero el
+   * precio resultó mayor que el riesgo: el entregable del agente de
+   * prospección ES evidencia verificable, y el filtro se comía la fuente de
+   * cada afirmación. El cliente lo comparó con un pack lleno de fuentes
+   * enlazadas y el nuestro pareció palabrería.
+   *
+   * La política no se relajó: cambió de forma. Antes se prohibía el enlace;
+   * ahora se obliga a enseñar a dónde va, que es lo que de verdad desactiva el
+   * engaño. Quien quiera volver atrás tiene que leer esto primero.
    */
-  public function testNoEmiteEnlacesNiSiquieraLegitimos(): void {
+  public function testUnEnlaceLegitimoMuestraSuDestino(): void {
     $html = $this->renderer->render('Visita [nuestra web](https://salesbumm.com) para más.');
 
-    $this->assertStringNotContainsString('<a ', $html);
-    $this->assertStringContainsString('nuestra web', $html, 'El texto del enlace debe conservarse.');
+    $this->assertStringContainsString('href="https://salesbumm.com"', $html);
+    $this->assertStringContainsString('nuestra web', $html);
+    $this->assertStringContainsString('(salesbumm.com)', $html, 'El destino tiene que verse.');
   }
 
   /**

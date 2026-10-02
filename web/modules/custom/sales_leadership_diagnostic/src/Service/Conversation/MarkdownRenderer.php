@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Service\Conversation;
 
+use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\Xss;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Exception\CommonMarkException;
@@ -34,16 +35,31 @@ final class MarkdownRenderer {
   /**
    * Etiquetas permitidas en la salida.
    *
-   * No incluye <a>: un enlace generado por un modelo es un vector de phishing
-   * y un diagnóstico conversacional no necesita emitir enlaces. Si la
-   * metodología del cliente los requiriese, habilitarlo debe ser una decisión
-   * explícita, no un descuido heredado.
+   * Incluye <a> DESDE EL 02-10-2026, y es la decisión explícita que este
+   * comentario pedía. Antes no estaba, por una razón que sigue siendo cierta
+   * —un enlace generado por un modelo es un vector de phishing—, pero el
+   * precio resultó ser mayor que el riesgo: el entregable del agente de
+   * prospección **es** evidencia verificable, y el filtro se comía la fuente
+   * de cada afirmación. `[SAP News Center](https://…)` llegaba al alumno como
+   * «SAP News Center» a secas, sin forma de comprobar nada. El cliente lo
+   * comparó con un pack lleno de fuentes enlazadas y el nuestro pareció
+   * palabrería.
    *
-   * Tampoco incluye <img>, <iframe>, <script> ni <style>, por lo mismo.
+   * El riesgo se trata, no se ignora, y en cuatro capas: CommonMark con
+   * `allow_unsafe_links` apagado, `Xss::filter()` filtrando protocolos,
+   * `enlacesSeguros()` descartando todo lo que no sea http(s) y, la que de
+   * verdad desactiva el engaño, **el destino siempre visible**: el phishing
+   * vive de que el texto diga una cosa y el enlace lleve a otra, y aquí el
+   * dominio se imprime al lado.
+   *
+   * No incluye <img>, <iframe>, <script> ni <style>.
    *
    * @var string[]
    */
   private const ALLOWED_TAGS = [
+    'a',
+    // <span> no se le permite al modelo: lo añade enlacesSeguros() después de
+    // filtrar, para marcar el dominio de cada fuente.
     'p',
     'br',
     'strong',
@@ -122,7 +138,78 @@ final class MarkdownRenderer {
       return '<p>' . Xss::filter($markdown, []) . '</p>';
     }
 
-    return Xss::filter($html, self::ALLOWED_TAGS);
+    return $this->enlacesSeguros(Xss::filter($html, self::ALLOWED_TAGS));
+  }
+
+  /**
+   * Deja los enlaces en condiciones de enseñárselos a una persona.
+   *
+   * Tres cosas, y cada una tapa un agujero distinto:
+   *
+   *  1. **Solo http y https.** `Xss::filter()` ya descarta los protocolos
+   *     peligrosos, pero esto es explícito y no depende de que esa lista no
+   *     cambie nunca. Lo que no pasa el filtro pierde el enlace y conserva el
+   *     texto: la frase sigue leyéndose.
+   *  2. **`rel` y `target`.** Se abren fuera para no perder la conversación a
+   *     medias, y con `noopener noreferrer` para que la página de destino no
+   *     pueda tocar la nuestra ni saber de dónde viene.
+   *  3. **El dominio, visible.** Es la que de verdad importa. Un enlace
+   *     engaña cuando el texto dice «SAP News Center» y lleva a otro sitio;
+   *     con el dominio impreso al lado, la persona ve a dónde va antes de
+   *     pulsar. Si el texto ya lo contiene, no se repite.
+   *
+   * Lo que esto NO resuelve, y se asume: que el agente cite una fuente real
+   * pero irrelevante. Eso es un problema de la metodología, no del filtro.
+   */
+  private function enlacesSeguros(string $html): string {
+    // Con expresión y no con `str_contains('<a ')`: cuando Xss::filter ya ha
+    // quitado un href peligroso, la etiqueta queda como `<a>` SIN espacio, el
+    // atajo no la veía y el enlace vacío llegaba a la pantalla. Lo destapó la
+    // prueba del caso `javascript:`.
+    if (preg_match('/<a[\s>]/i', $html) !== 1) {
+      return $html;
+    }
+
+    $documento = Html::load($html);
+
+    foreach (iterator_to_array($documento->getElementsByTagName('a')) as $enlace) {
+      $destino = (string) $enlace->getAttribute('href');
+      $host = strtolower((string) parse_url($destino, PHP_URL_HOST));
+      $esquema = strtolower((string) parse_url($destino, PHP_URL_SCHEME));
+
+      if ($host === '' || !in_array($esquema, ['http', 'https'], TRUE)) {
+        // Se queda el texto y se va el enlace: quitar la frase entera sería
+        // perder lo que el agente quiso decir por culpa de una URL mala.
+        $enlace->parentNode?->replaceChild(
+          $documento->createTextNode($enlace->textContent),
+          $enlace,
+        );
+
+        continue;
+      }
+
+      $enlace->setAttribute('rel', 'nofollow noopener noreferrer');
+      $enlace->setAttribute('target', '_blank');
+
+      // Con str_starts_with y no con ltrim: `ltrim($host, 'www.')` quita
+      // CARACTERES sueltos, no el prefijo, y convertía «wired.com» en
+      // «ired.com». Un dominio mal escrito al lado de un enlace es peor que
+      // no ponerlo: invita a desconfiar de la fuente correcta.
+      $visible = str_starts_with($host, 'www.') ? substr($host, 4) : $host;
+
+      if (!str_contains(strtolower($enlace->textContent), $visible)) {
+        // En su propio elemento y no como texto suelto, para poder atenuarlo:
+        // el dominio es una ayuda para decidir si pulsar, no parte de la
+        // frase, y con el mismo peso competiría con lo que se está leyendo.
+        // Esta etiqueta la creamos nosotros DESPUÉS de filtrar, así que no
+        // viene del modelo.
+        $fuente = $documento->createElement('span', ' (' . $visible . ')');
+        $fuente->setAttribute('class', 'sld-fuente');
+        $enlace->parentNode?->insertBefore($fuente, $enlace->nextSibling);
+      }
+    }
+
+    return Html::serialize($documento);
   }
 
   /**

@@ -360,3 +360,40 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/**
+ * Enlaces dentro de lo que escribe el agente.
+ *
+ * Una sola regla para los TRES sitios donde se pinta su Markdown —la burbuja
+ * del chat, la prosa del informe y el cuerpo de cada cuenta del Pack—, porque
+ * escribirla tres veces es garantizar que diverjan.
+ *
+ * Los enlaces se permiten desde el 02-10-2026: el entregable del agente de
+ * prospección ES evidencia verificable, y antes el filtro se comía la fuente
+ * de cada afirmación. Junto a cada uno se imprime su dominio, que es lo que
+ * desactiva el engaño: un enlace miente cuando el texto dice una cosa y el
+ * destino es otra.
+ *
+ * El color sale del token de información y NO del azul de enlace del tema: ese
+ * azul es el que delata que una pantalla no tuvo decisiones de diseño.
+ */
+.sld-chat__bubble a,
+.sld-result__prose a,
+.sld-pack__body a {
+  color: var(--sld-color-info);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.sld-chat__bubble a:hover,
+.sld-result__prose a:hover,
+.sld-pack__body a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* El dominio acompaña, no compite: mismo color que el texto secundario. */
+.sld-fuente {
+  color: var(--sld-color-text-muted);
+  font-size: 0.85em;
+  white-space: nowrap;
+}
