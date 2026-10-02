@@ -215,6 +215,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn'
       - '@Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService'
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory'
+      - '@Drupal\sales_leadership_diagnostic\Service\Research\CitationAudit'
       - '@logger.factory'
 
   # --- Repositorios --------------------------------------------------------
@@ -477,6 +478,13 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard'
 
   Drupal\sales_leadership_diagnostic\Service\Research\ResearchRuntime: {}
+
+  # Comprueba que cada fuente citada saliera de una busqueda de esa mision.
+  # Mide y avisa; no toca el entregable (02-10-2026).
+  Drupal\sales_leadership_diagnostic\Service\Research\CitationAudit:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository'
+      - '@logger.factory'
 
   # --- Evidence Ledger -------------------------------------------------------
 

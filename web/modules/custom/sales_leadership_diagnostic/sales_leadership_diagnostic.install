@@ -554,6 +554,12 @@ function sales_leadership_diagnostic_tool_call_table(): array {
         'default' => '',
         'description' => 'Por qué se denegó. Vacío si se concedió.',
       ],
+      'result_urls' => [
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => FALSE,
+        'description' => 'Las URL que devolvió esta llamada, como lista JSON. Es lo único con que se puede contrastar una cita del agente: sin esto, cada fuente del entregable está sobre su palabra.',
+      ],
       'results' => [
         'type' => 'int',
         'unsigned' => TRUE,
@@ -1677,4 +1683,32 @@ function sales_leadership_diagnostic_update_10024(): string {
   $gestor->installEntityType(\Drupal::entityTypeManager()->getDefinition('sld_agent'));
 
   return (string) t('Definición del agente de diagnóstico registrada como instalada.');
+}
+
+/**
+ * Guarda las URL que devuelve cada búsqueda, para poder contrastar las citas.
+ *
+ * El 02-10-2026 el Weekly GOLD Pack de un alumno citó catorce fuentes con su
+ * URL, y no había NADA en el sistema con que comprobar que esas catorce
+ * salieran de las trece búsquedas que se hicieron. El registro guardaba la
+ * consulta, cuántos resultados y cuántos caracteres; los enlaces, no. Y
+ * `sld_evidence.source` guarda lo que el agente declara, no lo que la
+ * herramienta trajo.
+ *
+ * Con cinco ejecutivos citados por nombre y cargo, una URL inventada es el
+ * peor fallo posible de este producto: no parece un error, parece un hecho.
+ *
+ * Las filas anteriores se quedan en NULL, que es lo honesto: de esas misiones
+ * no se guardó y no se puede reconstruir.
+ */
+function sales_leadership_diagnostic_update_10025(): string {
+  $esquema = \Drupal::database()->schema();
+
+  if ($esquema->fieldExists('sld_tool_call', 'result_urls')) {
+    return (string) t('La columna de URL ya existía: nada que hacer.');
+  }
+
+  $esquema->addField('sld_tool_call', 'result_urls', sales_leadership_diagnostic_tool_call_table()['fields']['result_urls']);
+
+  return (string) t('Las búsquedas ya guardan las URL que devuelven. Las anteriores quedan sin ellas: no se registraron.');
 }

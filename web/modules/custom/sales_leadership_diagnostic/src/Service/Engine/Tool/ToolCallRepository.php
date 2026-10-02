@@ -31,6 +31,10 @@ final class ToolCallRepository {
 
   /**
    * Anota una llamada, concedida o no.
+   *
+   * `$resultUrls` son las URL que devolvió, y se guardan porque son lo ÚNICO
+   * con que se puede contrastar una cita del entregable. Ver
+   * `retrievedUrlsInMission()`.
    */
   public function record(
     int $uid,
@@ -43,6 +47,7 @@ final class ToolCallRepository {
     int $retrievedChars = 0,
     int $latencyMs = 0,
     bool $isSandbox = FALSE,
+    array $resultUrls = [],
   ): void {
     $this->database->insert(self::TABLE)->fields([
       'uid' => $uid,
@@ -56,7 +61,54 @@ final class ToolCallRepository {
       'latency_ms' => $latencyMs,
       'is_sandbox' => $isSandbox ? 1 : 0,
       'created' => $this->time->getRequestTime(),
+      // NULL y no «[]» cuando no hay ninguna: distingue «esta llamada no
+      // devolvió enlaces» de «esta fila es anterior a que se guardaran», que
+      // es lo que hay que poder distinguir al auditar una misión vieja.
+      'result_urls' => $resultUrls === [] ? NULL : json_encode(
+        array_values(array_unique($resultUrls)),
+        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+      ),
     ])->execute();
+  }
+
+  /**
+   * Todas las URL que las búsquedas de una misión trajeron de verdad.
+   *
+   * Es el contraste de las citas del entregable. Si el agente cita una URL que
+   * no está aquí, no salió de ninguna búsqueda de esta misión: o la arrastró de
+   * su propio conocimiento o se la inventó, y ninguna de las dos cosas se puede
+   * presentar al cliente como fuente verificada.
+   *
+   * @param int $sessionId
+   *   Conversación.
+   *
+   * @return string[]
+   *   Las URL, sin repetir.
+   */
+  public function retrievedUrlsInMission(int $sessionId): array {
+    $filas = $this->database->select(self::TABLE, 't')
+      ->fields('t', ['result_urls'])
+      ->condition('session_id', $sessionId)
+      ->condition('allowed', 1)
+      ->isNotNull('result_urls')
+      ->execute()
+      ->fetchCol();
+
+    $urls = [];
+
+    foreach ($filas as $fila) {
+      $lista = json_decode((string) $fila, TRUE);
+
+      if (is_array($lista)) {
+        foreach ($lista as $url) {
+          if (is_string($url) && $url !== '') {
+            $urls[] = $url;
+          }
+        }
+      }
+    }
+
+    return array_values(array_unique($urls));
   }
 
   /**

@@ -149,6 +149,7 @@ final class ToolGateway implements ToolRunnerInterface {
     $inicio = microtime(TRUE);
     $salida = $this->tools->run($name, $arguments);
     $latencia = (int) round((microtime(TRUE) - $inicio) * 1000);
+    $resultados = $this->resultsOf($salida);
 
     $this->calls->record(
       uid: $this->turn->uid(),
@@ -156,12 +157,13 @@ final class ToolGateway implements ToolRunnerInterface {
       tool: $name,
       query: $consulta,
       allowed: TRUE,
-      results: $this->countResults($salida),
+      results: count($resultados),
       // Lo que se mide es la longitud de lo que ENTRA al modelo, no lo que
       // devolvió el buscador. Es lo que se paga y lo que el §9 pide acotar.
       retrievedChars: strlen($salida),
       latencyMs: $latencia,
       isSandbox: $this->turn->isSandbox(),
+      resultUrls: $this->urlsOf($resultados),
     );
 
     return $salida;
@@ -314,18 +316,53 @@ final class ToolGateway implements ToolRunnerInterface {
   }
 
   /**
-   * Cuántos resultados trajo, para poder contarlos.
+   * Los resultados que trajo, para contarlos y para anotar sus URL.
    *
    * Es una lectura de conveniencia y por eso no falla: si la herramienta
-   * devolviera algo con otra forma, se anota cero en lugar de reventar una
-   * búsqueda que sí ocurrió.
+   * devolviera algo con otra forma, se anota una lista vacía en lugar de
+   * reventar una búsqueda que sí ocurrió.
+   *
+   * @param string $salida
+   *   Lo que devolvió la herramienta, tal cual.
+   *
+   * @return array
+   *   Los resultados, o lista vacía si no venían con la forma esperada.
    */
-  private function countResults(string $salida): int {
+  private function resultsOf(string $salida): array {
     $decoded = json_decode($salida, TRUE);
 
     return is_array($decoded) && is_array($decoded['resultados'] ?? NULL)
-      ? count($decoded['resultados'])
-      : 0;
+      ? $decoded['resultados']
+      : [];
+  }
+
+  /**
+   * Las URL de esos resultados, que es lo que permite auditar una cita.
+   *
+   * Se anotan AQUÍ y no en la herramienta porque aquí ya está desarmada la
+   * respuesta para contarla: sacar los enlaces en otro sitio obligaría a
+   * desarmarla dos veces y a que las dos lecturas pudieran decir cosas
+   * distintas. Vale para cualquier herramienta que devuelva «resultados» con
+   * su «url», sin que haya que tocarla.
+   *
+   * @param array $resultados
+   *   Lo que devolvió la herramienta.
+   *
+   * @return string[]
+   *   Las URL que traía.
+   */
+  private function urlsOf(array $resultados): array {
+    $urls = [];
+
+    foreach ($resultados as $resultado) {
+      $url = is_array($resultado) ? ($resultado['url'] ?? NULL) : NULL;
+
+      if (is_string($url) && $url !== '') {
+        $urls[] = $url;
+      }
+    }
+
+    return $urls;
   }
 
   /**

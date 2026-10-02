@@ -24,6 +24,7 @@ use Drupal\sales_leadership_diagnostic\Plugin\QueueWorker\DiagnosticTurnWorker;
 use Drupal\sales_leadership_diagnostic\Plugin\QueueWorker\MemoryExtractionWorker;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory;
+use Drupal\sales_leadership_diagnostic\Service\Research\CitationAudit;
 use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
@@ -107,6 +108,7 @@ final class ConversationService {
     private readonly CurrentTurn $currentTurn,
     private readonly ResearchEntitlementService $entitlements,
     private readonly ToolBoxFactory $tools,
+    private readonly CitationAudit $citations,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -445,6 +447,11 @@ final class ConversationService {
 
     $entity->setPayload($payload);
     $entity->save();
+
+    // Se revisa DESPUES de guardar, y a proposito: una cita sin respaldo no
+    // puede impedir que el alumno reciba su entregable. Lo que hace falta es
+    // que quede constancia de que la hubo.
+    $this->citations->review((int) $session->id(), $payload);
 
     return (int) $entity->id();
   }

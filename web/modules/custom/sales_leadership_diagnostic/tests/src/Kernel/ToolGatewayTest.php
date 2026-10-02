@@ -290,6 +290,41 @@ final class ToolGatewayTest extends KernelTestBase {
   }
 
   /**
+   * Las URL que devolvió la búsqueda quedan anotadas.
+   *
+   * Es lo único con que se puede contrastar una cita del entregable. El
+   * 02-10-2026 un pack citó catorce fuentes con su URL y no había forma de
+   * saber si salieron de las trece búsquedas que se hicieron: el registro
+   * guardaba la consulta y los recuentos, y los enlaces se perdían aquí.
+   *
+   * Esta prueba vive en el gateway a propósito. Que la revisión de citas sepa
+   * comparar no sirve de nada si quien ejecuta la búsqueda no guarda lo que
+   * trajo, y eso es justo lo que no se vería desde la otra prueba.
+   */
+  public function testLasUrlDeLaBusquedaQuedanAnotadas(): void {
+    $this->turno();
+
+    $this->gateway()->run('buscar_web', ['consulta' => 'cemex']);
+
+    $this->assertSame(
+      ['https://x.mx'],
+      $this->container->get(ToolCallRepository::class)->retrievedUrlsInMission(self::MISION),
+    );
+  }
+
+  /**
+   * Una búsqueda denegada no deja URL que puedan respaldar nada.
+   */
+  public function testUnaBusquedaDenegadaNoDejaUrl(): void {
+    $this->gateway()->run('buscar_web', ['consulta' => 'cemex']);
+
+    $this->assertSame(
+      [],
+      $this->container->get(ToolCallRepository::class)->retrievedUrlsInMission(self::MISION),
+    );
+  }
+
+  /**
    * Declara de quién es el turno.
    */
   private function turno(int $mision = self::MISION, bool $ensayo = FALSE): void {

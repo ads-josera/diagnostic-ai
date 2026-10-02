@@ -62,6 +62,10 @@ final class ConversationServiceTest extends KernelTestBase {
       'sld_diagnostic_message',
       'sld_research_entitlement',
       'sld_evidence',
+      // Al cerrar una misión se revisan las citas del entregable contra las
+      // URL que trajeron las búsquedas, y eso se lee de aquí. En producción la
+      // tabla siempre está; faltaba solo en este montaje.
+      'sld_tool_call',
     ]);
     $this->installConfig(['sales_leadership_diagnostic']);
 
