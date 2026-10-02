@@ -543,8 +543,22 @@ usuario 1.
 ```bash
 drush updatedb:status     # esperado: "No database updates required."
 drush config:status       # esperado: "No differences between DB and sync directory."
-drush core:requirements | grep -i diagnostic
+drush core:requirements --format=tsv | grep -i 'diagnostic ai'   # deben salir 5, todas OK
 ```
+
+**El `--format=tsv` no es un capricho y no se puede quitar.** Hasta el
+01-10-2026 esta comprobación era `core:requirements | grep -i diagnostic`, y
+**nunca encontró nada en ningún despliegue**: la tabla que dibuja drush ajusta
+la columna del título al ancho del terminal y parte la palabra, de modo que la
+salida real es `Diagnost` / `ic AI:` / `agentes` en tres líneas y el `grep` no
+casa con ninguna. Peor todavía en un entorno cuyo dominio lleve «diagnostic» en
+el nombre: ahí el `grep` encuentra el DOMINIO en otra fila y parece que la
+comprobación funcionó.
+
+Una comprobación que siempre sale vacía es peor que no tenerla, porque se lee
+como que pasó. Por eso la orden lleva ahora el formato plano y **la guía dice
+cuántas líneas tienen que salir**: cinco, todas `OK`. Menos es un fallo. Seis
+significa que está encendido el motor simulado, y también es un fallo.
 
 Un despliegue recién hecho deja el informe así:
 

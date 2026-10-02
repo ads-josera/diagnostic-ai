@@ -116,7 +116,13 @@ final class DiagnosticRequirements {
       'title' => $title,
       'value' => $version,
       'severity' => RequirementSeverity::OK,
-      'description' => $this->t('Comprobado por última vez el @fecha.', [
+      // «Esta versión se vio por primera vez» y no «comprobado por última vez»,
+      // que es lo que decía antes y era falso: el registro solo escribe cuando
+      // la versión CAMBIA, para no tocar la base en cada consulta de
+      // autorización. Con el texto viejo, una integración que respondía a
+      // diario parecía llevar dieciocho días muda, y alguien fue a buscar una
+      // avería que no existía (01-10-2026).
+      'description' => $this->t('Esta versión se vio por primera vez el @fecha. La fecha solo cambia cuando cambia la versión, así que no indica cuándo se habló con WordPress por última vez.', [
         '@fecha' => $seenAt === NULL
           ? $this->t('(desconocido)')
           : $this->dateFormatter->format($seenAt, 'short'),

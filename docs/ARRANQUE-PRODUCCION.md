@@ -206,7 +206,7 @@ vendor/bin/drush site:install --existing-config \
 vendor/bin/drush updatedb -y
 vendor/bin/drush cache:rebuild
 vendor/bin/drush config:status        # esperado: sin diferencias
-vendor/bin/drush core:requirements | grep -i diagnostic
+vendor/bin/drush core:requirements --format=tsv | grep -i 'diagnostic ai'   # 5 líneas, todas OK
 ```
 
 **Anota la contraseña del administrador** que imprime el comando y dásela a José
@@ -304,7 +304,9 @@ Y colocar el shortcode `[salesbumm_diagnostic_button]` donde vaya el botón,
 
 ## Paso 9 — Verificación
 
-1. `vendor/bin/drush core:requirements | grep -i diagnostic`: WordPress, secretos
+1. `vendor/bin/drush core:requirements --format=tsv | grep -i 'diagnostic ai'`
+   (**5 líneas, todas OK**; menos es un fallo, y 6 significa que el motor
+   simulado está encendido): WordPress, secretos
    y documentos en OK; ninguna línea de «motor simulado».
 2. Abrir https://labai.salesbumm.com/bienvenida y el inicio de sesión: estilo
    oscuro, favicon de Salesbumm.

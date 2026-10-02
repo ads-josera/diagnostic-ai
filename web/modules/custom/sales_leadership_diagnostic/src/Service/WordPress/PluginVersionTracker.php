@@ -79,7 +79,14 @@ final class PluginVersionTracker {
   }
 
   /**
-   * Momento en que se observó, o NULL si nunca.
+   * Cuándo se vio POR PRIMERA VEZ la versión actual, o NULL si nunca.
+   *
+   * No es «la última vez que respondió WordPress». `record()` solo escribe
+   * cuando la versión cambia —para no tocar la base en cada consulta de
+   * autorización—, así que esta marca se queda quieta mientras el plugin siga
+   * siendo el mismo, aunque conteste cada día. Quien la muestre tiene que
+   * decirlo así: con el texto contrario, una integración sana parecía llevar
+   * dieciocho días muda (01-10-2026).
    */
   public function getSeenAt(): ?int {
     $stored = $this->state->get(self::STATE_KEY);
