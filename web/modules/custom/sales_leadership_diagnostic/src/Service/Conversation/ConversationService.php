@@ -110,6 +110,7 @@ final class ConversationService {
     private readonly ToolBoxFactory $tools,
     private readonly CitationAuditInterface $citations,
     private readonly SourcesAppendix $sources,
+    private readonly OutreachQuoter $quoter,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -330,11 +331,13 @@ final class ConversationService {
 
     $turn = $this->engine->process($context);
 
-    // Al entregar, la plataforma añade las fuentes de cada cuenta, enlazadas.
+    // Al entregar, la plataforma da formato al Pack: marca como cita cada
+    // correo listo para enviar (ver OutreachQuoter) y añade las fuentes de
+    // cada cuenta, enlazadas.
     // No se le pide al modelo: medido el 02-10-2026, pedírselo le hacía dejar
     // de buscar a los compradores. Se guarda con el mensaje para que siga ahí
     // al recargar la conversación. Ver SourcesAppendix.
-    $mensaje = $turn->message;
+    $mensaje = $turn->completed ? $this->quoter->quote($turn->message, $turn->result) : $turn->message;
     $fuentes = $turn->completed ? $this->sources->build($turn->result) : '';
 
     if ($fuentes !== '') {

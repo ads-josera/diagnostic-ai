@@ -217,6 +217,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory'
       - '@Drupal\sales_leadership_diagnostic\Service\Research\CitationAudit'
       - '@Drupal\sales_leadership_diagnostic\Service\Conversation\SourcesAppendix'
+      - '@Drupal\sales_leadership_diagnostic\Service\Conversation\OutreachQuoter'
       - '@logger.factory'
 
   # --- Repositorios --------------------------------------------------------
@@ -483,6 +484,10 @@ services:
   # Las fuentes de cada cuenta, enlazadas al final del Pack. Las pone la
   # plataforma y no el modelo: pedirselo le quitaba la busqueda de compradores.
   Drupal\sales_leadership_diagnostic\Service\Conversation\SourcesAppendix: {}
+
+  # Marca como cita cada correo listo para enviar. Tambien lo hace la
+  # plataforma y no el modelo, por la misma razon.
+  Drupal\sales_leadership_diagnostic\Service\Conversation\OutreachQuoter: {}
 
   # Comprueba que cada fuente citada saliera de una busqueda de esa mision.
   # Mide y avisa; no toca el entregable (02-10-2026).

@@ -250,14 +250,14 @@ final class ConversationServiceTest extends KernelTestBase {
   }
 
   /**
-   * Al entregar el Pack, sus fuentes quedan enlazadas en lo que se guarda.
+   * Al entregar el Pack, sus fuentes y su correo quedan formateados al guardar.
    *
    * La plataforma las añade a partir de `accounts[].sources`, porque pedírselo
    * al agente le quitaba la búsqueda de compradores (medido el 02-10-2026). Se
    * comprueba en lo GUARDADO y no solo en lo que se pinta en el momento: al
    * recargar la conversación, lo que se lee es lo guardado.
    */
-  public function testAlEntregarElPackSusFuentesQuedanEnlazadas(): void {
+  public function testElPackEntregadoGuardaSusFuentesEnlazadasConElCorreoCitado(): void {
     $this->container->set('sales_leadership_diagnostic.engine', new class() implements DiagnosticEngineInterface {
 
       /**
@@ -265,14 +265,22 @@ final class ConversationServiceTest extends KernelTestBase {
        */
       public function process(DiagnosticContext $context): DiagnosticTurn {
         return new DiagnosticTurn(
-          message: "Weekly GOLD Pack\n\nMabe abre planta.",
+          message: "Weekly GOLD Pack\n\nMabe abre planta.\n\n**Asunto:** Planta de Guayaquil\n\nLiliana, vi el anuncio de la nueva planta que Mabe instala en Guayaquil.",
           completed: TRUE,
           result: [
             'summary' => 'Pack',
-            'accounts' => [[
-              'name' => 'Mabe Ecuador',
-              'sources' => [['url' => 'https://www.eluniverso.com/mabe-planta', 'label' => 'Nueva planta', 'published' => '']],
-            ],
+            'accounts' => [
+              [
+                'name' => 'Mabe Ecuador',
+                'outreach_message' => "Asunto: Planta de Guayaquil\n\nLiliana, vi el anuncio de la nueva planta que Mabe instala en Guayaquil.",
+                'sources' => [
+                  [
+                    'url' => 'https://www.eluniverso.com/mabe-planta',
+                    'label' => 'Nueva planta',
+                    'published' => '',
+                  ],
+                ],
+              ],
             ],
           ],
           raw: [],
@@ -290,6 +298,10 @@ final class ConversationServiceTest extends KernelTestBase {
     $guardado = end($conversacion);
     $this->assertStringContainsString('https://www.eluniverso.com/mabe-planta', $guardado->content);
     $this->assertStringContainsString('Fuentes por cuenta', $guardado->content);
+
+    // Y el correo de contacto, marcado como cita en lo guardado.
+    $this->assertStringContainsString('> Liliana, vi el anuncio', $guardado->content);
+    $this->assertStringContainsString('<blockquote>', $respuesta['message_html']);
   }
 
   /**

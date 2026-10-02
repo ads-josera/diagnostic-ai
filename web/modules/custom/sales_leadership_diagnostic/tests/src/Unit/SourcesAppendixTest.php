@@ -25,7 +25,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 final class SourcesAppendixTest extends UnitTestCase {
 
   /**
-   * Cada fuente de cada cuenta acaba siendo un enlace, con su dominio a la vista.
+   * Cada fuente de cada cuenta acaba siendo un enlace, con su dominio.
    */
   public function testCadaFuenteAcabaSiendoUnEnlaceConSuDominio(): void {
     $html = $this->pantalla([
@@ -33,7 +33,11 @@ final class SourcesAppendixTest extends UnitTestCase {
         [
           'name' => 'Mabe Ecuador',
           'sources' => [
-            ['url' => 'https://www.eluniverso.com/mabe-planta', 'label' => 'Nueva planta en Guayaquil', 'published' => '2026-04-12'],
+            [
+              'url' => 'https://www.eluniverso.com/mabe-planta',
+              'label' => 'Nueva planta en Guayaquil',
+              'published' => '2026-04-12',
+            ],
           ],
         ],
         [
