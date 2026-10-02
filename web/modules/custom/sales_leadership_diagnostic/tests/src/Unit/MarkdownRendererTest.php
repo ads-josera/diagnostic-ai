@@ -137,6 +137,26 @@ final class MarkdownRendererTest extends UnitTestCase {
   }
 
   /**
+   * Una fuente citada DENTRO de una tabla sigue siendo enlace.
+   *
+   * Es el sitio donde de verdad van a caer: el Weekly GOLD Pack pone casi todo
+   * en tablas —el pool auditable, las señales por cuenta—, y desde el
+   * 02-10-2026 el contrato le pide al agente el enlace pegado a la afirmación.
+   * Los enlaces se probaron en prosa, que es el caso fácil: una celda pasa por
+   * la extensión de tablas antes de pasar por el filtro, y ahí es donde se
+   * rompería sin que lo viera ninguna de las otras pruebas.
+   */
+  public function testUnaFuenteCitadaDentroDeUnaTablaSigueSiendoEnlace(): void {
+    $html = $this->renderer->render(
+      "| Cuenta | Señal |\n|---|---|\n| Mabe | planta nueva ([Primicias](https://primicias.ec/nota)) |"
+    );
+
+    $this->assertStringContainsString('<td>', $html);
+    $this->assertStringContainsString('href="https://primicias.ec/nota"', $html);
+    $this->assertStringContainsString('primicias.ec', $html);
+  }
+
+  /**
    * Un encabezado de primer nivel se rebaja, no se pierde.
    *
    * La página ya tiene su «h1». Antes esto se resolvía dejando «h1» fuera de
