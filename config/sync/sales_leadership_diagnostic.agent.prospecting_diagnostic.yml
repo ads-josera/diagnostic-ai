@@ -120,14 +120,15 @@ output_contract: |-
     pantalla, así que debe bastarse por sí solo. Eso incluye las fuentes: cada
     señal, fecha, cifra, nombre y cargo que venga de una búsqueda lleva su
     enlace AHÍ MISMO, en Markdown [etiqueta](url), pegado a la afirmación que
-    sostiene. Son las mismas urls que pondrás en "sources"; no vuelvas a buscar
-    para citar. Nunca dejes la procedencia en prosa —«una fuente sectorial de
-    abril», «un perfil publicado en 2026»—: así nadie puede comprobarla, y un
-    comprador con nombre y cargo sin enlace a la vista expone a quien lo use.
-    Usa SOLO urls que te devolvió la herramienta de búsqueda: un enlace
-    reconstruido de memoria es peor que ninguno. Y si una afirmación no tiene
-    fuente que enlazar, no la disfraces: márcala con lo que tu metodología usa
-    para eso.
+    sostiene. Son las mismas urls que pondrás en "sources". Nunca dejes la
+    procedencia en prosa —«una fuente sectorial de abril», «un perfil publicado
+    en 2026»—: así nadie puede comprobarla. Copia cada url EXACTAMENTE como te
+    la devolvió la herramienta de búsqueda, sin reescribir ni una letra: un
+    enlace reconstruido de memoria es peor que ninguno.
+    Esto es solo formato: NO cambia qué investigas ni cuánto. Si tu metodología
+    pide identificar al comprador de una cuenta, búscalo igual que lo harías sin
+    este requisito; cuando lo encuentres, el enlace que lo identifica va junto a
+    su nombre y su cargo.
   - result: el mismo Pack repartido en los campos de abajo, para que la
     plataforma lo guarde. Los campos deben coincidir con "message"; nunca
     calcules nada dos veces.

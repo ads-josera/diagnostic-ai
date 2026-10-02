@@ -37,7 +37,7 @@ final class CitationAudit implements CitationAuditInterface {
   public const RESPALDADAS = 'respaldadas';
 
   /**
-   * El agente ya la tenía anotada en el ledger, puede que semanas antes.
+   * El agente ya la tenía anotada en el ledger, en una conversación ANTERIOR.
    *
    * NO es prueba independiente —esas filas las escribió él— pero tampoco es una
    * invención: explica la reutilización de evidencia, que es justo para lo que
@@ -123,7 +123,7 @@ final class CitationAudit implements CitationAuditInterface {
 
     $declaradas = [];
 
-    foreach ($this->ledger->sourcesFor($uid) as $fuente) {
+    foreach ($this->ledger->sourcesFor($uid, $sessionId) as $fuente) {
       $declaradas[$this->normalizar($fuente)] = TRUE;
     }
 
@@ -172,7 +172,17 @@ final class CitationAudit implements CitationAuditInterface {
 
     $sospechosas = array_merge($revision[self::NO_VISTAS], $revision[self::OTRA_PAGINA]);
 
+    // Cuando todo cuadra también se dice, en nivel informativo. Sin esta línea,
+    // «revisó y no encontró nada» y «no llegó a ejecutarse» se veían igual
+    // desde fuera: el mismo silencio ambiguo que ya costó un error aquí.
     if ($sospechosas === []) {
+      $this->logger->info('citas_respaldadas: en la misión @sesion, las @citadas fuente(s) citadas cuadran (@vistas de una búsqueda, @declaradas anotadas en conversaciones anteriores).', [
+        '@sesion' => $sessionId,
+        '@citadas' => $citadas,
+        '@vistas' => count($revision[self::RESPALDADAS]),
+        '@declaradas' => count($revision[self::DECLARADAS]),
+      ]);
+
       return;
     }
 

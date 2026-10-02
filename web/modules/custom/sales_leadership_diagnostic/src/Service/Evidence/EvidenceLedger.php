@@ -200,16 +200,26 @@ final class EvidenceLedger {
    * que tratarlo aparte: estas filas las escribió el propio agente. Dicen que
    * ya declaró esa fuente antes, no que exista.
    *
+   * Y por eso mismo se excluye la conversación en curso. El 02-10-2026 el
+   * agente escribió «diez» donde la URL de la búsqueda decía «10», anotó esa
+   * URL rota en el ledger y la citó en el mismo Pack: su propia anotación la
+   * respaldó, y la cita que daba 404 pasó en silencio. Lo anotado en ESTA
+   * conversación se contrasta contra lo que las búsquedas trajeron, como
+   * cualquier otra cita; solo lo de antes explica una reutilización.
+   *
    * @param int $uid
    *   El alumno.
+   * @param int $exceptSessionId
+   *   La conversación que se está revisando, cuyas anotaciones no cuentan.
    *
    * @return string[]
    *   Las procedencias, sin repetir.
    */
-  public function sourcesFor(int $uid): array {
+  public function sourcesFor(int $uid, int $exceptSessionId = 0): array {
     $fuentes = $this->database->select(self::TABLE, 'e')
       ->fields('e', ['source'])
       ->condition('uid', $uid)
+      ->condition('session_id', $exceptSessionId, '<>')
       ->condition('source', '', '<>')
       ->distinct()
       ->execute()

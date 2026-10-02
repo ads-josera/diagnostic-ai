@@ -145,3 +145,30 @@ tres cifras del aviso son la medida:
 **Lo que no se puede hacer es mirar atrás.** De las misiones anteriores al
 02-10-2026 no se guardaron las URL. Las catorce de aquel pack solo se pueden
 comprobar abriéndolas a mano.
+
+## Lo que enseñó la primera misión de control (02-10-2026, 15:37)
+
+**Un 404 que pasó en silencio.** La búsqueda devolvió una URL con
+`…tras-10-anos-de-ausencia…`; el agente escribió `…tras-diez-anos…`, que da
+404, la anotó en el ledger **en la misma conversación** y la citó. Como estaba en
+el ledger, salió como «declarada», y las declaradas no avisan. Era exactamente el
+auto-respaldo que la categoría existía para impedir, por la puerta de atrás.
+
+Ahora solo cuenta como declarada la evidencia de **conversaciones anteriores**.
+Lo anotado en la conversación en curso se contrasta contra lo que las búsquedas
+trajeron, como cualquier otra cita: ese caso habría salido como «otra página del
+mismo sitio».
+
+**Los compradores desaparecieron.** Las dos misiones con el contrato de
+`c26306e` se saltaron la ronda de búsqueda de ejecutivos que la misión anterior
+sí hizo (5 búsquedas, 5 compradores con nombre). Tres misiones no prueban la
+causa, pero la frase sospechosa era nuestra y empujaba en la dirección
+equivocada: «un comprador con nombre y cargo sin enlace a la vista expone a quien
+lo use» se puede leer como «no nombres a nadie». Se sustituyó por una
+instrucción en positivo: el enlace es formato y no cambia qué se investiga ni
+cuánto. Y se endureció la otra mitad: copiar cada URL exactamente como la
+devolvió la búsqueda, sin reescribir una letra.
+
+Y cuando todo cuadra, la revisión ahora también lo dice (`citas_respaldadas`, en
+nivel informativo), para que «revisó y no encontró nada» deje de verse igual que
+«no se ejecutó».

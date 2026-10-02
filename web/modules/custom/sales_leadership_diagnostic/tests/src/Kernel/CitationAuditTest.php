@@ -57,6 +57,11 @@ final class CitationAuditTest extends KernelTestBase {
   private const ALUMNO = 14;
 
   /**
+   * Una conversación anterior del mismo alumno.
+   */
+  private const SESION_ANTERIOR = 29;
+
+  /**
    * Lo que salió de una búsqueda queda respaldado.
    */
   public function testUnaCitaQueSalioDeUnaBusquedaQuedaRespaldada(): void {
@@ -196,7 +201,7 @@ final class CitationAuditTest extends KernelTestBase {
    */
   public function testUnaEvidenciaYaAnotadaNoSeDenunciaComoInvento(): void {
     $this->busqueda(['https://otra-cosa.com/x']);
-    $this->evidencia('https://expreso.ec/economia/tia-402-locales');
+    $this->evidencia('https://expreso.ec/economia/tia-402-locales', self::SESION_ANTERIOR);
 
     $revision = $this->revisar(['https://expreso.ec/economia/tia-402-locales']);
 
@@ -206,6 +211,27 @@ final class CitationAuditTest extends KernelTestBase {
     );
     $this->assertSame([], $revision[CitationAudit::NO_VISTAS]);
     $this->assertSame([], $revision[CitationAudit::RESPALDADAS]);
+  }
+
+  /**
+   * Lo que el agente anota en ESTA conversación no se respalda a sí mismo.
+   *
+   * Es el caso real del 02-10-2026: la búsqueda devolvió una URL con «10-anos»,
+   * el agente escribió «diez-anos», anotó esa URL rota en el ledger y la citó.
+   * Como «declarada», pasó en silencio, y daba 404. Se contrasta contra lo que
+   * la búsqueda trajo, y sale como lo que es: otra página del mismo sitio.
+   */
+  public function testLoAnotadoEnEstaConversacionNoRespaldaSuPropiaCita(): void {
+    $this->busqueda(['https://primicias.ec/banco-pichincha-regresa-tras-10-anos']);
+    $this->evidencia('https://primicias.ec/banco-pichincha-regresa-tras-diez-anos', self::SESION);
+
+    $revision = $this->revisar(['https://primicias.ec/banco-pichincha-regresa-tras-diez-anos']);
+
+    $this->assertSame([], $revision[CitationAudit::DECLARADAS]);
+    $this->assertSame(
+      ['https://primicias.ec/banco-pichincha-regresa-tras-diez-anos'],
+      $revision[CitationAudit::OTRA_PAGINA],
+    );
   }
 
   /**
@@ -271,11 +297,11 @@ final class CitationAuditTest extends KernelTestBase {
   /**
    * Anota una evidencia del alumno con esta procedencia.
    */
-  private function evidencia(string $fuente): void {
+  private function evidencia(string $fuente, int $sesion): void {
     $this->container->get(EvidenceLedger::class)->record(
       self::ALUMNO,
-      'mision-anterior',
-      self::SESION,
+      'mision-' . $sesion,
+      $sesion,
       [
         'scope' => 'Almacenes Tía',
         'claim' => 'Opera 402 locales.',
