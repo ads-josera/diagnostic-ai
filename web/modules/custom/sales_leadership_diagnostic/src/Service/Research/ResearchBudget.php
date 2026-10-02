@@ -107,9 +107,6 @@ final class ResearchBudget {
     // Alcance estrecho —la misión de la semana ya se cerró y solo quedan
     // comprobaciones puntuales— o quedando poco margen. Son las dos
     // situaciones en las que el agente DEBE administrar lo que le queda.
-    // Alcance estrecho —la misión de la semana ya se cerró y solo quedan
-    // comprobaciones puntuales— o quedando poco margen. Son las dos
-    // situaciones en las que el agente DEBE administrar lo que le queda.
     if ($acceso === ResearchAccess::TargetedOnly || $gastado >= self::CERCA_DEL_TOPE) {
       return 'LIMITED';
     }

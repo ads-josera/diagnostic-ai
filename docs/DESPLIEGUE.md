@@ -538,6 +538,30 @@ Verificado en el ensayo: la cuenta queda con `authenticated, administrator`, de
 modo que sus permisos no dependen únicamente del privilegio implícito del
 usuario 1.
 
+### El `cache:rebuild` va PEGADO al `git pull`
+
+Cuando un despliegue trae un **servicio nuevo** —o cambia `services.yml`— el
+contenedor viejo sigue inyectando los argumentos antiguos a una clase que ya
+espera otros. El resultado es un `TypeError` en cada petición y en cada pasada
+de cron **hasta que se reconstruye la caché**.
+
+Pasó el 02-10-2026 y la culpa fue del procedimiento, no del código: entre el
+`pull` y el `cache:rebuild` había una parada para revisar la configuración
+antes de importarla, y esos **dos minutos y medio** dejaron ocho errores en el
+registro, todos de cron y de los recogedores. No afectó a nadie porque las
+colas estaban vacías, pero con una misión en curso habría matado el turno de
+un alumno.
+
+La regla, entonces:
+
+```bash
+git pull && drush cache:rebuild     # juntos, sin nada en medio
+```
+
+Y **después** lo que haga falta revisar, importar o comprobar —incluido un
+segundo `cache:rebuild` si el import cambia configuración—. La ventana pasa de
+minutos a segundos.
+
 ## 5. Verificación posterior
 
 ```bash
