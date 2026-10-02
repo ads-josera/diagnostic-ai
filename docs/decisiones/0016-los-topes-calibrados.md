@@ -29,7 +29,7 @@ de lo que se teme al poner un tope generoso.
 | Ajuste | Antes | Ahora | Por qué |
 |---|---|---|---|
 | `max_calls_per_mission` | 50 | **40** | 1,8 × p90; 1,6 × la misión más cara |
-| `max_retrieved_chars_per_mission` | 200 000 | **160 000** | 2 × p90 |
+| `max_retrieved_chars_per_mission` | 200 000 | **160 000** | 2 × p90 · **subido a 400 000 el 02-10-2026, ver [0020](0020-la-materia-prima-de-la-investigacion.md)** |
 | `max_calls_per_user_period` | 220 | **200** | 5 misiones a la más cara, más rechecks |
 | `search.max_tool_rounds` | 20 | **15** | 2 × las 7 vueltas de la que más dio |
 

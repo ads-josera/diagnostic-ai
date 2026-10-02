@@ -32,13 +32,13 @@ research:
   evidence_stale_days: 30
 tools:
   max_calls_per_mission: 40
-  max_retrieved_chars_per_mission: 160000
+  max_retrieved_chars_per_mission: 400000
   max_calls_per_user_period: 200
 search:
   enabled: true
   max_tool_rounds: 15
-  max_results: 5
-  depth: basic
+  max_results: 10
+  depth: advanced
   timeout: 20
 spending:
   per_user_limit: 5.0
