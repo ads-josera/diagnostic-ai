@@ -134,6 +134,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository'
       - '@config.factory'
       - '@Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService'
+      - '@Drupal\sales_leadership_diagnostic\Service\Research\ResearchBudget'
       - '@Drupal\sales_leadership_diagnostic\Service\Research\TurnClassifier'
       - '@Drupal\sales_leadership_diagnostic\Service\Research\ResearchRuntime'
       - '@Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger'
@@ -466,6 +467,14 @@ services:
 
   # La clase del turno se deduce del estado, nunca se le pregunta al modelo.
   Drupal\sales_leadership_diagnostic\Service\Research\TurnClassifier: {}
+
+  # Decide `research_budget` con el consumo real: el §2 del cliente define tres
+  # valores y el modulo solo emitia dos (02-10-2026).
+  Drupal\sales_leadership_diagnostic\Service\Research\ResearchBudget:
+    arguments:
+      - '@config.factory'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository'
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard'
 
   Drupal\sales_leadership_diagnostic\Service\Research\ResearchRuntime: {}
 

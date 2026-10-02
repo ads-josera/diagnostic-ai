@@ -13,6 +13,7 @@ use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolGateway;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolInterface;
 use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
+use Drupal\sales_leadership_diagnostic\Service\Research\ResearchBudget;
 use Drupal\sales_leadership_diagnostic\Service\Research\ResearchRuntime;
 use Drupal\sales_leadership_diagnostic\Service\Research\TurnClassifier;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
@@ -244,8 +245,15 @@ final class ResearchEntitlementTest extends KernelTestBase {
     $servicio->startMission(self::ALUMNO, 100);
     $entitlement = $servicio->forUser(self::ALUMNO);
 
+    // El presupuesto lo decide ResearchBudget con el consumo real, y se le
+    // pasa ya resuelto. Se usa el servicio de verdad y no una cadena a mano:
+    // así esta prueba también cubre que una misión recién abierta reciba
+    // AVAILABLE, que es lo que falló el 02-10-2026.
+    $presupuesto = $this->container->get(ResearchBudget::class)
+      ->forSession($entitlement, 3, 100);
+
     $bloque = $this->container->get(ResearchRuntime::class)
-      ->compose($entitlement, TurnClass::ResearchMission, 3);
+      ->compose($entitlement, TurnClass::ResearchMission, 3, $presupuesto);
 
     $this->assertStringContainsString('RESEARCH_RUNTIME', $bloque);
 
@@ -257,6 +265,9 @@ final class ResearchEntitlementTest extends KernelTestBase {
     $this->assertStringContainsString('PLATFORM_RUNTIME', $plataforma);
     $this->assertStringContainsString('file_upload: NOT_AVAILABLE', $plataforma);
     $this->assertStringContainsString('mission_state: ACTIVE', $bloque);
+    // Recién abierta: DISPONIBLE. Decir «limitado» aquí hizo que el agente se
+    // racionara con las cuarenta búsquedas intactas.
+    $this->assertStringContainsString('research_budget: AVAILABLE', $bloque);
     $this->assertStringContainsString('external_research: ALLOWED', $bloque);
     $this->assertStringContainsString('mission_id: ', $bloque);
 

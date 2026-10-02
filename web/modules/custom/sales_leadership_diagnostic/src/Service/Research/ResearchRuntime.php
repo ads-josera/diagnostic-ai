@@ -35,18 +35,24 @@ final class ResearchRuntime {
    *   De qué clase es este turno.
    * @param int $maxRechecks
    *   Comprobaciones puntuales del periodo.
+   * @param string $researchBudget
+   *   `AVAILABLE`, `LIMITED` o `EXHAUSTED`, ya decidido por ResearchBudget con
+   *   el consumo real. Aquí no se calcula a propósito: esta clase compone, y
+   *   mezclar las dos cosas fue lo que dejó el campo congelado en `LIMITED`
+   *   durante toda una misión.
    * @param bool $ledgerAvailable
    *   Si hay evidencia guardada que reutilizar.
    */
-  public function compose(Entitlement $entitlement, TurnClass $class, int $maxRechecks, bool $ledgerAvailable = FALSE): string {
+  public function compose(Entitlement $entitlement, TurnClass $class, int $maxRechecks, string $researchBudget, bool $ledgerAvailable = FALSE): string {
     $lineas = [
       'RESEARCH_RUNTIME',
       'mission_state: ' . $entitlement->state->value,
       'turn_class: ' . $class->value,
       'external_research: ' . $entitlement->access($maxRechecks)->value,
-      // El presupuesto se declara en las palabras del cliente y sin cifras: lo
-      // que el agente necesita saber es si le queda margen, no cuánto.
-      'research_budget: ' . ($entitlement->access($maxRechecks)->allowsAnything() ? 'LIMITED' : 'EXHAUSTED'),
+      // Sin cifras, que el §5 lo prohíbe, pero con los TRES valores de su §2 y
+      // siguiendo el consumo real. Decir siempre `LIMITED` hacía que el agente
+      // se racionara con el presupuesto intacto (02-10-2026).
+      'research_budget: ' . $researchBudget,
       'entitlement_period: ' . $entitlement->period,
       'evidence_ledger_available: ' . ($ledgerAvailable ? 'true' : 'false'),
       'allowed_actions: ' . implode(', ', $class->allowedActions()),
