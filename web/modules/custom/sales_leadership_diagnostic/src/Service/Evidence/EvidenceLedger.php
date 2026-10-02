@@ -189,6 +189,36 @@ final class EvidenceLedger {
   }
 
   /**
+   * Las procedencias que este alumno tiene anotadas.
+   *
+   * Sirve para explicar una cita que el agente reutiliza de una semana
+   * anterior: su URL no sale de ninguna búsqueda de ESTA misión, y sin esto la
+   * revisión de citas la señalaría como no vista. Una falsa alarma en lo que
+   * el ledger existe precisamente para permitir.
+   *
+   * Lo que devuelve NO es prueba independiente, y por eso quien lo use tiene
+   * que tratarlo aparte: estas filas las escribió el propio agente. Dicen que
+   * ya declaró esa fuente antes, no que exista.
+   *
+   * @param int $uid
+   *   El alumno.
+   *
+   * @return string[]
+   *   Las procedencias, sin repetir.
+   */
+  public function sourcesFor(int $uid): array {
+    $fuentes = $this->database->select(self::TABLE, 'e')
+      ->fields('e', ['source'])
+      ->condition('uid', $uid)
+      ->condition('source', '', '<>')
+      ->distinct()
+      ->execute()
+      ->fetchCol();
+
+    return array_map('strval', $fuentes);
+  }
+
+  /**
    * Cifras del periodo, para enseñarlas.
    *
    * @return array{entries: int, reused: int, scopes: int}

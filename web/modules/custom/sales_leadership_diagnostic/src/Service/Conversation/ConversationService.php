@@ -24,7 +24,7 @@ use Drupal\sales_leadership_diagnostic\Plugin\QueueWorker\DiagnosticTurnWorker;
 use Drupal\sales_leadership_diagnostic\Plugin\QueueWorker\MemoryExtractionWorker;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory;
-use Drupal\sales_leadership_diagnostic\Service\Research\CitationAudit;
+use Drupal\sales_leadership_diagnostic\Service\Research\CitationAuditInterface;
 use Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
@@ -108,7 +108,7 @@ final class ConversationService {
     private readonly CurrentTurn $currentTurn,
     private readonly ResearchEntitlementService $entitlements,
     private readonly ToolBoxFactory $tools,
-    private readonly CitationAudit $citations,
+    private readonly CitationAuditInterface $citations,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -448,10 +448,34 @@ final class ConversationService {
     $entity->setPayload($payload);
     $entity->save();
 
-    // Se revisa DESPUES de guardar, y a proposito: una cita sin respaldo no
+    // Se revisa DESPUÉS de guardar, y a propósito: una cita sin respaldo no
     // puede impedir que el alumno reciba su entregable. Lo que hace falta es
     // que quede constancia de que la hubo.
-    $this->citations->review((int) $session->id(), $payload);
+    //
+    // Y por eso mismo va envuelta: esto corre antes de marcar la sesión como
+    // completada y de cerrar la misión, así que una excepción aquí —un fallo
+    // de base de datos, por ejemplo— dejaría al alumno con resultado y la
+    // sesión a medias. Lo peor de los dos mundos, porque el turno ya se pagó.
+    //
+    // Cubrirlo costó extraer `CitationAuditInterface`: la primera prueba tiraba
+    // la tabla que la revisión consulta y pasaba IGUAL sin este try/catch,
+    // porque la revisión solo toca la base si el entregable cita algo y el
+    // motor simulado no cita nada. Ahora la prueba la sustituye por una que
+    // revienta siempre, y se pone en rojo si alguien quita estas líneas.
+    try {
+      $this->citations->review(
+        (int) $session->getOwnerId(),
+        (int) $session->id(),
+        $payload,
+        $turn->message,
+      );
+    }
+    catch (\Throwable $e) {
+      $this->logger->warning('No se pudieron revisar las citas del entregable de la misión @sesion: @motivo. El entregable se entrega igual.', [
+        '@sesion' => $session->id(),
+        '@motivo' => $e->getMessage(),
+      ]);
+    }
 
     return (int) $entity->id();
   }

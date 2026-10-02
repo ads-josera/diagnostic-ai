@@ -46,11 +46,20 @@ desarmarla dos veces y a que las dos lecturas pudieran decir cosas distintas.
 Y vale para cualquier herramienta futura que devuelva `resultados` con su `url`,
 sin tocarla.
 
-## Tres resultados, no dos
+## Cuatro resultados, no dos
 
 La revisión no responde «sí o no». Separa:
 
-- **Respaldada** — la URL salió de una búsqueda de esta misión.
+- **Respaldada** — la URL salió de una búsqueda de esta misión. Es el único
+  respaldo fuerte.
+- **Declarada** — el agente ya la tenía anotada en el ledger, puede que semanas
+  antes. Reutilizar evidencia es justo para lo que el ledger existe, y su URL no
+  sale de ninguna búsqueda de ESTA misión: sin esta categoría, la revisión
+  avisaría de invención cada vez que el sistema hace lo que debe, y en dos
+  semanas nadie volvería a mirar el aviso. Va aparte y **no cuenta como
+  respaldo**, porque esas filas las escribió el propio agente: si se sumaran a
+  lo recuperado, bastaría con que anotara una URL inventada para quedar
+  respaldado por sí mismo.
 - **Otra página** — el sitio sí se visitó, esa página concreta no. Puede ser
   legítimo: el agente pudo seguir un enlace que venía dentro de un resultado.
 - **No vista** — ese sitio no aparece en ninguna búsqueda. No tiene origen.
@@ -63,10 +72,37 @@ diferencias que no cambian la página —el esquema, el `www.`, la barra final, 
 fragmento—, porque si contaran, la revisión avisaría de invenciones que no lo
 son y en dos semanas nadie volvería a mirar el aviso.
 
-Y hay un cuarto estado que importa tanto como los otros: **sin registro**. En
+Y hay un quinto estado que importa tanto como los otros: **sin registro**. En
 una misión anterior a este cambio no se guardaron las URL y no se pueden
 reconstruir. Devolver ahí «catorce citas no vistas» sería una acusación falsa, y
 es exactamente la clase de cifra que luego alguien repite.
+
+### Dos silencios que significan lo contrario
+
+La primera versión de esta clase tenía el peor fallo posible: el que no avisa.
+Declaraba «sin registro» siempre que no hubiera URL con que comparar, y eso
+confunde dos situaciones opuestas.
+
+| Búsquedas concedidas | Con URL guardadas | Qué significa | Qué hace |
+|---|---|---|---|
+| 0 | — | Lo citado **no puede venir de ninguna parte** | Todo a «no vista», y avisa |
+| >0 | 0 | Misión anterior al cambio | «Sin registro», y también deja línea |
+| >0 | >0 | Caso normal | Compara |
+
+La primera fila es exactamente el caso de las catorce citas inventadas —una
+misión sin búsquedas, o con todas denegadas, que entrega un pack lleno de
+fuentes— y quedaba muda. Lo encontró la revisión de Jarvis, no una prueba.
+
+Y el «sin registro» también escribe en el registro, con su propio mensaje
+(`citas_sin_comprobar`). Callar ahí era el mismo error en pequeño: el silencio
+se lee como «todo bien».
+
+### Se auditan los dos sitios donde puede estar una cita
+
+Las `sources` de cada cuenta, que es lo que se guarda, **y los enlaces del
+Markdown que la persona lee**. Desde el mismo día, el contrato le pide al agente
+los enlaces en el `message`; auditar solo las `sources` dejaría sin revisar
+justo lo que se le acababa de pedir poner en el otro sitio.
 
 ## Lo que NO hace, y por qué
 
@@ -80,6 +116,15 @@ cuando se sepa si ocurre y cuánto. Primero hay que saberlo.
 
 También se revisa **después** de guardar el resultado, a propósito: una cita sin
 respaldo no puede impedir que el alumno reciba su entregable.
+
+Y por lo mismo va envuelta en un `try/catch`. Corre antes de marcar la sesión
+como completada, así que una excepción dejaría al alumno con entregable y la
+sesión a medias, con el turno ya pagado. Cubrir ese guardia costó extraer
+`CitationAuditInterface`: la primera prueba tiraba la tabla que la revisión
+consulta y **pasaba igual sin el try/catch**, porque la revisión solo toca la
+base si el entregable cita algo y el motor simulado no cita nada. Se retiró —una
+prueba verde que no demuestra nada es peor que ninguna— y con la interfaz la
+prueba sustituye la revisión por una que revienta siempre.
 
 Y el aviso anota la misión y las URL —páginas públicas—, nunca el texto de la
 conversación ni quién es la persona: el §31 y el §43 lo prohíben, y una cita sin

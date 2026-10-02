@@ -6,6 +6,8 @@ namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
 use Drupal\Core\Queue\QueueInterface;
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\sales_leadership_diagnostic\Service\Research\CitationAudit;
+use Drupal\sales_leadership_diagnostic\Service\Research\CitationAuditInterface;
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Exception\DiagnosticException;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
@@ -200,6 +202,47 @@ final class ConversationServiceTest extends KernelTestBase {
     $this->assertFalse(
       $flood->isAllowed($evento, 1, 300, (string) $uid),
       'El intento fallido debe haber quedado contado.',
+    );
+  }
+
+  /**
+   * Si la revisión de citas revienta, el alumno recibe su entregable igual.
+   *
+   * La revisión corre al crear el resultado, DESPUÉS de guardarlo pero ANTES de
+   * marcar la sesión como completada. Una excepción ahí —un fallo de base de
+   * datos, por ejemplo— dejaba al alumno con entregable y la sesión a medias, y
+   * el turno ya se había pagado.
+   *
+   * La primera versión de esta prueba tiraba la tabla que la revisión consulta,
+   * y pasaba IGUAL sin el try/catch: la revisión solo toca la base si el
+   * entregable cita algo, y el motor simulado no cita nada. Se retiró y se
+   * extrajo `CitationAuditInterface` para poder hacer esto, que es lo único que
+   * prueba el guardia: una revisión que revienta siempre, pase lo que pase.
+   */
+  public function testSiLaRevisionDeCitasRevientaElEntregableLlegaIgual(): void {
+    $this->container->set(CitationAudit::class, new class() implements CitationAuditInterface {
+
+      /**
+       * {@inheritdoc}
+       */
+      public function review(int $uid, int $sessionId, array $payload, string $message = ''): array {
+        throw new \RuntimeException('La revisión de citas falló.');
+      }
+
+    });
+
+    $session = $this->crearSesion('agente_gap');
+
+    $resultado = $this->conversarHastaElFinal($session);
+
+    $this->assertNotNull($resultado->id(), 'El resultado tiene que haberse guardado.');
+    $this->assertSame(
+      'completed',
+      $this->container->get('entity_type.manager')
+        ->getStorage('sld_diagnostic_session')
+        ->load($session->id())
+        ->get('status')->value,
+      'La sesión tiene que quedar cerrada, no a medias.',
     );
   }
 

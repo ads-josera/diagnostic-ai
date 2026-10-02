@@ -112,6 +112,44 @@ final class ToolCallRepository {
   }
 
   /**
+   * Qué registro de búsquedas tiene una misión, y qué permite concluir.
+   *
+   * Hay dos silencios que se parecen y significan lo contrario, y confundirlos
+   * es el peor fallo posible de la revisión de citas:
+   *
+   * - **No hubo búsquedas concedidas.** Entonces una cita no puede venir de
+   *   ninguna parte. Es el caso de catorce fuentes inventadas, y tiene que
+   *   avisar.
+   * - **Hubo búsquedas, pero sin URL guardadas.** Son las misiones anteriores
+   *   al 02-10-2026: no se guardaron y no se pueden reconstruir. Aquí acusar
+   *   sería mentir.
+   *
+   * @param int $sessionId
+   *   Conversación.
+   * @param string[] $excluding
+   *   Herramientas que no salen a internet y por tanto no traen URL. Las pasa
+   *   quien las exime, para que eximir y contar no digan cosas distintas.
+   *
+   * @return array{calls: int, withUrls: int}
+   *   Búsquedas concedidas, y cuántas de ellas guardaron sus URL.
+   */
+  public function searchRecordInMission(int $sessionId, array $excluding = []): array {
+    $consulta = $this->database->select(self::TABLE, 't')
+      ->condition('session_id', $sessionId)
+      ->condition('allowed', 1);
+    $this->excluir($consulta, $excluding);
+    $consulta->addExpression('COUNT(*)', 'llamadas');
+    $consulta->addExpression('COUNT(t.result_urls)', 'con_urls');
+
+    $fila = $consulta->execute()->fetchAssoc() ?: [];
+
+    return [
+      'calls' => (int) ($fila['llamadas'] ?? 0),
+      'withUrls' => (int) ($fila['con_urls'] ?? 0),
+    ];
+  }
+
+  /**
    * Lo consumido en una misión.
    *
    * Solo cuenta lo CONCEDIDO: una petición denegada no gastó nada, y contarla

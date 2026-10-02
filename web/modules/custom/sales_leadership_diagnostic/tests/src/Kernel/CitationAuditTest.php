@@ -7,6 +7,7 @@ namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\WebSearchTool;
+use Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger;
 use Drupal\sales_leadership_diagnostic\Service\Research\CitationAudit;
 use PHPUnit\Framework\Attributes\CoversClass;
 
@@ -41,7 +42,7 @@ final class CitationAuditTest extends KernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->installSchema('sales_leadership_diagnostic', ['sld_tool_call']);
+    $this->installSchema('sales_leadership_diagnostic', ['sld_tool_call', 'sld_evidence']);
     $this->installConfig(['sales_leadership_diagnostic']);
   }
 
@@ -49,6 +50,11 @@ final class CitationAuditTest extends KernelTestBase {
    * Misión de las pruebas.
    */
   private const SESION = 30;
+
+  /**
+   * Alumno de las pruebas.
+   */
+  private const ALUMNO = 14;
 
   /**
    * Lo que salió de una búsqueda queda respaldado.
@@ -117,21 +123,6 @@ final class CitationAuditTest extends KernelTestBase {
   }
 
   /**
-   * Una misión sin URL guardadas se declara así, no se acusa.
-   *
-   * Es el caso de todo lo anterior al 02-10-2026: no se guardaron y no se
-   * pueden reconstruir. Devolver «catorce citas no vistas» ahí sería una
-   * acusación falsa, y es la clase de cifra que luego alguien repite.
-   */
-  public function testUnaMisionSinUrlGuardadasSeDeclaraSinRegistro(): void {
-    $revision = $this->revisar(['https://primicias.ec/economia/mabe']);
-
-    $this->assertTrue($revision[CitationAudit::SIN_REGISTRO]);
-    $this->assertSame([], $revision[CitationAudit::NO_VISTAS]);
-    $this->assertSame([], $revision[CitationAudit::RESPALDADAS]);
-  }
-
-  /**
    * Un entregable sin ninguna cita no es una misión sin registro.
    *
    * Son dos cosas distintas: aquí no hay nada que comprobar, y allí hay algo
@@ -144,17 +135,120 @@ final class CitationAuditTest extends KernelTestBase {
   }
 
   /**
-   * Una búsqueda denegada no respalda nada.
+   * Si TODAS las búsquedas se denegaron, una cita no tiene de dónde salir.
    *
-   * No trajo URL, así que no puede prestar respaldo a una cita. Contarla
-   * convertiría una denegación en coartada.
+   * Es el caso grave, y la primera versión de esta clase lo dejaba en silencio:
+   * trataba «no hay URL con que comparar» igual que «esta misión es anterior a
+   * que se guardaran», o sea sin decir una palabra. Una denegación no puede
+   * servir de coartada.
    */
-  public function testUnaBusquedaDenegadaNoRespaldaNada(): void {
+  public function testSiTodasLasBusquedasSeDenegaronLaCitaNoTieneOrigen(): void {
     $this->busqueda(['https://primicias.ec/nota'], permitida: FALSE);
 
     $revision = $this->revisar(['https://primicias.ec/nota']);
 
+    $this->assertFalse($revision[CitationAudit::SIN_REGISTRO]);
+    $this->assertSame(
+      ['https://primicias.ec/nota'],
+      $revision[CitationAudit::NO_VISTAS],
+    );
+  }
+
+  /**
+   * Sin ninguna búsqueda, lo citado tampoco tiene de dónde salir.
+   */
+  public function testSinNingunaBusquedaLoCitadoNoTieneOrigen(): void {
+    $revision = $this->revisar(['https://primicias.ec/nota']);
+
+    $this->assertFalse($revision[CitationAudit::SIN_REGISTRO]);
+    $this->assertSame(
+      ['https://primicias.ec/nota'],
+      $revision[CitationAudit::NO_VISTAS],
+    );
+  }
+
+  /**
+   * Una misión que buscó pero no guardó sus URL sí es «sin registro».
+   *
+   * Es el caso de todo lo anterior al 02-10-2026, y el único en que no se
+   * puede concluir nada. Se distingue del anterior por lo único que los
+   * distingue de verdad: que HUBO búsquedas concedidas.
+   */
+  public function testUnaMisionQueBuscoSinGuardarUrlEsSinRegistro(): void {
+    $this->busqueda([]);
+
+    $revision = $this->revisar(['https://primicias.ec/nota']);
+
     $this->assertTrue($revision[CitationAudit::SIN_REGISTRO]);
+    $this->assertSame([], $revision[CitationAudit::NO_VISTAS]);
+  }
+
+  /**
+   * Una evidencia que el agente ya tenía anotada NO se denuncia como invento.
+   *
+   * Reutilizar evidencia de semanas anteriores es justo para lo que el ledger
+   * existe, y su URL no sale de ninguna búsqueda de ESTA misión. Sin esto, la
+   * revisión avisaría de invención cada vez que el sistema hace lo que debe, y
+   * en dos semanas nadie volvería a mirar el aviso.
+   *
+   * Va en su propia categoría y no como respaldada, porque esa fila la escribió
+   * el propio agente: dice que ya declaró la fuente antes, no que exista.
+   */
+  public function testUnaEvidenciaYaAnotadaNoSeDenunciaComoInvento(): void {
+    $this->busqueda(['https://otra-cosa.com/x']);
+    $this->evidencia('https://expreso.ec/economia/tia-402-locales');
+
+    $revision = $this->revisar(['https://expreso.ec/economia/tia-402-locales']);
+
+    $this->assertSame(
+      ['https://expreso.ec/economia/tia-402-locales'],
+      $revision[CitationAudit::DECLARADAS],
+    );
+    $this->assertSame([], $revision[CitationAudit::NO_VISTAS]);
+    $this->assertSame([], $revision[CitationAudit::RESPALDADAS]);
+  }
+
+  /**
+   * Un enlace que solo está en el texto del Pack también se audita.
+   *
+   * Desde el 02-10-2026 el contrato le pide al agente los enlaces en el
+   * `message`, que es lo único que la persona lee. Mirar solo las `sources`
+   * dejaría sin revisar exactamente lo que se le acababa de pedir poner en el
+   * otro sitio.
+   */
+  public function testUnEnlaceQueSoloEstaEnElTextoTambienSeAudita(): void {
+    $this->busqueda(['https://primicias.ec/real']);
+
+    $revision = $this->container->get(CitationAudit::class)->review(
+      self::ALUMNO,
+      self::SESION,
+      ['accounts' => []],
+      'Mabe abre planta ([Inventado](https://no-se-busco-nunca.com/nota)).',
+    );
+
+    $this->assertSame(
+      ['https://no-se-busco-nunca.com/nota'],
+      $revision[CitationAudit::NO_VISTAS],
+    );
+  }
+
+  /**
+   * Un punto final de la frase no es parte de la dirección.
+   */
+  public function testElPuntoFinalDeLaFraseNoEsParteDeLaDireccion(): void {
+    $this->busqueda(['https://primicias.ec/nota']);
+
+    $revision = $this->container->get(CitationAudit::class)->review(
+      self::ALUMNO,
+      self::SESION,
+      ['accounts' => []],
+      'La fuente es https://primicias.ec/nota.',
+    );
+
+    $this->assertSame(
+      ['https://primicias.ec/nota'],
+      $revision[CitationAudit::RESPALDADAS],
+    );
   }
 
   /**
@@ -171,7 +265,26 @@ final class CitationAuditTest extends KernelTestBase {
     }
 
     return $this->container->get(CitationAudit::class)
-      ->review(self::SESION, ['accounts' => $cuentas]);
+      ->review(self::ALUMNO, self::SESION, ['accounts' => $cuentas]);
+  }
+
+  /**
+   * Anota una evidencia del alumno con esta procedencia.
+   */
+  private function evidencia(string $fuente): void {
+    $this->container->get(EvidenceLedger::class)->record(
+      self::ALUMNO,
+      'mision-anterior',
+      self::SESION,
+      [
+        'scope' => 'Almacenes Tía',
+        'claim' => 'Opera 402 locales.',
+        'summary' => 'Dato de su expansión.',
+        'source' => $fuente,
+        'evidence_type' => 'HECHO',
+        'confidence' => 'ALTA',
+      ],
+    );
   }
 
   /**
@@ -179,7 +292,7 @@ final class CitationAuditTest extends KernelTestBase {
    */
   private function busqueda(array $urls, bool $permitida = TRUE): void {
     $this->container->get(ToolCallRepository::class)->record(
-      uid: 14,
+      uid: self::ALUMNO,
       sessionId: self::SESION,
       tool: WebSearchTool::NAME,
       query: 'consulta',

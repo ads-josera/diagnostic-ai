@@ -484,6 +484,7 @@ services:
   Drupal\sales_leadership_diagnostic\Service\Research\CitationAudit:
     arguments:
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository'
+      - '@Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger'
       - '@logger.factory'
 
   # --- Evidence Ledger -------------------------------------------------------
