@@ -355,6 +355,29 @@ vendor/bin/drush sld:limpiar-pruebas --ejecutar --con-alumnos   # borra, pidiend
 Conserva siempre la configuración, los agentes y sus documentos, el
 administrador, el gestor y **alumno.demo**.
 
+**Tres cosas que hay que saber antes de usarlo**, las tres aprendidas usándolo:
+
+- **Es todo o nada.** Vacía las tablas enteras y borra TODAS las conversaciones:
+  `--conservar` protege la CUENTA, no sus datos. No existe «limpia todo menos lo
+  de fulano». Si hay que respetar los datos de alguien, no se usa este comando;
+  se borra lo concreto, y mejor con la API de entidades que con SQL, para que
+  corran los hooks del módulo y se limpie la caché.
+- **Borrar cuentas de WordPress no es grave**: el nombre que genera el SSO es
+  determinista (`sld_wp_<id>`), así que se recrean solas en el siguiente acceso.
+  Lo que no vuelve es su historial, que es lo que se busca.
+- **No toca la tabla `flood`**, que es el contador de «3 conversaciones nuevas
+  al día por agente». Y ese contador va por **ventana de 24 horas, no por día
+  natural**: lo que se abrió anoche a las nueve sigue contando mañana a las
+  nueve. Antes de una demo conviene vaciarlo, o quien enseñe el producto se
+  queda sin conversaciones a mitad:
+
+  ```bash
+  drush sql:query "DELETE FROM flood WHERE event LIKE 'sales_leadership_diagnostic%'"
+  ```
+
+  Es solo un contador de ritmo: no afecta a datos, cupos ni gasto. Ha hecho
+  falta las dos veces que se ha preparado una demo (22-09 y 01-10-2026).
+
 ### Topes de gasto
 
 30 USD globales al mes alcanzan para unos **8 alumnos muy activos**: sirve para
