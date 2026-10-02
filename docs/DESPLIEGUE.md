@@ -872,12 +872,23 @@ fondo y logotipos de la portada—: los protege `config_ignore`. Los cargadores
      agente, la orden va completa:
 
      ```bash
-     cd /home/labai/public_html && PHP_INI_SCAN_DIR=:/home/labai/.php-ini.d \
-       /opt/cpanel/ea-php84/root/usr/bin/php vendor/drush/drush/drush.php <orden>
+     cd /home/labai/public_html \
+       && PATH=/opt/cpanel/ea-php84/root/usr/bin:$PATH \
+          PHP_INI_SCAN_DIR=:/home/labai/.php-ini.d \
+          /opt/cpanel/ea-php84/root/usr/bin/php vendor/drush/drush/drush.php <orden>
      ```
 
      Pasó el 24-09-2026: un despliegue escrito con `drush` a secas no corrió, y
      hubo que repetirlo entero con la forma larga.
+
+     **El `PATH` de delante parece redundante y no lo es**, y esto costó un
+     segundo intento el 01-10-2026. Dar la ruta del binario basta para el
+     proceso que se lanza, pero **`updatedb` abre un subproceso suyo**
+     (`vendor/bin/drush updatedb:status`) que vuelve a resolver `php` por el
+     `PATH` y se encuentra el 8.1: la orden falla **antes de aplicar nada** —del
+     lado seguro otra vez, pero falla—. Es el mismo hermano del problema del
+     21-09 con los `-d`, que tampoco los heredaba el lote. Como no estorba a las
+     demás órdenes, va en la forma canónica y no solo en `updatedb`.
    - **Y por lo mismo, un `php -r` en la consola de alguien engaña**: si su
      `.bashrc` ya exporta la variable, el ini se lee y el valor sale bien, lo que
      hace parecer que la variable no hace falta. El cron no lee `.bashrc`, así

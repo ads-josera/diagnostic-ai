@@ -110,11 +110,18 @@ export PATH=/opt/cpanel/ea-php84/root/usr/bin:$PATH
 cd /home/labai/public_html
 php -v | head -1              # debe decir PHP 8.4
 composer --version            # 2.10.3 o superior (CVE-2026-84361), y «PHP version 8.4»
-                              # si dice 8.1, el composer de cPanel fija su PHP:
-                              # usar  php $(command -v composer) ...  en su lugar
+                              # si dice 8.1: php ~/.local/bin/composer ... en su lugar
 composer install --no-dev --optimize-autoloader
 vendor/bin/drush --version    # drush es dependencia de producción
 ```
+
+**`command -v composer` NO demuestra con qué PHP corre Composer**, y esa
+confusión costó un rodeo el 01-10-2026: la ruta era la correcta
+—`~/.local/bin/composer`— y aun así arrancó con PHP 8.1, porque ese archivo
+empieza por `#!/usr/bin/env php` y resuelve `php` por el `PATH`. Lo único que lo
+demuestra es la línea «PHP version» que imprime `composer --version`. Si dice
+8.1, se llama a Composer con el intérprete delante:
+`/opt/cpanel/ea-php84/root/usr/bin/php ~/.local/bin/composer install …`.
 
 Si Composer es anterior a 2.10.3, actualizarlo antes: la vulnerabilidad permite
 ejecutar órdenes al instalar un paquete malicioso. **En este servidor
