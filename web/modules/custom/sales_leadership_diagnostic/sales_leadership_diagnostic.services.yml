@@ -482,7 +482,8 @@ services:
   Drupal\sales_leadership_diagnostic\Service\Research\ResearchRuntime: {}
 
   # Las fuentes de cada cuenta, enlazadas al final del Pack. Las pone la
-  # plataforma y no el modelo: pedirselo le quitaba la busqueda de compradores.
+  # plataforma y no el modelo: lo que depende de que el modelo obedezca un
+  # formato sale unas veces si y otras no.
   Drupal\sales_leadership_diagnostic\Service\Conversation\SourcesAppendix: {}
 
   # Marca como cita cada correo listo para enviar. Tambien lo hace la

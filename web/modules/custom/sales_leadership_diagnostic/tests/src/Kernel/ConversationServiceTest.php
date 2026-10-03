@@ -252,8 +252,8 @@ final class ConversationServiceTest extends KernelTestBase {
   /**
    * Al entregar el Pack, sus fuentes y su correo quedan formateados al guardar.
    *
-   * La plataforma las añade a partir de `accounts[].sources`, porque pedírselo
-   * al agente le quitaba la búsqueda de compradores (medido el 02-10-2026). Se
+   * La plataforma las añade a partir de `accounts[].sources`, en lugar de
+   * pedirle al agente un formato que unas veces sigue y otras no. Se
    * comprueba en lo GUARDADO y no solo en lo que se pinta en el momento: al
    * recargar la conversación, lo que se lee es lo guardado.
    */

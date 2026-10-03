@@ -375,6 +375,14 @@ for ($turno = 1; $turno <= $caso['max']; $turno++) {
 
   $texto = $caso['guion'][$turno] ?? sld_bateria_alumno_dice($cliente, $caso, $conversacion->getConversation($sid));
 
+  // El alumno simulado responde al instante, y una conversación de veinte
+  // turnos cabe en menos de cinco minutos: el límite anti-abuso por usuario
+  // (20 mensajes en 300 s) la cortaba a media entrevista. Pasó el 02-10-2026,
+  // cuando el modelo empezó a responder más rápido que el 12-09, y la batería
+  // medía ese límite en vez de al agente. Una persona real no escribe a ese
+  // ritmo, y el límite tiene sus propias pruebas; aquí se vacía su contador.
+  \Drupal::flood()->clear('sales_leadership_diagnostic.message', (string) $sesion->getOwnerId());
+
   try {
     $conversacion->submitMessage($sesion, $texto);
   }

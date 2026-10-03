@@ -191,6 +191,17 @@ exactamente con el bloque y con nada más. Qué parte del bloque lo provoca no s
 aisló; la sospecha es que exigir un enlace junto a cada nombre y cargo le hace
 preferir no nombrar.
 
+> **Corrección del mismo día, 20:00: la sospecha NO se confirmó.** Se repitió
+> en local con el contrato de `c26306e` —comprobado en el `prompt_snapshot` de
+> cada sesión— y las 2 misiones hicieron la ronda de compradores (4 y 3
+> búsquedas a ejecutivos) y nombraron a 5 y a 2. Con el contrato actual, 3 de 3
+> la hicieron. Lo de producción fue una coincidencia de tres misiones seguidas,
+> no una causa. Qué la produjo no se sabe.
+>
+> La decisión de abajo se mantiene igual, pero por su propia razón: que el
+> formato dependa de que el modelo lo obedezca es frágil —salían 10 de 11, no
+> todas— y la plataforma lo hace siempre.
+
 La salida no era elegir entre compradores y enlaces, sino **dejar de pedirle al
 modelo un trabajo de la plataforma**. El contrato vuelve al de `eda301b`, y al
 entregar el Pack la plataforma añade «Fuentes por cuenta» a partir de

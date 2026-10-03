@@ -79,9 +79,9 @@ final class CitationAudit implements CitationAuditInterface {
    *
    * Se miran los dos sitios donde puede estar una cita: las `sources` de
    * cada cuenta, que es lo que se guarda, y el `$message`, el Pack en Markdown
-   * que lee la persona. Al agente ya no se le pide enlazar en el texto —le
-   * quitaba la búsqueda de compradores—, pero sigue haciéndolo por su cuenta
-   * con algunas fuentes, y un enlace a la vista se audita igual que otro.
+   * que lee la persona. Al agente ya no se le pide enlazar en el texto —los
+   * enlaces los pone la plataforma—, pero sigue haciéndolo por su cuenta con
+   * algunas fuentes, y un enlace a la vista se audita igual que otro.
    *
    * `sin_registro` vuelve cierto cuando hubo búsquedas pero de antes de que se
    * guardaran sus URL, y entonces las otras listas no permiten concluir nada.

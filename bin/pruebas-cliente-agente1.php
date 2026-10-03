@@ -312,7 +312,7 @@ function sld_pc_comprobar(array $caso, $sesion, array $mensajes, array $errores)
 
   if (isset($caso['rango']) && is_numeric($score)) {
     [$min, $max] = $caso['rango'];
-    $c['rango'] = [$score >= $min - 5 && $score <= $max + 5, "Score $score, esperan $min–$max (±5)"];
+    $c['rango'] = [$score >= $min - 5 && $score <= $max + 5, "Score $score, esperan {$min}–{$max} (±5)"];
   }
 
   if (isset($caso['madurez'])) {
@@ -331,7 +331,7 @@ function sld_pc_comprobar(array $caso, $sesion, array $mensajes, array $errores)
     [$patron, $min, $max] = $caso['dimension'];
     $d = array_values(array_filter($dims, static fn ($x) => preg_match('/' . $patron . '/iu', (string) ($x['name'] ?? '')) === 1))[0] ?? NULL;
     $v = $d['score'] ?? NULL;
-    $c['dimension_' . $patron] = [is_numeric($v) && $v >= $min && $v <= $max, "$patron $v, esperan $min–$max"];
+    $c['dimension_' . $patron] = [is_numeric($v) && $v >= $min && $v <= $max, "$patron $v, esperan {$min}–{$max}"];
   }
 
   $c['maximo_3'] = [
@@ -536,6 +536,14 @@ for ($turno = 1; $turno <= ($caso['max'] ?? 50); $turno++) {
   }
 
   $texto = $caso['guion'][$turno] ?? sld_pc_participante($cliente, $ficha, $mensajes);
+
+  // El alumno simulado responde al instante, y una conversación de veinte
+  // turnos cabe en menos de cinco minutos: el límite anti-abuso por usuario
+  // (20 mensajes en 300 s) la cortaba a media entrevista. Pasó el 02-10-2026,
+  // cuando el modelo empezó a responder más rápido que el 12-09, y la batería
+  // medía ese límite en vez de al agente. Una persona real no escribe a ese
+  // ritmo, y el límite tiene sus propias pruebas; aquí se vacía su contador.
+  \Drupal::flood()->clear('sales_leadership_diagnostic.message', (string) $sesion->getOwnerId());
 
   try {
     $conversacion->submitMessage($sesion, $texto);

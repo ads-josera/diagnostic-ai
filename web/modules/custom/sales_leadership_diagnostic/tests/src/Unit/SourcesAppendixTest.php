@@ -12,10 +12,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 /**
  * Las fuentes de cada cuenta llegan enlazadas a lo que lee la persona.
  *
- * Nace de un dilema medido el 02-10-2026: pedirle al agente que pusiera los
- * enlaces en su texto le hacía dejar de buscar a los compradores (0 de 3
- * misiones), y sin pedírselo solo 5 de 14 fuentes quedaban a la vista. Las
- * pone la plataforma, a partir de `accounts[].sources`.
+ * Nace el 02-10-2026: pidiéndole al agente los enlaces en su texto salían 10
+ * de 11, y sin pedírselo 5 de 14. Las pone la plataforma, a partir de
+ * `accounts[].sources`, y así salen todas siempre.
  *
  * Varias pruebas pasan el resultado por el renderizador real a propósito: lo
  * que importa no es el Markdown que se genera, sino el enlace que acaba en la

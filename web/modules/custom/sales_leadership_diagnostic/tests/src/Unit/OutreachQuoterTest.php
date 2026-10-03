@@ -14,8 +14,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
  *
  * El agente a veces lo escribía con «>» y a veces no; en la misión del
  * 02-10-2026 a las 16:15 salieron como párrafos normales, confundidos con el
- * análisis. No se le pide en el contrato porque ese día se midió que una
- * instrucción de formato le quitaba la búsqueda de compradores.
+ * análisis. No se le pide en el contrato: lo que depende de que el modelo
+ * obedezca un formato sale unas veces sí y otras no.
  *
  * El Pack de prueba imita el real: el correo va tras «Copy/paste — email:», con
  * «Asunto:» en negrita en el texto y sin negrita en `outreach_message`.

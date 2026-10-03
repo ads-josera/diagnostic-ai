@@ -23,7 +23,22 @@
  *   ddev drush php:script bin/mision-real.php -- decir 95 "Soy director comercial de…"
  *   ddev drush php:script bin/mision-real.php -- leer 95
  *   ddev drush php:script bin/mision-real.php -- medir 95
+ *   ddev drush php:script bin/mision-real.php -- regresion 3
  * @endcode
+ *
+ * `regresion` es distinto de los otros: conduce de un tirón EL CASO QUE SE
+ * PERDIÓ contra ChatGPT el 02-10-2026 —«Haz el trabajo por mí esta semana» y
+ * luego Deloitte Ecuador— y dice PASA o NO PASA por cada cosa que falló ese día.
+ * Va antes de desplegar cualquier cambio que toque al agente de prospección,
+ * su contrato o lo que rodea al turno. Lo que mide —si investiga, si busca a
+ * los compradores, si criba diez cuentas— solo existe hablando con el modelo, y
+ * ninguna prueba unitaria lo ve.
+ *
+ * Comprobado que sirve, rompiéndolo a propósito el 02-10-2026: con el agente
+ * racionado a 4 búsquedas —lo que pasó esa mañana— caen cuatro puertas (0
+ * cuentas, 5 denegadas, 0 búsquedas a ejecutivos, 0 fuentes). Gasta unos 0,35-0,60
+ * USD por misión y tarda dos o tres minutos; con 3 misiones basta para ver si un
+ * fallo es variación o es sistemático.
  *
  * Se conversa turno a turno y no de un tirón A PROPÓSITO: el agente pregunta
  * antes de investigar —el territorio, la empresa— y sus respuestas deciden lo
@@ -34,6 +49,8 @@ declare(strict_types=1);
 
 use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\ConversationService;
+use Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer;
+use Drupal\sales_leadership_diagnostic\Service\Research\CitationAudit;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticPromptManager;
 use Drupal\user\Entity\User;
 
@@ -238,6 +255,160 @@ if ($accion === 'medir') {
   return;
 }
 
+if ($accion === 'regresion') {
+  $veces = max(1, (int) ($extra[1] ?? 1));
+  $alumno = sld_mision_alumno();
+  $uid = (int) $alumno->id();
+  $bd = \Drupal::database();
+  $agente = \Drupal::entityTypeManager()->getStorage('sld_agent')->load('prospecting_diagnostic');
+  $promptManager = \Drupal::service(DiagnosticPromptManager::class);
+  $renderer = \Drupal::service(MarkdownRenderer::class);
+  $auditoria = \Drupal::service(CitationAudit::class);
+
+  // Los mismos dos mensajes que mandó José Raúl con la cuenta de Omar: el botón
+  // de la bienvenida y la web con el territorio. Si el agente pide algo más, se
+  // le dice que siga; necesitar ese empujón se anota, porque un alumno real
+  // podría no darlo.
+  $guion = [
+    'Haz el trabajo por mí esta semana.',
+    'https://www.deloitte.com/latam/es/about/story/nuestros-marketplaces/deloitte-ecuador.html Ecuador',
+  ];
+  $empujon = 'Adelante: entrega el Weekly GOLD Pack completo con lo que tengas.';
+
+  // Una búsqueda «a un ejecutivo» nombra un cargo y no es de descubrimiento
+  // general. Es una heurística —la misma con la que Jarvis contó en
+  // producción— y no ve una búsqueda que solo lleve el nombre propio.
+  $cargo = '/\b(CEO|CFO|CIO|CTO|COO|CDO|gerente|director|directora|presidente|presidenta|ejecutivo|vicepresidente|VP|jefe|fundador|country manager)\b|linkedin\.com\/in/iu';
+  $generica = '/\b(empresas|nombramientos?|empleos?|ofertas?|vacantes?)\b|linkedin\.com\/jobs/iu';
+  $prohibidas = '/l[ií]mite de investigaci[oó]n|presupuesto (de investigaci[oó]n )?(limitado|agotado)|dentro del l[ií]mite/iu';
+
+  $resumen = [];
+
+  for ($n = 1; $n <= $veces; $n++) {
+    // La cuenta empieza cada misión como Omar en producción tras la limpieza:
+    // sin misión esta semana, sin evidencia, sin memoria y sin historial de
+    // cuentas. Sin esto, la segunda misión reutilizaría lo de la primera y
+    // mediría otra cosa.
+    $bd->delete('sld_research_entitlement')->condition('uid', $uid)->execute();
+    $bd->delete('sld_evidence')->condition('uid', $uid)->execute();
+    $bd->delete('sld_account_event')->condition('uid', $uid)->execute();
+    $bd->delete('sld_account')->condition('uid', $uid)->execute();
+    $memorias = \Drupal::entityTypeManager()->getStorage('sld_student_memory');
+    $memorias->delete($memorias->loadByProperties(['uid' => $uid]));
+
+    $prompt = $promptManager->composeFor($agente);
+    $sesion = $almacen->create([
+      'uid' => $uid,
+      'wp_user_id' => '99001',
+      'course_id' => $agente->getCourseId(),
+      'agent' => 'prospecting_diagnostic',
+      'diagnostic_version' => $agente->getVersion(),
+      'prompt_snapshot' => $prompt,
+      'prompt_hash' => hash('sha256', $prompt),
+      'started_at' => \Drupal::time()->getRequestTime(),
+    ]);
+    $sesion->setStatus(DiagnosticStatus::InProgress);
+    $sesion->save();
+    $sid = (int) $sesion->id();
+    $inicio = microtime(TRUE);
+
+    $mensajes = $guion;
+    $empujones = 0;
+
+    for ($turno = 0; $turno < 4; $turno++) {
+      $texto = $mensajes[$turno] ?? $empujon;
+
+      if (!isset($mensajes[$turno])) {
+        $empujones++;
+      }
+
+      $respuesta = $conversacion->submitMessage($sesion, $texto);
+
+      if (!empty($respuesta['processing'])) {
+        $cola = \Drupal::service('queue')->get('sld_diagnostic_turn');
+        $trabajador = \Drupal::service('plugin.manager.queue_worker')->createInstance('sld_diagnostic_turn');
+
+        while ($elemento = $cola->claimItem(3600)) {
+          $trabajador->processItem($elemento->data);
+          $cola->deleteItem($elemento);
+        }
+      }
+
+      $almacen->resetCache([$sid]);
+      $sesion = $almacen->load($sid);
+
+      if ($sesion->getStatus() === DiagnosticStatus::Completed) {
+        break;
+      }
+    }
+
+    $completa = $sesion->getStatus() === DiagnosticStatus::Completed;
+    $resultado = NULL;
+    $ids = \Drupal::entityQuery('sld_diagnostic_result')->condition('session_id', $sid)->accessCheck(FALSE)->execute();
+
+    if ($ids !== []) {
+      $resultado = \Drupal::entityTypeManager()->getStorage('sld_diagnostic_result')->load(reset($ids));
+    }
+
+    $payload = $resultado ? ($resultado->getPayload() ?? []) : [];
+    $cuentas = $payload['accounts'] ?? [];
+    $ultimo = $conversacion->getConversation($sid);
+    $guardado = ($fin = end($ultimo)) ? $fin->content : '';
+
+    $busquedas = $bd->query('SELECT query FROM {sld_tool_call} WHERE session_id = :s AND tool = :t AND allowed = 1', [':s' => $sid, ':t' => 'buscar_web'])->fetchCol();
+    $denegadas = (int) $bd->query('SELECT COUNT(*) FROM {sld_tool_call} WHERE session_id = :s AND allowed = 0', [':s' => $sid])->fetchField();
+    $aEjecutivos = count(array_filter($busquedas, fn ($q) => preg_match($cargo, $q) && !preg_match($generica, $q)));
+    $nombrados = array_values(array_filter($cuentas, fn ($c) => !empty($c['buyer_verified'])));
+    $fuentes = array_sum(array_map(fn ($c) => count($c['sources'] ?? []), $cuentas));
+    $correos = count(array_filter($cuentas, fn ($c) => trim((string) ($c['outreach_message'] ?? '')) !== ''));
+    $citas = substr_count($renderer->render($guardado), '<blockquote>');
+    $revision = $auditoria->review($uid, $sid, $payload, $guardado);
+    $usd = (float) $bd->query('SELECT COALESCE(SUM(cost_usd), 0) FROM {sld_ai_usage} WHERE session_id = :s', [':s' => $sid])->fetchField();
+
+    $puertas = [
+      'cierra con Pack en ≤4 turnos' => [$completa, $completa ? sprintf('%d turnos, %d empujón(es)', $turno + 1, $empujones) : 'no cerró'],
+      'criba 10 cuentas' => [count($cuentas) >= 10 && (int) ($payload['pool_declared'] ?? 0) >= 10, sprintf('%d cuentas, pool declarado %d', count($cuentas), (int) ($payload['pool_declared'] ?? 0))],
+      'no se queja de presupuesto' => [!preg_match($prohibidas, $guardado), preg_match($prohibidas, $guardado, $m) ? '«' . $m[0] . '»' : 'ninguna frase'],
+      'investiga de verdad' => [count($busquedas) >= 8 && $denegadas === 0, sprintf('%d búsquedas, %d denegadas', count($busquedas), $denegadas)],
+      'busca a los compradores' => [$aEjecutivos >= 1, sprintf('%d búsquedas a ejecutivos', $aEjecutivos)],
+      'enlaza las fuentes' => [$fuentes >= 10 && str_contains($guardado, 'Fuentes por cuenta'), sprintf('%d fuentes, apéndice %s', $fuentes, str_contains($guardado, 'Fuentes por cuenta') ? 'sí' : 'NO')],
+      'ninguna cita sin origen' => [!$revision[CitationAudit::SIN_REGISTRO] && $revision[CitationAudit::NO_VISTAS] === [], sprintf('%d respaldadas, %d otra página, %d no vistas', count($revision[CitationAudit::RESPALDADAS]), count($revision[CitationAudit::OTRA_PAGINA]), count($revision[CitationAudit::NO_VISTAS]))],
+      'correos como cita' => [$citas >= $correos, sprintf('%d correos, %d citas en pantalla', $correos, $citas)],
+    ];
+
+    $pasa = !in_array(FALSE, array_column($puertas, 0), TRUE);
+    $resumen[] = [$sid, $pasa, $usd, microtime(TRUE) - $inicio, count($nombrados)];
+
+    printf("\n═══ MISIÓN %d de %d · sesión %d · %s · $%.3f · %.0fs\n", $n, $veces, $sid, $pasa ? 'PASA TODO' : 'NO PASA', $usd, microtime(TRUE) - $inicio);
+
+    foreach ($puertas as $nombre => [$ok, $detalle]) {
+      printf("  %s  %-28s %s\n", $ok ? 'PASA   ' : 'NO PASA', $nombre, $detalle);
+    }
+
+    // Los compradores CON NOMBRE no son puerta por misión, a propósito. La
+    // metodología del cliente solo deja nombrar a alguien con empleo, cargo,
+    // alcance y recencia confirmados, y el modelo aplica ese listón con
+    // criterio variable: el 02-10-2026, de cuatro misiones que buscaron a las
+    // personas, tres nombraron a dos o tres y una a nadie, citando incluso la
+    // fuente que lo identificaba. Eso es variación, no regresión. La regresión
+    // de aquel día tenía otra firma —cero búsquedas a personas— y esa sí es
+    // puerta dura. El resumen falla si NINGUNA misión de la tanda nombra a
+    // alguien, que ya sería sistemático.
+    printf("  %s  %-28s %s\n", count($nombrados) >= 1 ? 'PASA   ' : 'AVISO  ', 'nombra compradores', count($nombrados) . ': ' . implode(', ', array_map(fn ($c) => ($c['buyer'] ?? '?') . ' (' . ($c['name'] ?? '?') . ')', $nombrados)));
+
+    foreach ($revision[CitationAudit::OTRA_PAGINA] as $url) {
+      printf("     · otra página: %s\n", $url);
+    }
+  }
+
+  $conNombre = count(array_filter(array_column($resumen, 4)));
+  printf("\n  %s  compradores con nombre en %d de %d misiones%s\n", $conNombre >= 1 ? 'PASA   ' : 'NO PASA', $conNombre, $veces, $conNombre === 0 ? ' — en ninguna: eso ya no es variación' : '');
+
+  printf("\n═══ RESUMEN: %d de %d misiones pasan todas las puertas%s · $%.3f en total\n", count(array_filter(array_column($resumen, 1))), $veces, $conNombre === 0 ? ', y NINGUNA nombra compradores' : '', array_sum(array_column($resumen, 2)));
+
+  return;
+}
+
 print <<<AYUDA
 Conduce una misión real contra el agente y la mide. GASTA DINERO.
 
@@ -245,6 +416,7 @@ Conduce una misión real contra el agente y la mide. GASTA DINERO.
   decir <sesión> <…>  manda un mensaje, drena la cola y mide el turno
   leer <sesión>       vuelca la conversación entera
   medir <sesión>      el resumen de la misión: búsquedas, tokens, caché y coste
+  regresion [veces]   el caso que se perdió contra ChatGPT, con PASA o NO PASA
 
 El agente pregunta antes de investigar, así que se conversa turno a turno.
 

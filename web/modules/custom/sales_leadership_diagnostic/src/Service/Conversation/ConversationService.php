@@ -334,9 +334,9 @@ final class ConversationService {
     // Al entregar, la plataforma da formato al Pack: marca como cita cada
     // correo listo para enviar (ver OutreachQuoter) y añade las fuentes de
     // cada cuenta, enlazadas.
-    // No se le pide al modelo: medido el 02-10-2026, pedírselo le hacía dejar
-    // de buscar a los compradores. Se guarda con el mensaje para que siga ahí
-    // al recargar la conversación. Ver SourcesAppendix.
+    // No se le pide al modelo: lo que depende de que obedezca un formato sale
+    // unas veces sí y otras no. Se guarda con el mensaje para que siga ahí al
+    // recargar la conversación. Ver SourcesAppendix.
     $mensaje = $turn->completed ? $this->quoter->quote($turn->message, $turn->result) : $turn->message;
     $fuentes = $turn->completed ? $this->sources->build($turn->result) : '';
 

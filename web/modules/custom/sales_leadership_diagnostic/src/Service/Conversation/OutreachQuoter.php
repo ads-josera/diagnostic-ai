@@ -13,9 +13,11 @@ namespace Drupal\sales_leadership_diagnostic\Service\Conversation;
  * decidía él, y no siempre lo hacía: en la misión del 02-10-2026 a las 16:15
  * los dos correos salieron como párrafos normales, confundidos con el resto.
  *
- * No se le pide en el contrato a propósito. Ese mismo día se midió que una
- * instrucción de formato —poner los enlaces en el texto— le quitaba la búsqueda
- * de compradores. El formato lo pone la plataforma.
+ * No se le pide en el contrato a propósito: un formato que depende de que el
+ * modelo obedezca sale unas veces sí y otras no —es justo lo que pasó con la
+ * cita—, y la plataforma lo hace siempre. (Ese día se sospechó también que
+ * una instrucción de formato le quitaba la búsqueda de compradores; no se
+ * confirmó al repetirlo. Ver SourcesAppendix.)
  *
  * Cómo lo encuentra: el agente entrega cada correo por separado en
  * `accounts[].outreach_message`, y el contrato le pide que coincida con el
