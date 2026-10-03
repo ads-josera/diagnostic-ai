@@ -15,6 +15,7 @@ use Drupal\sales_leadership_diagnostic\Entity\DiagnosticAgentInterface;
 use Drupal\sales_leadership_diagnostic\Service\Agent\AgentRegistry;
 use Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticReadiness;
 use Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\ProviderAccountStatus;
 use Drupal\sales_leadership_diagnostic\Service\WordPress\PluginVersionTracker;
 
 /**
@@ -41,6 +42,7 @@ final class DiagnosticRequirements {
     private readonly PluginVersionTracker $pluginVersions,
     private readonly DateFormatterInterface $dateFormatter,
     private readonly EntityTypeManagerInterface $entityTypeManager,
+    private readonly ProviderAccountStatus $accountStatus,
   ) {}
 
   /**
@@ -58,6 +60,10 @@ final class DiagnosticRequirements {
 
     if ($this->engineFactory->isMockActive()) {
       $requirements['sales_leadership_diagnostic_mock_engine'] = $this->warnAboutMockEngine();
+    }
+
+    if ($this->accountStatus->problems() !== []) {
+      $requirements['sales_leadership_diagnostic_providers'] = $this->warnAboutProviders();
     }
 
     return $requirements;
@@ -201,6 +207,38 @@ final class DiagnosticRequirements {
         // así el texto traducible no arrastra comillas escapadas y quien
         // traduzca no puede romperlo por accidente.
         '@ajuste' => "\$settings['" . DiagnosticEngineFactory::MOCK_SETTING . "']",
+      ]),
+    ];
+  }
+
+  /**
+   * Avisa de un proveedor que no da servicio por su cuenta.
+   *
+   * Solo aparece cuando lo hay, igual que el aviso del motor simulado: la
+   * comprobación tras cada despliegue cuenta «5 líneas de Diagnostic AI, todas
+   * OK», y una sexta en rojo es justo lo que tiene que saltar a la vista.
+   *
+   * Nació el 02-10-2026: al agotarse un saldo, el alumno veía «intenta
+   * nuevamente» y nadie más se enteraba. Desaparece sola en cuanto el
+   * proveedor vuelve a responder bien.
+   */
+  private function warnAboutProviders(): array {
+    $lineas = [];
+
+    foreach ($this->accountStatus->problems() as $proveedor => $corte) {
+      $lineas[] = $this->t('@proveedor: @motivo (desde @desde)', [
+        '@proveedor' => $proveedor === ProviderAccountStatus::IA ? 'OpenAI' : 'Tavily',
+        '@motivo' => $corte['motivo'],
+        '@desde' => $this->dateFormatter->format((int) $corte['desde'], 'short'),
+      ]);
+    }
+
+    return [
+      'title' => $this->t('Diagnostic AI: proveedores'),
+      'value' => $this->t('Sin servicio'),
+      'severity' => RequirementSeverity::Error,
+      'description' => $this->t('Los alumnos no pueden usar el agente hasta que se resuelva. @detalle. El aviso se quita solo cuando el proveedor vuelve a responder.', [
+        '@detalle' => implode('; ', array_map('strval', $lineas)),
       ]),
     ];
   }

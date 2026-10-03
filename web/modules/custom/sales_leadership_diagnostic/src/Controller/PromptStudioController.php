@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Controller;
 
+use Drupal\sales_leadership_diagnostic\Service\Conversation\ChatTimeFormat;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Render\Markup;
@@ -41,6 +42,7 @@ final class PromptStudioController extends ControllerBase {
     private readonly DiagnosticMessageRepository $messages,
     private readonly MarkdownRenderer $markdown,
     private readonly DateFormatterInterface $dateFormatter,
+    private readonly ChatTimeFormat $timeFormat,
   ) {}
 
   /**
@@ -53,6 +55,7 @@ final class PromptStudioController extends ControllerBase {
       $container->get(DiagnosticMessageRepository::class),
       $container->get(MarkdownRenderer::class),
       $container->get('date.formatter'),
+      $container->get(ChatTimeFormat::class),
     );
   }
 
@@ -108,6 +111,8 @@ final class PromptStudioController extends ControllerBase {
           'salesLeadershipDiagnostic' => [
             // La firma de los mensajes que el JS pinta sin recargar.
             'agentName' => $agente->label(),
+            // Y su hora, con el formato del servidor: es el mismo JS.
+            'timeFormat' => $this->timeFormat->settings(),
             // El JS del chat del alumno se reutiliza tal cual: lee su destino
             // de aquí, así que basta con apuntarlo al endpoint del ensayo.
             'messageEndpoint' => Url::fromRoute(

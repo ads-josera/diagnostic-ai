@@ -14,6 +14,7 @@ use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolGateway;
 use Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageRepository;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\QueueHealth;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\ProviderAccountStatus;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -58,6 +59,7 @@ final class UsageController extends ControllerBase {
     private readonly DateFormatterInterface $dates,
     private readonly TimeInterface $time,
     private readonly RequestStack $requestStack,
+    private readonly ProviderAccountStatus $accountStatus,
   ) {}
 
   /**
@@ -74,6 +76,7 @@ final class UsageController extends ControllerBase {
       $container->get('date.formatter'),
       $container->get('datetime.time'),
       $container->get('request_stack'),
+      $container->get(ProviderAccountStatus::class),
     );
   }
 
@@ -95,6 +98,7 @@ final class UsageController extends ControllerBase {
       '#theme' => 'sld_usage',
       '#attached' => ['library' => ['sales_leadership_diagnostic/usage']],
       '#cache' => ['max-age' => 0],
+      '#providers' => $this->proveedores(),
       '#budget' => $this->presupuesto(),
       '#queue' => $this->estadoDeLaCola(),
       '#periods' => $this->periodos($dias),
@@ -106,6 +110,34 @@ final class UsageController extends ControllerBase {
       '#people' => $this->porAlumno($desde),
       '#calls' => $this->ultimas(),
     ];
+  }
+
+  /**
+   * Los proveedores que no dan servicio por su cuenta, si hay alguno.
+   *
+   * Va lo primero de la pantalla. Es lo único que deja a TODOS los alumnos sin
+   * poder usar el agente, y lo arregla una persona recargando una cuenta: cada
+   * minuto que tarda en verlo es un minuto de alumnos atascados. El 02-10-2026
+   * se agotó un saldo y la única señal era una línea en el registro.
+   *
+   * @return array<int, array{name: string, reason: string, since: string, elapsed: string}>
+   *   Uno por proveedor cortado. Vacío si todo responde.
+   */
+  private function proveedores(): array {
+    $ahora = $this->time->getRequestTime();
+    $lista = [];
+
+    foreach ($this->accountStatus->problems() as $proveedor => $corte) {
+      $desde = (int) $corte['desde'];
+      $lista[] = [
+        'name' => $proveedor === ProviderAccountStatus::IA ? 'OpenAI' : 'Tavily',
+        'reason' => $corte['motivo'],
+        'since' => $this->dates->format($desde, 'short'),
+        'elapsed' => $this->dates->formatInterval(max(60, $ahora - $desde), 1),
+      ];
+    }
+
+    return $lista;
   }
 
   /**

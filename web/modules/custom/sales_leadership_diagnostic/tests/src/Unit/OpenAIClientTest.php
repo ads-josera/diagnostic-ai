@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\sales_leadership_diagnostic\Unit;
 
+use Drupal\sales_leadership_diagnostic\Exception\ProviderAccountException;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\ProviderAccountStatus;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
@@ -87,8 +89,11 @@ final class OpenAIClientTest extends UnitTestCase {
       $this->respuestaCorrecta(['no' => 'deberia llegarse aqui']),
     ], reintentos: 3);
 
-    $this->expectException(EngineException::class);
-    $this->expectExceptionMessage('Revise la API key');
+    // Desde el 03-10-2026 una clave rechazada es un problema de CUENTA: se
+    // anota para quien opera y sale con su propia excepción. Lo que esta
+    // prueba protege no cambia: que no se reintente.
+    $this->expectException(ProviderAccountException::class);
+    $this->expectExceptionMessage('rechazó la clave');
 
     $this->llamar($client);
   }
@@ -281,6 +286,7 @@ final class OpenAIClientTest extends UnitTestCase {
         $this->createMock(StateInterface::class),
         $loggerFactory,
       ),
+      new ProviderAccountStatus($this->createMock(StateInterface::class), $this->createMock(TimeInterface::class), $loggerFactory),
     );
   }
 

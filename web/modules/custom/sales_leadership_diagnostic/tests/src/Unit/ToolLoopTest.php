@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\sales_leadership_diagnostic\Unit;
 
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\ProviderAccountStatus;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
@@ -320,6 +321,7 @@ final class ToolLoopTest extends UnitTestCase {
         $this->createMock(StateInterface::class),
         $loggerFactory,
       ),
+      new ProviderAccountStatus($this->createMock(StateInterface::class), $this->createMock(TimeInterface::class), $loggerFactory),
     );
 
     return $cliente->completeJson([['role' => 'user', 'content' => 'hola']], 'prueba', [], 'Prueba', NULL, $tools);

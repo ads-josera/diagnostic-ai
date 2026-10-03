@@ -9,11 +9,13 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\Exception\EngineException;
 use Drupal\sales_leadership_diagnostic\Exception\InvalidEngineResponseException;
+use Drupal\sales_leadership_diagnostic\Exception\ProviderAccountException;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\DTO\AiCall;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolRunnerInterface;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\AiUsageCollector;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\ProviderAccountStatus;
 use Drupal\sales_leadership_diagnostic\Service\Telemetry\SpendGuard;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
@@ -69,6 +71,17 @@ final class OpenAIClient {
   private const RETRYABLE_STATUSES = [429, 500, 502, 503, 504];
 
   /**
+   * Códigos con los que el proveedor dice que la cuenta no tiene saldo.
+   *
+   * Llegan con estado 429, el mismo que un límite de velocidad, y por eso hay
+   * que mirar el código: tratarlos igual era reintentar algo que no se arregla
+   * esperando y registrar «el proveedor está limitando las peticiones», que es
+   * falso. `credit_balance_exhausted` es el que devolvió el 02-10-2026 al
+   * agotarse la cuenta de pruebas; `insufficient_quota` es su nombre clásico.
+   */
+  private const SIN_SALDO = ['credit_balance_exhausted', 'insufficient_quota', 'billing_hard_limit_reached'];
+
+  /**
    * Canal de log del módulo.
    *
    * @var \Drupal\Core\Logger\LoggerChannelInterface
@@ -82,6 +95,7 @@ final class OpenAIClient {
     LoggerChannelFactoryInterface $loggerFactory,
     private readonly AiUsageCollector $usage,
     private readonly SpendGuard $spend,
+    private readonly ProviderAccountStatus $accountStatus,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
   }
@@ -364,8 +378,12 @@ final class OpenAIClient {
     $body = (string) $response->getBody();
 
     if ($status !== 200) {
+      $this->comprobarCuenta($status, $body);
+
       throw new EngineException($this->describeError($status, $body), $status);
     }
+
+    $this->accountStatus->markAvailable(ProviderAccountStatus::IA);
 
     $decoded = json_decode($body, TRUE);
 
@@ -374,6 +392,40 @@ final class OpenAIClient {
     }
 
     return $decoded;
+  }
+
+  /**
+   * Corta en seco si el fallo es de la cuenta: sin saldo o clave rechazada.
+   *
+   * No se reintenta y queda anotado para quien opera: ninguna de las dos cosas
+   * se arregla esperando, solo recargando o cambiando la clave.
+   *
+   * @throws \Drupal\sales_leadership_diagnostic\Exception\ProviderAccountException
+   */
+  private function comprobarCuenta(int $status, string $body): void {
+    $decoded = json_decode($body, TRUE);
+    $code = is_array($decoded) ? (string) ($decoded['error']['code'] ?? '') : '';
+
+    $motivo = match (TRUE) {
+      $status === 429 && in_array($code, self::SIN_SALDO, TRUE) => 'la cuenta de OpenAI no tiene saldo; recárguela',
+      $status === 401 => 'OpenAI rechazó la clave; revísela',
+      default => NULL,
+    };
+
+    if ($motivo === NULL) {
+      return;
+    }
+
+    $this->logger->error('El proveedor de IA respondió @status (@code): @motivo.', [
+      '@status' => $status,
+      '@code' => $code !== '' ? $code : 'sin código',
+      '@motivo' => $motivo,
+    ]);
+    $this->accountStatus->markUnavailable(ProviderAccountStatus::IA, $motivo);
+
+    // 402 no está en RETRYABLE_STATUSES: el bucle de reintentos lo deja pasar
+    // a la primera, que es lo que se quiere.
+    throw new ProviderAccountException('El proveedor de IA no da servicio: ' . $motivo . '.', 402);
   }
 
   /**
@@ -494,10 +546,6 @@ final class OpenAIClient {
       '@status' => $status,
       '@code' => $code !== '' ? ' (' . $code . ')' : '',
     ]);
-
-    if ($status === 401) {
-      return 'El proveedor rechazó las credenciales. Revise la API key.';
-    }
 
     if ($status === 429) {
       return 'El proveedor está limitando las peticiones.';

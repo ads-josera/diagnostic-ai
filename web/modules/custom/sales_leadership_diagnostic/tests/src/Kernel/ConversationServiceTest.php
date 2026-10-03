@@ -6,6 +6,11 @@ namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
 use Drupal\Core\Queue\QueueInterface;
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\sales_leadership_diagnostic\Controller\ConversationApiController;
+use Drupal\sales_leadership_diagnostic\Exception\ProviderAccountException;
+use Drupal\sales_leadership_diagnostic\MessageRole;
+use Drupal\sales_leadership_diagnostic\Repository\DiagnosticMessageRepository;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\ProviderAccountStatus;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticContext;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn;
 use Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineInterface;
@@ -331,6 +336,96 @@ final class ConversationServiceTest extends KernelTestBase {
     $respuesta = $this->container->get(ConversationService::class)->submitMessage($session, 'Hola');
 
     $this->assertStringNotContainsString('Fuentes por cuenta', $respuesta['message_html']);
+  }
+
+  /**
+   * Sin saldo en el proveedor, un turno encolado libera la conversación.
+   *
+   * Antes la sesión se quedaba en «procesando» hasta que el cron la
+   * desatascaba a los 45 minutos, y la cola reintentaba cada minuto algo que
+   * no podía salir bien. Ahora vuelve a admitir mensajes y no relanza, así que
+   * la cola suelta el elemento.
+   */
+  public function testSinSaldoUnTurnoEncoladoLiberaLaConversacion(): void {
+    $this->container->set('sales_leadership_diagnostic.engine', new class() implements DiagnosticEngineInterface {
+
+      /**
+       * {@inheritdoc}
+       */
+      public function process(DiagnosticContext $context): DiagnosticTurn {
+        throw new ProviderAccountException('sin saldo', 402);
+      }
+
+    });
+
+    $session = $this->enEspera();
+
+    // Si se relanzara, la cola lo reintentaría cada minuto: no debe lanzar.
+    $this->container->get(ConversationService::class)->processQueuedTurn((int) $session->id());
+
+    $this->assertSame(
+      DiagnosticStatus::InProgress->value,
+      $this->recargar($session)->get('status')->value,
+      'La conversación tiene que volver a admitir mensajes.',
+    );
+  }
+
+  /**
+   * La pantalla se entera de que el turno no se hizo, y de por qué.
+   *
+   * Con un proveedor sin servicio, el mismo texto que ante el tope de gasto:
+   * no depende del alumno y reintentar no sirve. Sin él, el genérico.
+   */
+  public function testElEstadoDiceQueElTurnoNoSeHizo(): void {
+    $session = $this->enEspera();
+    $session->setStatus(DiagnosticStatus::InProgress);
+    $session->save();
+    $controlador = ConversationApiController::create($this->container);
+
+    $sinProblema = json_decode((string) $controlador->status($this->recargar($session))->getContent(), TRUE);
+    $this->assertTrue($sinProblema['failed'] ?? FALSE);
+    $this->assertStringContainsString('intenta nuevamente', $sinProblema['error']);
+
+    $this->container->get(ProviderAccountStatus::class)->markUnavailable(ProviderAccountStatus::IA, 'sin saldo');
+    $conProblema = json_decode((string) $controlador->status($this->recargar($session))->getContent(), TRUE);
+    $this->assertStringContainsString('Avisa a tu instructor', $conProblema['error']);
+    $this->assertStringNotContainsString('saldo', $conProblema['error'], 'Al alumno no se le habla de saldos.');
+  }
+
+  /**
+   * Un turno que sí terminó no se marca como fallido.
+   */
+  public function testUnTurnoTerminadoNoSeMarcaComoFallido(): void {
+    $session = $this->enEspera();
+    $this->container->get(DiagnosticMessageRepository::class)->append((int) $session->id(), MessageRole::Assistant, 'Respuesta');
+    $session->setStatus(DiagnosticStatus::InProgress);
+    $session->save();
+
+    $estado = json_decode((string) ConversationApiController::create($this->container)->status($this->recargar($session))->getContent(), TRUE);
+
+    $this->assertArrayNotHasKey('failed', $estado);
+  }
+
+  /**
+   * Una sesión con un mensaje del alumno esperando su turno en la cola.
+   */
+  private function enEspera(): DiagnosticSessionInterface {
+    $session = $this->crearSesion('agente_gap');
+    $this->container->get(DiagnosticMessageRepository::class)->append((int) $session->id(), MessageRole::User, 'Haz el trabajo por mí');
+    $session->setStatus(DiagnosticStatus::Processing);
+    $session->save();
+
+    return $session;
+  }
+
+  /**
+   * La sesión tal como está guardada ahora.
+   */
+  private function recargar(DiagnosticSessionInterface $session): DiagnosticSessionInterface {
+    $almacen = $this->container->get('entity_type.manager')->getStorage('sld_diagnostic_session');
+    $almacen->resetCache([$session->id()]);
+
+    return $almacen->load($session->id());
   }
 
   /**

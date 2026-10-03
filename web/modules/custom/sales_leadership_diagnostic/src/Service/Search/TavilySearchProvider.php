@@ -11,6 +11,7 @@ use Drupal\sales_leadership_diagnostic\DTO\SearchResult;
 use Drupal\sales_leadership_diagnostic\Exception\SearchException;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Security\SecretsProvider;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\ProviderAccountStatus;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 
@@ -56,6 +57,7 @@ final class TavilySearchProvider implements SearchProviderInterface {
     private readonly SecretsProvider $secrets,
     private readonly ConfigFactoryInterface $configFactory,
     LoggerChannelFactoryInterface $loggerFactory,
+    private readonly ProviderAccountStatus $accountStatus,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
   }
@@ -109,8 +111,26 @@ final class TavilySearchProvider implements SearchProviderInterface {
       // consulta la escribió el modelo con datos de la conversación (§43).
       $this->logger->error('El buscador respondió @status.', ['@status' => $status]);
 
+      // Los fallos de CUENTA quedan anotados para quien opera. Son los de su
+      // documentación: 401 clave inválida, 432 límite del plan, 433 límite de
+      // pago por uso. Sin esto, un Tavily sin créditos no se notaba: el agente
+      // declaraba que no pudo buscar y entregaba un Pack vacío, a cada alumno,
+      // hasta que alguien mirase el registro.
+      $motivo = match ($status) {
+        401 => 'Tavily rechazó la clave; revísela',
+        432 => 'Tavily alcanzó el límite del plan; amplíelo',
+        433 => 'Tavily alcanzó el límite de pago por uso; súbalo en su panel',
+        default => NULL,
+      };
+
+      if ($motivo !== NULL) {
+        $this->accountStatus->markUnavailable(ProviderAccountStatus::BUSCADOR, $motivo);
+      }
+
       throw new SearchException(sprintf('El buscador respondió con el código %d.', $status), $status);
     }
+
+    $this->accountStatus->markAvailable(ProviderAccountStatus::BUSCADOR);
 
     return $this->parse((string) $response->getBody());
   }

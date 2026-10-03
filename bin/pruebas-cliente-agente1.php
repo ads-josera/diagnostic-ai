@@ -437,10 +437,20 @@ if ($accion === 'lista') {
 
 if ($accion === 'informe') {
   $filas = [];
+  $fechas = [];
   foreach (glob(SLD_PC_DIR . '/*.json') as $f) {
     $filas[basename($f, '.json')] = json_decode((string) file_get_contents($f), TRUE);
+    $fechas[basename($f, '.json')] = (int) filemtime($f);
   }
   ksort($filas);
+
+  // Un caso que no llegó a correr deja su resultado ANTERIOR en el directorio,
+  // y el informe lo contaba como si fuera de esta tanda. Pasó el 02-10-2026:
+  // se agotó el saldo del proveedor en tres casos y el informe mezcló sus
+  // resultados del 12-09 con los del día. Se marca todo lo que tenga más de un
+  // día de diferencia con el más reciente.
+  $masReciente = $fechas === [] ? 0 : max($fechas);
+  $viejos = array_keys(array_filter($fechas, static fn (int $f) => $masReciente - $f > 86400));
 
   $pass = $total = 0;
   $veredictos = [];
@@ -459,7 +469,11 @@ if ($accion === 'informe') {
       $cero[] = "$id: $z";
     }
     $auto = array_keys(array_filter($fila['comprobaciones'] ?? [], static fn ($c) => !$c[0]));
-    printf("%-5s %-22s Score %-5s %-17s conf %-6s $%.2f  auto: %s\n", $id, $v, var_export($fila['score'], TRUE), $fila['madurez'] ?? '', $fila['confianza'] ?? '', $fila['usd'] ?? 0, $auto === [] ? 'ok' : implode(', ', $auto));
+    printf("%-5s %-22s Score %-5s %-17s conf %-6s $%.2f  auto: %s%s\n", $id, $v, var_export($fila['score'], TRUE), $fila['madurez'] ?? '', $fila['confianza'] ?? '', $fila['usd'] ?? 0, $auto === [] ? 'ok' : implode(', ', $auto), in_array($id, $viejos, TRUE) ? '   ← VIEJO, del ' . date('d-m-Y', $fechas[$id]) : '');
+  }
+
+  if ($viejos !== []) {
+    printf("\nOJO: %d resultado(s) NO son de esta tanda y entran en las cifras de abajo: %s. Vuelve a correrlos antes de dar el informe por bueno.\n", count($viejos), implode(', ', $viejos));
   }
 
   printf("\nVeredictos: %s\n", json_encode($veredictos, JSON_UNESCAPED_UNICODE));

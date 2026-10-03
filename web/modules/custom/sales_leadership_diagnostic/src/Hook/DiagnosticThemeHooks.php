@@ -246,6 +246,10 @@ final class DiagnosticThemeHooks {
             'longest' => NULL,
           ],
           'periods' => [],
+          // Proveedores sin servicio por su cuenta (sin saldo, clave
+          // rechazada). Vacío si todo responde. Va declarada por la misma
+          // razón que la cola: sin declararla no llega a la plantilla.
+          'providers' => [],
           // Búsquedas externas. Nulo si no ha habido ninguna: un panel a cero
           // ocupa sitio y no dice nada.
           'searches' => NULL,

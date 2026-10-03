@@ -149,7 +149,63 @@
    * Formatea la hora del mensaje optimista con la configuración del navegador.
    */
   function nowLabel() {
-    return new Date().toLocaleString();
+    return formatearHora(new Date(), (drupalSettings.salesLeadershipDiagnostic || {}).timeFormat);
+  }
+
+  /**
+   * Escribe una fecha con el MISMO patrón que usa el servidor.
+   *
+   * Antes era `toLocaleString()`, que formatea según el idioma del navegador:
+   * en uno en inglés salía «10/2/2026, 8:18:14 PM» debajo de mensajes en
+   * «3 Oct 2026 - 16:47». El servidor manda su patrón (el formato corto de
+   * Drupal) y los meses traducidos, y aquí solo se aplican: si cambian allí,
+   * esto los sigue. Cubre las letras de fecha y hora habituales; cualquier
+   * otra se escribe tal cual, y una barra invertida escapa la siguiente.
+   *
+   * @param {Date} fecha
+   *   La fecha.
+   * @param {object|undefined} formato
+   *   `{pattern, months}` del servidor.
+   *
+   * @return {string}
+   *   La fecha escrita.
+   */
+  function formatearHora(fecha, formato) {
+    if (!formato || !formato.pattern || !Array.isArray(formato.months)) {
+      // Sin el formato del servidor, al menos en español y en 24 horas.
+      return fecha.toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    const dos = (n) => String(n).padStart(2, '0');
+    const piezas = {
+      d: () => dos(fecha.getDate()),
+      j: () => String(fecha.getDate()),
+      m: () => dos(fecha.getMonth() + 1),
+      n: () => String(fecha.getMonth() + 1),
+      M: () => formato.months[fecha.getMonth()] || '',
+      Y: () => String(fecha.getFullYear()),
+      y: () => String(fecha.getFullYear()).slice(-2),
+      H: () => dos(fecha.getHours()),
+      G: () => String(fecha.getHours()),
+      i: () => dos(fecha.getMinutes()),
+      s: () => dos(fecha.getSeconds()),
+    };
+
+    let salida = '';
+
+    for (let i = 0; i < formato.pattern.length; i++) {
+      const letra = formato.pattern[i];
+
+      if (letra === '\\' && i + 1 < formato.pattern.length) {
+        salida += formato.pattern[i + 1];
+        i++;
+      }
+      else {
+        salida += piezas[letra] ? piezas[letra]() : letra;
+      }
+    }
+
+    return salida;
   }
 
   /**
@@ -272,6 +328,16 @@
 
       if (!estado.processing) {
         quitarAviso();
+
+        // Ya no procesa y no hay respuesta: el turno no llego a hacerse. El
+        // servidor manda el motivo. Sin esto se pintaba una burbuja vacia, o,
+        // si la sesion seguia atascada, se esperaba hasta el aviso de que
+        // tardaba mas de lo normal, que no era verdad.
+        if (estado.failed) {
+          onError(estado.error || GENERIC_ERROR);
+          return null;
+        }
+
         return estado;
       }
 
@@ -419,11 +485,31 @@
         if (!response.ok) {
           // 409 significa que ya hay un turno en curso para esta sesión: el
           // servidor lo rechaza mediante su bloqueo, no el navegador.
-          showError(
-            response.status === 409
-              ? Drupal.t('Ya hay una respuesta en curso. Espera un momento.')
-              : GENERIC_ERROR,
-          );
+          if (response.status === 409) {
+            showError(Drupal.t('Ya hay una respuesta en curso. Espera un momento.'));
+            return;
+          }
+
+          // El servidor manda un texto pensado para el alumno cuando lo que
+          // pasa no se arregla reintentando: el tope de gasto, un proveedor
+          // sin servicio. Hasta el 02-10-2026 se tiraba y se enseñaba siempre
+          // «intenta nuevamente», que en esos casos era mentirle. Solo trae
+          // textos escritos a mano para el alumno, nunca un detalle técnico
+          // (§58); si no viene o no se puede leer, el genérico.
+          let mensaje = GENERIC_ERROR;
+
+          try {
+            const cuerpo = await response.json();
+
+            if (cuerpo && typeof cuerpo.error === 'string' && cuerpo.error !== '') {
+              mensaje = cuerpo.error;
+            }
+          }
+          catch (error) {
+            // Sin cuerpo legible: se queda el genérico.
+          }
+
+          showError(mensaje);
           return;
         }
 

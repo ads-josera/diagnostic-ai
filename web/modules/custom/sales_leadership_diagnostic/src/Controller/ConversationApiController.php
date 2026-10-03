@@ -10,6 +10,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
 use Drupal\sales_leadership_diagnostic\Exception\DiagnosticException;
+use Drupal\sales_leadership_diagnostic\Exception\ProviderAccountException;
 use Drupal\sales_leadership_diagnostic\Exception\RateLimitException;
 use Drupal\sales_leadership_diagnostic\Exception\SpendLimitException;
 use Drupal\sales_leadership_diagnostic\Exception\SessionBusyException;
@@ -19,6 +20,7 @@ use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\ConversationService;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository;
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\ProviderAccountStatus;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -59,6 +61,7 @@ final class ConversationApiController extends ControllerBase {
     private readonly ToolCallRepository $toolCalls,
     private readonly MarkdownRenderer $markdown,
     LoggerChannelFactoryInterface $loggerFactory,
+    private readonly ProviderAccountStatus $accountStatus,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
   }
@@ -73,6 +76,7 @@ final class ConversationApiController extends ControllerBase {
       $container->get(ToolCallRepository::class),
       $container->get(MarkdownRenderer::class),
       $container->get('logger.factory'),
+      $container->get(ProviderAccountStatus::class),
     );
   }
 
@@ -109,6 +113,16 @@ final class ConversationApiController extends ControllerBase {
         ? $this->markdown->render($ultimo->content)
         : '';
       $respuesta['completed'] = $estado === DiagnosticStatus::Completed;
+
+      // Ya no procesa y lo último es del alumno: el turno no llegó a hacerse.
+      // Antes de esto el navegador pintaba una burbuja vacía o seguía
+      // esperando; ahora recibe el motivo para decírselo a la persona.
+      if ($ultimo !== FALSE && $ultimo->role === MessageRole::User) {
+        $respuesta['failed'] = TRUE;
+        $respuesta['error'] = (string) ($this->accountStatus->problems() !== []
+          ? $this->sinServicio()
+          : $this->t('No hemos podido procesar tu solicitud en este momento. Por favor intenta nuevamente.'));
+      }
     }
 
     // Sin caché: es una pregunta sobre algo que cambia cada pocos segundos.
@@ -146,16 +160,22 @@ final class ConversationApiController extends ControllerBase {
         Response::HTTP_TOO_MANY_REQUESTS,
       );
     }
+    catch (ProviderAccountException $e) {
+      // Sin saldo o con la clave rechazada en el proveedor. «Intenta
+      // nuevamente» sería mentirle: no va a funcionar hasta que alguien
+      // recargue la cuenta. Quien opera ya lo tiene en el informe de estado y
+      // en la pantalla de consumo.
+      $this->logger->error('Turno rechazado: el proveedor no da servicio por su cuenta. @message', ['@message' => ExceptionRedactor::redact($e)]);
+
+      return $this->error($this->sinServicio(), Response::HTTP_SERVICE_UNAVAILABLE);
+    }
     catch (SpendLimitException $e) {
       // Es una decisión de quien administra, no un fallo. Al alumno se le dice
       // lo que necesita saber —que no ha perdido nada y a quién avisar— y no
       // que existe un presupuesto ni por dónde va (§43, §58).
       $this->logger->warning('Turno rechazado por tope de gasto: @message', ['@message' => ExceptionRedactor::redact($e)]);
 
-      return $this->error(
-        $this->t('Esta conversación no puede continuar en este momento. No se ha perdido nada: lo que ya generaste sigue disponible. Avisa a tu instructor para reanudarla.'),
-        Response::HTTP_TOO_MANY_REQUESTS,
-      );
+      return $this->error($this->sinServicio(), Response::HTTP_TOO_MANY_REQUESTS);
     }
     catch (DiagnosticException $e) {
       // El detalle técnico queda en el log; al alumno le llega un mensaje
@@ -179,6 +199,18 @@ final class ConversationApiController extends ControllerBase {
       'result_id' => $outcome['result_id'],
       'time' => $this->dateFormatter->format($this->conversation->now(), 'short'),
     ]);
+  }
+
+  /**
+   * Lo que se le dice al alumno cuando el servicio no puede seguir.
+   *
+   * Es el mismo texto que ante el tope de gasto, a propósito: para quien lo lee
+   * la situación es la misma —no depende de él, no ha perdido nada, hay que
+   * avisar a alguien— y dos mensajes para lo mismo se leerían como dos
+   * problemas distintos. Tampoco revela que existe un proveedor ni un saldo.
+   */
+  private function sinServicio(): string {
+    return (string) $this->t('Esta conversación no puede continuar en este momento. No se ha perdido nada: lo que ya generaste sigue disponible. Avisa a tu instructor para reanudarla.');
   }
 
   /**

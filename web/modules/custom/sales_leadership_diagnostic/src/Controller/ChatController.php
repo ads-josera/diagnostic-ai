@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Controller;
 
+use Drupal\sales_leadership_diagnostic\Service\Conversation\ChatTimeFormat;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Render\Markup;
@@ -33,6 +34,7 @@ final class ChatController extends ControllerBase {
     private readonly DateFormatterInterface $dateFormatter,
     private readonly ChatWelcome $welcome,
     private readonly AgentRegistry $agents,
+    private readonly ChatTimeFormat $timeFormat,
   ) {}
 
   /**
@@ -45,6 +47,7 @@ final class ChatController extends ControllerBase {
       $container->get('date.formatter'),
       $container->get(ChatWelcome::class),
       $container->get(AgentRegistry::class),
+      $container->get(ChatTimeFormat::class),
     );
   }
 
@@ -112,6 +115,9 @@ final class ChatController extends ControllerBase {
         'drupalSettings' => [
           'salesLeadershipDiagnostic' => [
             'sessionId' => (int) $session->id(),
+            // Para que la hora de lo que se pinta sin recargar salga con el
+            // mismo formato que la de los mensajes del servidor.
+            'timeFormat' => $this->timeFormat->settings(),
             // La misma firma para los mensajes que el JS pinta sin recargar.
             'agentName' => $agente?->label(),
             'acceptsMessages' => $status->acceptsMessages(),

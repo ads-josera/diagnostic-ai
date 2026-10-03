@@ -14,6 +14,7 @@ use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticResultInterface;
 use Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface;
+use Drupal\sales_leadership_diagnostic\Exception\ProviderAccountException;
 use Drupal\sales_leadership_diagnostic\Exception\DiagnosticException;
 use Drupal\sales_leadership_diagnostic\Exception\SessionBusyException;
 use Drupal\sales_leadership_diagnostic\MessageRole;
@@ -287,7 +288,22 @@ final class ConversationService {
         return;
       }
 
-      $this->executeTurn($session, $this->contextBuilder->build($session));
+      try {
+        $this->executeTurn($session, $this->contextBuilder->build($session));
+      }
+      catch (ProviderAccountException $e) {
+        // Sin saldo o con la clave rechazada: reintentar no sirve, y dejar la
+        // sesión en «procesando» la bloqueaba 45 minutos —hasta que la
+        // desatasca el cron— mientras la cola reintentaba cada minuto en
+        // balde. Se devuelve a un estado que admite mensajes y no se relanza:
+        // así la cola suelta el elemento, y la pantalla, que ve que el último
+        // mensaje es del alumno, le dice que avise a su instructor.
+        $session->setStatus(DiagnosticStatus::InProgress);
+        $session->save();
+        $this->logger->error('El turno encolado de la sesión @id no pudo hacerse: el proveedor no da servicio por su cuenta.', [
+          '@id' => $sessionId,
+        ]);
+      }
     }
     finally {
       $this->lock->release($lockName);

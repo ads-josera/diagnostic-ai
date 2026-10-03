@@ -9,6 +9,7 @@
  * a la pregunta por la que entró.
  *
  * Variables:
+ * - providers: proveedores sin servicio por su cuenta; vacío si todo responde.
  * - periods: selector de periodo.
  * - has_data: si hay algo que enseñar.
  * - totals: cifras de cabecera, ya formateadas.
@@ -17,6 +18,23 @@
  */
 #}
 <div class="sld-usage">
+
+  {#
+    Lo primero, cuando lo hay: un proveedor sin servicio deja a TODOS los
+    alumnos sin agente. Usa el mismo componente que el aviso de la cola en su
+    nivel de alerta, para que se lea igual que lo que el gestor ya conoce.
+  #}
+  {% for provider in providers %}
+    <div class="sld-usage__queue sld-usage__queue--alerta" role="alert">
+      <div class="sld-usage__queue-head">
+        <strong>{{ '@proveedor sin servicio'|t({'@proveedor': provider.name}) }}</strong>
+        <span class="sld-usage__aside">{{ 'desde @desde · hace @hace'|t({'@desde': provider.since, '@hace': provider.elapsed}) }}</span>
+      </div>
+      <p class="sld-usage__queue-note">
+        {{ 'Motivo: @motivo. Los alumnos no pueden usar el agente hasta que se resuelva; ven un aviso de que avisen a su instructor. Este aviso se quita solo cuando el proveedor vuelve a responder.'|t({'@motivo': provider.reason}) }}
+      </p>
+    </div>
+  {% endfor %}
 
   {% if budget %}
     <div class="sld-usage__budget{{ budget.blocked ? ' sld-usage__budget--blocked' : (budget.warn ? ' sld-usage__budget--warn') }}">

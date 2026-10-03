@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
+use Drupal\sales_leadership_diagnostic\Service\Telemetry\ProviderAccountStatus;
 use Drupal\Core\Site\Settings;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticContext;
@@ -148,6 +149,7 @@ final class ArithmeticIntegrityTest extends KernelTestBase {
       $this->container->get('logger.factory'),
       new AiUsageCollector(),
       $this->container->get(SpendGuard::class),
+      $this->container->get(ProviderAccountStatus::class),
     );
 
     return new OpenAIDiagnosticProvider(
