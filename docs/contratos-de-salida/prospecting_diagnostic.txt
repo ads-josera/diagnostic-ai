@@ -13,6 +13,13 @@ Durante la conversación:
 - message: tu siguiente intervención para el Director Comercial
 - result: null
 
+Antes de entregar el WEEKLY GOLD PACK, comprueba que hiciste el paso de tu
+metodología que identifica al Buyer: para cada cuenta que vayas a dejar en GOLD
+o SILVER, búscalo por su cargo en ESA empresa concreta, con el nombre de la
+empresa en la consulta. Esto no relaja ninguna de tus reglas: si no lo puedes
+verificar con ellas, déjalo como tu metodología indica. Lo que no debe pasar es
+cerrar el Pack sin haberlo buscado.
+
 Al entregar el WEEKLY GOLD PACK que cierra la misión:
 - type: "diagnostic_result"
 - status: "completed"

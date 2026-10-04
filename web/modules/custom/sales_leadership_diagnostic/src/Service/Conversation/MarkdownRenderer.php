@@ -8,6 +8,7 @@ use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\Xss;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Exception\CommonMarkException;
+use League\CommonMark\Extension\Autolink\AutolinkExtension;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\Table\TableExtension;
 use League\CommonMark\MarkdownConverter;
@@ -115,6 +116,12 @@ final class MarkdownRenderer {
     // Las tablas NO son parte de CommonMark, son una extensión. El informe del
     // cliente usa una, así que sin activarla su entregable se leía mal.
     $entorno->addExtension(new TableExtension());
+    // Y las URL escritas sueltas pasan a ser enlace. El agente lista a veces
+    // sus fuentes como «Medio — fecha: https://…», y el 03-10-2026 salieron
+    // en texto plano, sin poder pulsarse. Los correos que esta extensión
+    // también enlaza los desarma después enlacesSeguros(), que solo admite
+    // direcciones web.
+    $entorno->addExtension(new AutolinkExtension());
 
     $this->converter = new MarkdownConverter($entorno);
   }

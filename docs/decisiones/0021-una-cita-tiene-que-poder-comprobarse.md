@@ -209,3 +209,28 @@ entregar el Pack la plataforma añade «Fuentes por cuenta» a partir de
 
 Lo que se cede: los enlaces van agrupados por cuenta al final, no pegados a cada
 frase. El agente sigue poniendo algunos en el texto por su cuenta.
+
+## Recordar el paso de compradores (03-10-2026)
+
+Con el sistema de `dc3aef0`, de 8 misiones medidas, solo 4 nombraron compradores:
+2 buscaron y no pudieron verificar —la metodología del cliente es estricta— y 2
+**ni siquiera hicieron esa ronda**, entre ellas la prueba en producción con la
+cuenta de Omar. Un Pack sin nombres pierde contra ChatGPT, que dio dos.
+
+Se añade al contrato de salida —nuestro, no el prompt del cliente— un
+recordatorio antes del Pack: buscar al Buyer de cada cuenta GOLD o SILVER por su
+cargo en esa empresa concreta, sin relajar ninguna regla de verificación.
+
+Medido con `bin/mision-real.php -- regresion 5`:
+
+| | Antes (8) | Después (5) |
+|---|---|---|
+| Hacen la ronda de compradores | 6 | 5 de 5 |
+| Nombran al menos 1 | 4 | 5 de 5 |
+| Nombran 2 o más | 4 | 4 de 5 |
+
+Las demás puertas, 5 de 5; citas sin origen, 0. El agente busca más (11-21
+búsquedas) y la misión sale a unos 0,44 USD. Cinco misiones no son una garantía;
+si en producción vuelve a salir un Pack sin nombres, el siguiente paso está
+diseñado: que la plataforma pida una pasada de compradores antes de guardar,
+como ya hace cuando la suma de un informe no cuadra.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\sales_leadership_diagnostic\Unit;
 
+use Drupal\Component\Utility\UrlHelper;
 use Drupal\sales_leadership_diagnostic\Service\Conversation\MarkdownRenderer;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -154,6 +155,48 @@ final class MarkdownRendererTest extends UnitTestCase {
     $this->assertStringContainsString('<td>', $html);
     $this->assertStringContainsString('href="https://primicias.ec/nota"', $html);
     $this->assertStringContainsString('primicias.ec', $html);
+  }
+
+  /**
+   * Una URL escrita suelta también acaba siendo un enlace.
+   *
+   * El agente a veces lista sus fuentes como «Medio — fecha: https://…» en
+   * texto plano. El 03-10-2026 salieron así, sin enlace, justo encima de
+   * «Fuentes por cuenta»: una lista de direcciones que no se podían pulsar.
+   */
+  public function testUnaUrlSueltaAcabaSiendoUnEnlace(): void {
+    $html = $this->renderer->render('Grupo ALESSA — Vistazo: https://www.vistazo.com/negocios/alessa-plan');
+
+    $this->assertStringContainsString('href="https://www.vistazo.com/negocios/alessa-plan"', $html);
+    $this->assertStringContainsString('rel="nofollow noopener noreferrer"', $html);
+    // El dominio ya se ve en el propio texto: no se repite entre paréntesis.
+    $this->assertStringNotContainsString('sld-fuente', $html);
+  }
+
+  /**
+   * Un correo suelto NO se convierte en enlace.
+   *
+   * La extensión de autoenlace también enlaza correos con `mailto:`, y aquí
+   * solo se admiten direcciones web: queda como texto, sin enlace.
+   */
+  public function testUnCorreoSueltoNoSeConvierteEnEnlace(): void {
+    // Con los protocolos que Drupal admite de fábrica, que incluyen mailto.
+    // Sin esto, en una prueba unitaria el filtro XSS lo quitaría por su cuenta
+    // —fuera del contenedor solo admite http y https— y la prueba pasaría
+    // aunque enlacesSeguros() dejara de hacer su parte, que en producción es
+    // la única que lo para.
+    $antes = UrlHelper::getAllowedProtocols();
+    UrlHelper::setAllowedProtocols(['http', 'https', 'mailto']);
+
+    try {
+      $html = $this->renderer->render('Escribe a ventas@ejemplo.com');
+    }
+    finally {
+      UrlHelper::setAllowedProtocols($antes);
+    }
+
+    $this->assertStringNotContainsString('<a', $html);
+    $this->assertStringContainsString('ventas@ejemplo.com', $html);
   }
 
   /**
