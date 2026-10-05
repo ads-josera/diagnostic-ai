@@ -69,6 +69,10 @@ Campos de "result":
   · competing_alternative: la alternativa que compite con esa hipótesis.
   · buyer: nominal si lo verificaste; el rol si no.
   · buyer_verified: true SOLO si confirmaste empleo, cargo, scope y recencia.
+  · buyer_source: si buyer_verified es true, la url —de tus resultados de
+    búsqueda— de la página que nombra a esa persona con su cargo en esa
+    empresa; tiene que estar también en sources. Cadena vacía si no está
+    verificado. La plataforma comprueba que esa página lo nombre.
   · do_not_claim: qué NO se debe afirmar de esta cuenta.
   · routing: el motion recomendado y quién lo hace.
   · outreach_message: el mensaje listo para copiar, tal como se enviaría.

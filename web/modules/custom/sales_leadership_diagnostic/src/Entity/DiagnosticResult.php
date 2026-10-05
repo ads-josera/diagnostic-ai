@@ -284,6 +284,9 @@ class DiagnosticResult extends ContentEntityBase implements DiagnosticResultInte
         'competing_alternative' => trim((string) ($cruda['competing_alternative'] ?? '')),
         'buyer' => trim((string) ($cruda['buyer'] ?? '')),
         'buyer_verified' => (bool) ($cruda['buyer_verified'] ?? FALSE),
+        // La fuente que prueba al comprador. Se guarda para que se pueda
+        // auditar después qué página respaldó cada «verificado».
+        'buyer_source' => trim((string) ($cruda['buyer_source'] ?? '')),
         'do_not_claim' => $this->listaDeTextos($cruda['do_not_claim'] ?? []),
         'routing' => trim((string) ($cruda['routing'] ?? '')),
         'outreach_message' => trim((string) ($cruda['outreach_message'] ?? '')),

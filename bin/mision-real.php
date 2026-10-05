@@ -291,6 +291,12 @@ if ($accion === 'regresion') {
     // mediría otra cosa.
     $bd->delete('sld_research_entitlement')->condition('uid', $uid)->execute();
     $bd->delete('sld_evidence')->condition('uid', $uid)->execute();
+    // Y su consumo del periodo. Sin esto, la cuenta de prueba acumula las
+    // búsquedas de todas las tandas y acaba en su tope de 200: el 05-10-2026,
+    // tras unas 25 misiones, las cinco de una tanda salieron sin investigar y
+    // la regresión dio un falso «no pasa». Solo afecta a esta cuenta, que no es
+    // de nadie.
+    $bd->delete('sld_tool_call')->condition('uid', $uid)->execute();
     $bd->delete('sld_account_event')->condition('uid', $uid)->execute();
     $bd->delete('sld_account')->condition('uid', $uid)->execute();
     $memorias = \Drupal::entityTypeManager()->getStorage('sld_student_memory');
@@ -395,6 +401,14 @@ if ($accion === 'regresion') {
     // puerta dura. El resumen falla si NINGUNA misión de la tanda nombra a
     // alguien, que ya sería sistemático.
     printf("  %s  %-28s %s\n", count($nombrados) >= 1 ? 'PASA   ' : 'AVISO  ', 'nombra compradores', count($nombrados) . ': ' . implode(', ', array_map(fn ($c) => ($c['buyer'] ?? '?') . ' (' . ($c['name'] ?? '?') . ')', $nombrados)));
+
+    // Desde el 05-10-2026, un comprador verificado ha pasado la comprobación de
+    // la plataforma: su fuente salió de la búsqueda y lo nombra. Si el agente no
+    // lo logró respaldar, se bajó a no verificado y el Pack lleva una nota.
+    $conFuente = count(array_filter($nombrados, fn ($c) => trim((string) ($c['buyer_source'] ?? '')) !== ''));
+    printf("  %s  %-28s %d de %d con la fuente que los prueba; nota de «no confirmado»: %s\n",
+      'INFO   ', 'respaldo de compradores', $conFuente, count($nombrados),
+      str_contains($guardado, 'Comprobación de la plataforma') ? 'SÍ' : 'no');
 
     foreach ($revision[CitationAudit::OTRA_PAGINA] as $url) {
       printf("     · otra página: %s\n", $url);

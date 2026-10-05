@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
+use Drupal\sales_leadership_diagnostic\Service\Research\RetrievedPages;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn;
 use Drupal\sales_leadership_diagnostic\Service\Engine\Tool\LedgerReadTool;
@@ -310,6 +311,32 @@ final class ToolGatewayTest extends KernelTestBase {
       ['https://x.mx'],
       $this->container->get(ToolCallRepository::class)->retrievedUrlsInMission(self::MISION),
     );
+  }
+
+  /**
+   * El texto de cada resultado queda a mano durante el turno.
+   *
+   * Es lo que deja comprobar que la fuente de un comprador lo nombra. Sin
+   * esto la comprobación no tendría qué leer y no acusaría a nadie: callaría
+   * justo donde hacía falta.
+   */
+  public function testElTextoDeCadaResultadoSeGuardaDuranteElTurno(): void {
+    $this->turno();
+    $paginas = $this->container->get(RetrievedPages::class);
+    $gateway = new ToolGateway(
+      new ToolBox([$this->espia]),
+      $this->container->get(CurrentTurn::class),
+      $this->container->get(ToolCallRepository::class),
+      $this->container->get(SpendGuard::class),
+      $this->container->get('config.factory'),
+      $this->container->get('logger.factory'),
+      $this->container->get(ResearchEntitlementService::class),
+      $paginas,
+    );
+
+    $gateway->run('buscar_web', ['consulta' => 'cemex']);
+
+    $this->assertNotNull($paginas->textOf(self::MISION, 'https://x.mx'));
   }
 
   /**

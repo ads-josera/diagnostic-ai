@@ -118,18 +118,18 @@ final class CitationAudit implements CitationAuditInterface {
     $dominios = [];
 
     foreach ($this->calls->retrievedUrlsInMission($sessionId) as $url) {
-      $exactas[$this->normalizar($url)] = TRUE;
-      $dominios[$this->dominio($url)] = TRUE;
+      $exactas[UrlKey::of($url)] = TRUE;
+      $dominios[UrlKey::domain($url)] = TRUE;
     }
 
     $declaradas = [];
 
     foreach ($this->ledger->sourcesFor($uid, $sessionId) as $fuente) {
-      $declaradas[$this->normalizar($fuente)] = TRUE;
+      $declaradas[UrlKey::of($fuente)] = TRUE;
     }
 
     foreach ($citadas as $url) {
-      $normal = $this->normalizar($url);
+      $normal = UrlKey::of($url);
 
       if (isset($exactas[$normal])) {
         $revision[self::RESPALDADAS][] = $url;
@@ -144,7 +144,7 @@ final class CitationAudit implements CitationAuditInterface {
       // Mismo sitio, otra página. Se separa de lo no visto porque son dos
       // problemas distintos: aquí el agente pudo seguir un enlace que venía
       // dentro de un resultado, y allí la URL no tiene ningún origen.
-      $revision[isset($dominios[$this->dominio($url)]) ? self::OTRA_PAGINA : self::NO_VISTAS][] = $url;
+      $revision[isset($dominios[UrlKey::domain($url)]) ? self::OTRA_PAGINA : self::NO_VISTAS][] = $url;
     }
 
     $this->avisar($sessionId, $revision, count($citadas));
@@ -240,38 +240,6 @@ final class CitationAudit implements CitationAuditInterface {
       static fn (string $url): string => rtrim($url, '.,;:!?'),
       $coincidencias[0],
     );
-  }
-
-  /**
-   * La misma dirección escrita de una sola forma.
-   *
-   * Se igualan las diferencias que NO cambian la página: el esquema, el «www.»,
-   * la barra final y el fragmento. La ruta y los parámetros se conservan, y eso
-   * es deliberado: la invención más probable no es un dominio falso, es una
-   * ruta inventada dentro de un dominio real, y normalizar hasta el dominio la
-   * dejaría pasar por buena.
-   */
-  private function normalizar(string $url): string {
-    $partes = parse_url(trim($url));
-
-    if ($partes === FALSE || !isset($partes['host'])) {
-      return strtolower(trim($url));
-    }
-
-    $camino = rtrim($partes['path'] ?? '', '/');
-
-    return $this->dominio($url)
-      . strtolower($camino)
-      . (isset($partes['query']) ? '?' . $partes['query'] : '');
-  }
-
-  /**
-   * El sitio al que apunta, sin «www.» y en minúsculas.
-   */
-  private function dominio(string $url): string {
-    $host = strtolower((string) parse_url(trim($url), PHP_URL_HOST));
-
-    return str_starts_with($host, 'www.') ? substr($host, 4) : $host;
   }
 
 }

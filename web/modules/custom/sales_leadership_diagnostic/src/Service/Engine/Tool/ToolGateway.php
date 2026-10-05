@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Service\Engine\Tool;
 
+use Drupal\sales_leadership_diagnostic\Service\Research\RetrievedPages;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
@@ -85,6 +86,9 @@ final class ToolGateway implements ToolRunnerInterface {
     private readonly ConfigFactoryInterface $configFactory,
     LoggerChannelFactoryInterface $loggerFactory,
     private readonly ResearchEntitlementService $entitlements,
+    // Opcional para no obligar a las pruebas que no miran esto a construirlo.
+    // En la plataforma lo pasa siempre ToolBoxFactory.
+    private readonly ?RetrievedPages $pages = NULL,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
   }
@@ -150,6 +154,7 @@ final class ToolGateway implements ToolRunnerInterface {
     $salida = $this->tools->run($name, $arguments);
     $latencia = (int) round((microtime(TRUE) - $inicio) * 1000);
     $resultados = $this->resultsOf($salida);
+    $this->recordarTextos($resultados);
 
     $this->calls->record(
       uid: $this->turn->uid(),
@@ -334,6 +339,30 @@ final class ToolGateway implements ToolRunnerInterface {
     return is_array($decoded) && is_array($decoded['resultados'] ?? NULL)
       ? $decoded['resultados']
       : [];
+  }
+
+  /**
+   * Guarda, mientras dura el turno, lo que trajo cada resultado.
+   *
+   * Es lo que deja comprobar después que la página que el agente presenta como
+   * prueba de un comprador lo nombra de verdad. Ver RetrievedPages.
+   */
+  private function recordarTextos(array $resultados): void {
+    if ($this->pages === NULL) {
+      return;
+    }
+
+    foreach ($resultados as $resultado) {
+      if (!is_array($resultado) || !is_string($resultado['url'] ?? NULL)) {
+        continue;
+      }
+
+      $this->pages->remember(
+        $this->turn->sessionId(),
+        $resultado['url'],
+        trim((string) ($resultado['titulo'] ?? '') . ' ' . (string) ($resultado['extracto'] ?? '')),
+      );
+    }
   }
 
   /**

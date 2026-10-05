@@ -181,6 +181,23 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Diagnostic\DiagnosticResponseValidator'
       - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolBoxFactory'
       - '@logger.factory'
+      - '@Drupal\sales_leadership_diagnostic\Service\Research\BuyerEvidenceCheck'
+      - '@Drupal\sales_leadership_diagnostic\Service\Research\SourceRepair'
+
+  # Devuelve a su direccion real las fuentes que el agente reescribio de
+  # memoria y daban 404 (05-10-2026).
+  Drupal\sales_leadership_diagnostic\Service\Research\SourceRepair:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository'
+
+  # Que cada comprador dado por verificado tenga una fuente que lo nombre
+  # (05-10-2026). Si no, el motor pide la correccion antes de guardar.
+  Drupal\sales_leadership_diagnostic\Service\Research\BuyerEvidenceCheck:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\CurrentTurn'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository'
+      - '@Drupal\sales_leadership_diagnostic\Service\Research\RetrievedPages'
 
   Drupal\sales_leadership_diagnostic\Service\Engine\DiagnosticEngineFactory:
     arguments:
@@ -227,6 +244,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Research\CitationAudit'
       - '@Drupal\sales_leadership_diagnostic\Service\Conversation\SourcesAppendix'
       - '@Drupal\sales_leadership_diagnostic\Service\Conversation\OutreachQuoter'
+      - '@Drupal\sales_leadership_diagnostic\Service\Research\RetrievedPages'
       - '@logger.factory'
 
   # --- Repositorios --------------------------------------------------------
@@ -457,6 +475,11 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Research\ResearchEntitlementService'
       - '@Drupal\sales_leadership_diagnostic\Service\Evidence\EvidenceLedger'
       - '@entity_type.manager'
+      - '@Drupal\sales_leadership_diagnostic\Service\Research\RetrievedPages'
+
+  # El texto de cada resultado mientras dura el turno, para comprobar que la
+  # fuente de un comprador lo nombra (05-10-2026). En memoria, no en la base.
+  Drupal\sales_leadership_diagnostic\Service\Research\RetrievedPages: {}
 
   # De quien es el turno en curso. El gateway lo necesita DURANTE la llamada,
   # no al terminarla, y esa identidad no puede viajar en lo que se manda al

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Service\Engine\Tool;
 
+use Drupal\sales_leadership_diagnostic\Service\Research\RetrievedPages;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
@@ -50,6 +51,7 @@ final class ToolBoxFactory {
     private readonly ResearchEntitlementService $entitlements,
     private readonly EvidenceLedger $ledger,
     private readonly EntityTypeManagerInterface $entityTypeManager,
+    private readonly RetrievedPages $pages,
   ) {}
 
   /**
@@ -135,6 +137,7 @@ final class ToolBoxFactory {
       $this->configFactory,
       $this->loggerFactory,
       $this->entitlements,
+      $this->pages,
     );
   }
 

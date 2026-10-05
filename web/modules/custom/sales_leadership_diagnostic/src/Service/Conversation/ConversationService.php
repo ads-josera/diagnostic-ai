@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Service\Conversation;
 
+use Drupal\sales_leadership_diagnostic\Service\Research\RetrievedPages;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Lock\LockBackendInterface;
@@ -112,6 +113,7 @@ final class ConversationService {
     private readonly CitationAuditInterface $citations,
     private readonly SourcesAppendix $sources,
     private readonly OutreachQuoter $quoter,
+    private readonly RetrievedPages $pages,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -238,6 +240,8 @@ final class ConversationService {
       // quien no fue.
       $this->lock->release($lockName);
       $this->currentTurn->end();
+      // El texto de las páginas solo hacía falta durante el turno.
+      $this->pages->forget($sessionId);
 
       // Lo gastado se anota también si falló, por el mismo motivo que el
       // limitador se registra antes de llamar: lo que cuesta dinero es el
@@ -308,6 +312,8 @@ final class ConversationService {
     finally {
       $this->lock->release($lockName);
       $this->currentTurn->end();
+      // El texto de las páginas solo hacía falta durante el turno.
+      $this->pages->forget($sessionId);
 
       $this->usageRepository->recordAll(
         $this->usageCollector->drain(),

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\sales_leadership_diagnostic\Service\Engine;
 
+use Drupal\sales_leadership_diagnostic\Service\Research\SourceRepair;
+use Drupal\sales_leadership_diagnostic\Service\Research\BuyerEvidenceCheck;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\sales_leadership_diagnostic\DTO\DiagnosticContext;
@@ -125,6 +127,9 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
                 'competing_alternative' => ['type' => 'string'],
                 'buyer' => ['type' => 'string'],
                 'buyer_verified' => ['type' => 'boolean'],
+                // La URL que prueba al comprador verificado: la plataforma
+                // comprueba que salió de la búsqueda y que lo nombra.
+                'buyer_source' => ['type' => 'string'],
                 'do_not_claim' => ['type' => 'array', 'items' => ['type' => 'string']],
                 'routing' => ['type' => 'string'],
                 // El mensaje listo para copiar. Vacío si está bloqueada, y esa
@@ -159,6 +164,7 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
                 'competing_alternative',
                 'buyer',
                 'buyer_verified',
+                'buyer_source',
                 'do_not_claim',
                 'routing',
                 'outreach_message',
@@ -207,6 +213,10 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
     private readonly DiagnosticResponseValidator $validator,
     private readonly ToolBoxFactory $tools,
     LoggerChannelFactoryInterface $loggerFactory,
+    // Opcional para las pruebas que no miran compradores; en la plataforma lo
+    // pasa siempre el contenedor.
+    private readonly ?BuyerEvidenceCheck $buyers = NULL,
+    private readonly ?SourceRepair $sourceRepair = NULL,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
   }
@@ -220,11 +230,154 @@ final class OpenAIDiagnosticProvider implements DiagnosticEngineInterface {
     $turno = $this->validator->validate($raw);
     $descuadre = $this->validator->arithmeticGap($turno);
 
-    if ($descuadre === NULL) {
+    if ($descuadre !== NULL) {
+      $turno = $this->corregirDescuadre($mensajes, $raw, $turno, $descuadre);
+    }
+
+    return $this->respaldarCompradores($mensajes, $this->repararFuentes($turno));
+  }
+
+  /**
+   * Devuelve a su dirección real las fuentes que el agente reescribió.
+   *
+   * El 05-10-2026 una sola misión citó tres páginas con la dirección retocada
+   * de memoria, y las tres daban 404. La buena la trajo la búsqueda, así que no
+   * hace falta preguntarle al modelo. Va antes de comprobar los compradores:
+   * si la fuente de uno era una dirección retocada, se lee ya la buena.
+   */
+  private function repararFuentes(DiagnosticTurn $turno): DiagnosticTurn {
+    if ($this->sourceRepair === NULL || !$turno->completed || !is_array($turno->result)) {
       return $turno;
     }
 
-    return $this->corregirDescuadre($mensajes, $raw, $turno, $descuadre);
+    $reparado = $this->sourceRepair->forCurrentTurn($turno->result, $turno->message);
+
+    if ($reparado['reparadas'] === []) {
+      return $turno;
+    }
+
+    // Cuántas, no cuáles: las direcciones son públicas, pero no hace falta.
+    $this->logger->info('fuentes_reparadas: @n fuente(s) reescritas de memoria vuelven a la dirección que trajo la búsqueda.', [
+      '@n' => count($reparado['reparadas']),
+    ]);
+
+    return new DiagnosticTurn($reparado['message'], $turno->completed, $reparado['result'], $turno->raw);
+  }
+
+  /**
+   * Que cada comprador dado por verificado tenga una fuente que lo nombre.
+   *
+   * El 03-10-2026 el agente dio por verificado al directivo de un banco con
+   * dos fuentes que no lo demostraban, mientras otra de sus propios resultados,
+   * que sí lo nombraba con su cargo, se quedaba sin citar. Para quien recibe el
+   * Pack, «verificado» es la luz verde para escribirle a esa persona.
+   *
+   * Mismo camino que el descuadre: se le pide al agente que lo arregle antes de
+   * guardar —que cite la fuente que lo prueba, que la busque o que lo baje a no
+   * verificado— y se revisa otra vez. Si sigue sin respaldo, la plataforma lo
+   * baja a no verificado y lo dice en el Pack. Lo que nunca sale es un
+   * «verificado» sin la fuente que lo demuestre.
+   *
+   * @param array<int, array{role: string, content: string}> $mensajes
+   *   La conversación que se envió.
+   * @param \Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn $turno
+   *   El turno, ya validado y con la aritmética resuelta.
+   */
+  private function respaldarCompradores(array $mensajes, DiagnosticTurn $turno): DiagnosticTurn {
+    if ($this->buyers === NULL || !$turno->completed || !is_array($turno->result)) {
+      return $turno;
+    }
+
+    $huecos = $this->buyers->gaps($turno->result);
+    $vistos = $this->buyers->lastStats();
+
+    // Siempre que haya compradores verificados, se dice cuántos se comprobaron
+    // LEYENDO su fuente. Sin esta línea, «ninguno sin respaldo» no distingue
+    // entre que todo cuadraba y que no había texto que leer.
+    if ($vistos['verificados'] > 0) {
+      $this->logger->info('compradores_comprobados: @v verificado(s), @l comprobado(s) leyendo su fuente, @h sin respaldo.', [
+        '@v' => $vistos['verificados'],
+        '@l' => $vistos['leidos'],
+        '@h' => count($huecos),
+      ]);
+    }
+
+    if ($huecos === []) {
+      return $turno;
+    }
+
+    // Solo cuántos y por qué: nunca nombres ni contenido (§43).
+    $this->logger->warning('compradores_sin_respaldo: @n comprador(es) dados por verificados sin una fuente que los nombre; se pide al agente que lo corrija antes de guardar.', [
+      '@n' => count($huecos),
+    ]);
+
+    $lista = implode("\n", array_map(
+      static fn (array $h) => sprintf('- %s (%s): %s', $h['cuenta'], $h['comprador'], $h['motivo']),
+      $huecos,
+    ));
+
+    $mensajes[] = ['role' => 'assistant', 'content' => (string) json_encode($turno->raw, JSON_UNESCAPED_UNICODE)];
+    $mensajes[] = [
+      'role' => 'system',
+      'content' => "Control de evidencia de la plataforma. Marcaste estos compradores como verificados, pero la fuente que los respalda no lo demuestra:\n" . $lista . "\n\nPara cada uno: si entre tus resultados de búsqueda hay una página que nombra a esa persona con su cargo en esa empresa, ponla en buyer_source y en las sources de la cuenta. Si no la tienes, puedes buscarla. Si no la encuentras, márcalo como no verificado según tu metodología —buyer_verified false, el rol en lugar del nombre, buyer_source vacío— y ajusta el mensaje y el correo de esa cuenta. No relajes ninguna de tus reglas y no cambies nada que esto no afecte. Devuelve el Pack completo —el mensaje y el resultado— en el mismo formato.",
+    ];
+
+    try {
+      $corregido = $this->validator->validate($this->pedir($mensajes, 'Corrección de evidencia de compradores'));
+    }
+    catch (DiagnosticException $e) {
+      $this->logger->warning('No se pudo obtener la corrección de los compradores: se guarda el Pack con ellos bajados a no verificado.');
+      return $this->bajarSinRespaldo($turno, $huecos);
+    }
+
+    if (!$corregido->completed || !is_array($corregido->result)) {
+      $this->logger->warning('La corrección de compradores no devolvió un Pack: se guarda el original con ellos bajados a no verificado.');
+      return $this->bajarSinRespaldo($turno, $huecos);
+    }
+
+    $siguen = $this->buyers->gaps($corregido->result);
+
+    if ($siguen !== []) {
+      $this->logger->warning('compradores_sin_respaldo: tras pedir la corrección siguen @n sin una fuente que los nombre; se bajan a no verificado.', [
+        '@n' => count($siguen),
+      ]);
+      return $this->bajarSinRespaldo($corregido, $siguen);
+    }
+
+    $this->logger->info('compradores_respaldados: el agente respaldó o corrigió los compradores antes de guardar.');
+
+    return $corregido;
+  }
+
+  /**
+   * Baja a no verificado los compradores sin respaldo y lo dice en el Pack.
+   *
+   * Último recurso, cuando el agente no lo resolvió. Se cambia el dato y se
+   * añade una nota al mensaje, porque el texto del agente puede seguir diciendo
+   * «verificado» y es lo que la persona lee: sin la nota, el dato y el texto se
+   * contradirían justo donde más importa.
+   *
+   * @param \Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn $turno
+   *   El turno con los compradores sin respaldo.
+   * @param array<int, array{cuenta: string, comprador: string, motivo: string}> $huecos
+   *   Las cuentas sin respaldo.
+   */
+  private function bajarSinRespaldo(DiagnosticTurn $turno, array $huecos): DiagnosticTurn {
+    $cuentas = array_column($huecos, 'cuenta');
+    $resultado = $turno->result;
+
+    foreach ($resultado['accounts'] ?? [] as $i => $cuenta) {
+      if (is_array($cuenta) && in_array(trim((string) ($cuenta['name'] ?? '')), $cuentas, TRUE)) {
+        $resultado['accounts'][$i]['buyer_verified'] = FALSE;
+        $resultado['accounts'][$i]['buyer_source'] = '';
+      }
+    }
+
+    $nota = "\n\n**Comprobación de la plataforma:** " . (count($huecos) === 1
+      ? 'el comprador indicado para ' . $huecos[0]['cuenta'] . ' no está confirmado por una fuente de esta investigación. Verifícalo antes de contactar.'
+      : 'los compradores indicados para ' . implode(', ', $cuentas) . ' no están confirmados por una fuente de esta investigación. Verifícalos antes de contactar.');
+
+    return new DiagnosticTurn(rtrim($turno->message) . $nota, $turno->completed, $resultado, $turno->raw);
   }
 
   /**
