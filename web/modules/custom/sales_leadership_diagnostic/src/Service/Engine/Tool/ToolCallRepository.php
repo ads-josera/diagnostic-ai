@@ -182,6 +182,32 @@ final class ToolCallRepository {
   }
 
   /**
+   * Cuántas llamadas de una herramienta trajeron algo en una misión.
+   *
+   * Concedida no es lo mismo que útil: con el buscador sin servicio, la llamada
+   * se concede, sale y vuelve vacía. Es lo que distingue una misión que
+   * investigó de una que no pudo. Ver UnsearchedMission.
+   *
+   * @param int $sessionId
+   *   Conversación.
+   * @param string $tool
+   *   Herramienta.
+   *
+   * @return int
+   *   Llamadas concedidas con al menos un resultado.
+   */
+  public function fruitfulInMission(int $sessionId, string $tool): int {
+    return (int) $this->database->select(self::TABLE, 't')
+      ->condition('session_id', $sessionId)
+      ->condition('tool', $tool)
+      ->condition('allowed', 1)
+      ->condition('results', 0, '>')
+      ->countQuery()
+      ->execute()
+      ->fetchField();
+  }
+
+  /**
    * Llamadas concedidas a una persona desde una fecha.
    *
    * Este contador NO es redundante con el de la misión. Sin él, el tope se

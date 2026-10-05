@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\sales_leadership_diagnostic\Service\Conversation;
 
 use Drupal\sales_leadership_diagnostic\Service\Research\RetrievedPages;
+use Drupal\sales_leadership_diagnostic\Service\Research\UnsearchedMission;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Lock\LockBackendInterface;
@@ -114,6 +115,7 @@ final class ConversationService {
     private readonly SourcesAppendix $sources,
     private readonly OutreachQuoter $quoter,
     private readonly RetrievedPages $pages,
+    private readonly UnsearchedMission $unsearched,
     LoggerChannelFactoryInterface $loggerFactory,
   ) {
     $this->logger = $loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL);
@@ -366,9 +368,20 @@ final class ConversationService {
       $mensaje = rtrim($mensaje) . "\n\n" . $fuentes;
     }
 
+    // Una misión que no pudo investigar porque el buscador estaba cortado no
+    // le cuenta al alumno. Se decide antes de guardar el mensaje para que el
+    // aviso quede con el Pack y siga ahí al recargar. Ver UnsearchedMission.
+    $devolver = $turn->completed
+      && !(bool) $session->get('is_sandbox')->value
+      && $this->unsearched->applies($sessionId);
+
+    if ($devolver) {
+      $mensaje = UnsearchedMission::NOTA . "\n\n" . $mensaje;
+    }
+
     $this->messages->append($sessionId, MessageRole::Assistant, $mensaje, $turn->raw);
 
-    $resultId = $this->finalizeSession($session, $turn);
+    $resultId = $this->finalizeSession($session, $turn, $devolver);
 
     $this->logger->info('Turno completado en la sesión @id (turno @n).', [
       '@id' => $sessionId,
@@ -387,10 +400,17 @@ final class ConversationService {
   /**
    * Actualiza el estado de la sesión y crea el resultado si procede.
    *
+   * @param \Drupal\sales_leadership_diagnostic\Entity\DiagnosticSessionInterface $session
+   *   La conversación.
+   * @param \Drupal\sales_leadership_diagnostic\DTO\DiagnosticTurn $turn
+   *   El turno que acaba de generarse.
+   * @param bool $devolver
+   *   Si la misión se le devuelve al alumno en lugar de cerrarse.
+   *
    * @return int|null
    *   Identificador del resultado creado, si el diagnóstico concluyó.
    */
-  private function finalizeSession(DiagnosticSessionInterface $session, DiagnosticTurn $turn): ?int {
+  private function finalizeSession(DiagnosticSessionInterface $session, DiagnosticTurn $turn, bool $devolver = FALSE): ?int {
     $session->incrementTurnCount();
 
     if (!$turn->completed) {
@@ -411,7 +431,10 @@ final class ConversationService {
     // Un ensayo del gestor no cierra la misión de nadie: no la abrió. Y el
     // diagnóstico de otro agente tampoco: solo la cierra la sesión que la
     // abrió.
-    if (!(bool) $session->get('is_sandbox')->value) {
+    if ($devolver) {
+      $this->entitlements->releaseMission((int) $session->getOwnerId(), (int) $session->id());
+    }
+    elseif (!(bool) $session->get('is_sandbox')->value) {
       $this->entitlements->completeMission((int) $session->getOwnerId(), (int) $session->id());
     }
 

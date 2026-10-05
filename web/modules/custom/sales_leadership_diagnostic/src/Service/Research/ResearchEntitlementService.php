@@ -156,6 +156,51 @@ final class ResearchEntitlementService {
   }
 
   /**
+   * Devuelve la misión, como si no se hubiera abierto.
+   *
+   * Para un solo caso: el buscador estaba cortado por un problema de su cuenta
+   * y la misión no llegó a traer nada. El alumno no tuvo la culpa, y gastarle
+   * la única misión de la semana lo dejaría siete días sin agente por un corte
+   * nuestro. Lo decide UnsearchedMission; aquí solo se deshace la apertura.
+   *
+   * Con las mismas protecciones que al cerrarla: solo la conversación que la
+   * abrió, y solo si sigue activa. La evidencia que se hubiera anotado se
+   * conserva; lo que vuelve es la capacidad de abrir otra.
+   *
+   * @param int $uid
+   *   Alumno.
+   * @param int $sessionId
+   *   Conversación que la abrió.
+   *
+   * @return bool
+   *   Cierto si se devolvió.
+   */
+  public function releaseMission(int $uid, int $sessionId): bool {
+    $tocadas = $this->database->update(self::TABLE)
+      ->fields([
+        'mission_state' => MissionState::Available->value,
+        // Los mismos valores con los que nace la fila de la semana.
+        'mission_id' => '',
+        'session_id' => NULL,
+        'started_at' => 0,
+        'changed' => $this->time->getRequestTime(),
+      ])
+      ->condition('uid', $uid)
+      ->condition('period', $this->periodFor($uid))
+      ->condition('mission_state', MissionState::Active->value)
+      ->condition('session_id', $sessionId)
+      ->execute();
+
+    if ($tocadas > 0) {
+      $this->logger->notice('mision_devuelta: el alumno @uid recupera su misión de la semana; no pudo investigar porque el buscador estaba sin servicio.', [
+        '@uid' => $uid,
+      ]);
+    }
+
+    return $tocadas > 0;
+  }
+
+  /**
    * Anota que se gastó una comprobación puntual.
    */
   public function useRecheck(int $uid): void {

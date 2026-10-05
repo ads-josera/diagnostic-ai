@@ -245,6 +245,7 @@ services:
       - '@Drupal\sales_leadership_diagnostic\Service\Conversation\SourcesAppendix'
       - '@Drupal\sales_leadership_diagnostic\Service\Conversation\OutreachQuoter'
       - '@Drupal\sales_leadership_diagnostic\Service\Research\RetrievedPages'
+      - '@Drupal\sales_leadership_diagnostic\Service\Research\UnsearchedMission'
       - '@logger.factory'
 
   # --- Repositorios --------------------------------------------------------
@@ -589,3 +590,8 @@ services:
       - '@keyvalue'
       - '@queue'
       - '@logger.factory'
+
+  Drupal\sales_leadership_diagnostic\Service\Research\UnsearchedMission:
+    arguments:
+      - '@Drupal\sales_leadership_diagnostic\Service\Telemetry\ProviderAccountStatus'
+      - '@Drupal\sales_leadership_diagnostic\Service\Engine\Tool\ToolCallRepository'

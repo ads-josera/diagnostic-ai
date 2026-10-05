@@ -111,3 +111,32 @@ El último renglón es el escenario del §14, comprobado de punta a punta.
 ledger. Cuando lo haya, los follow-ups posteriores a la misión podrán trabajar
 con la evidencia guardada en vez de quedarse sin nada, que es el «después de
 completar, los follow-ups siguen funcionando con evidencia persistida» del §2.
+
+## Cuándo una misión no cuenta (05-10-2026)
+
+Ese día se agotó el plan del buscador a mitad de una misión. Cada búsqueda
+volvió vacía, el agente cerró el Pack igualmente y, con él, se cerró la única
+misión de la semana del alumno: siete días sin agente por un corte nuestro.
+José Raúl aprobó la regla.
+
+Ahora la misión **se devuelve**, y vuelve a `AVAILABLE` como si no se hubiera
+abierto, solo si las dos cosas son ciertas a la vez:
+
+1. el buscador está marcado sin servicio por un problema de su cuenta. Lo anota
+   `ProviderAccountStatus` cuando responde 401, 432 o 433, y no se deduce de
+   otra cosa;
+2. y en esa misión ninguna búsqueda trajo un solo resultado
+   (`ToolCallRepository::fruitfulInMission`).
+
+Con una sola de las dos no basta. Un corte al final de una misión que ya
+investigó deja un Pack bueno, y ese sí cuenta. Una misión sin resultados con
+el buscador en marcha es del alumno o del agente, no del servicio, y devolverla
+permitiría repetir misiones a voluntad.
+
+El Pack se guarda igual, con el aviso de `UnsearchedMission::NOTA` delante.
+El aviso no nombra al proveedor ni habla de saldo, porque eso no le toca al
+alumno. La evidencia anotada se conserva; lo que vuelve es la capacidad de
+abrir otra. Un ensayo del gestor no lleva el aviso: nunca abrió misión.
+Lo decide `UnsearchedMission` y lo aplica `ConversationService` antes de
+guardar el mensaje. Las pruebas están en `UnsearchedMissionTest`, entre ellas
+el caso de aquel día por el camino real, con un 432 simulado.
