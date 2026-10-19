@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\sales_leadership_diagnostic\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\sales_leadership_diagnostic\Service\Maintenance\TestDataCleaner;
 use Drupal\user\Entity\Role;
@@ -164,10 +165,131 @@ final class TestDataCleanerTest extends KernelTestBase {
   }
 
   /**
+   * Limpiar un alumno deja su cuenta como nueva y no toca a nadie más.
+   *
+   * Es para dejar limpia una cuenta de demostración sin perder el historial de
+   * los alumnos reales: lo que importa es que el otro alumno siga intacto.
+   */
+  public function testLimpiarUnAlumnoNoTocaLoDeNadieMas(): void {
+    $this->usoDe($this->demo);
+
+    $alumnos = $this->limpiador()->alumnosPorNombre(['alumno.otro']);
+    $this->limpiador()->limpiarAlumnos($alumnos);
+
+    $suyo = $this->limpiador()->inventarioDe($alumnos);
+    $this->assertSame([0, 0, 0], array_values($suyo['entidades']));
+    $this->assertSame(0, array_sum($suyo['tablas']));
+    $this->assertSame(0, $suyo['estado'], 'Su aviso de gasto vuelve a poder enviarse.');
+
+    $delDemo = $this->limpiador()->inventarioDe($this->limpiador()->alumnosPorNombre(['alumno.demo']));
+    $this->assertSame([1, 1, 1], array_values($delDemo['entidades']), 'Las conversaciones, informes y memoria del otro alumno siguen ahí.');
+    $this->assertSame(1, $delDemo['tablas']['sld_account']);
+    $this->assertSame(1, $delDemo['tablas']['sld_diagnostic_message'], 'Y los mensajes de su conversación.');
+    $this->assertSame(1, $delDemo['estado']);
+
+    $this->assertNotNull(User::load($this->otro->id()), 'El usuario se conserva: vuelve a entrar desde WordPress.');
+  }
+
+  /**
+   * Se le puede nombrar por su correo, que es como lo conoce quien lo pide.
+   */
+  public function testSeEncuentraPorCorreo(): void {
+    $alumnos = $this->limpiador()->alumnosPorNombre(['otro@ejemplo.com']);
+
+    $this->assertSame([(int) $this->otro->id()], array_keys($alumnos));
+  }
+
+  /**
+   * Un gestor no se limpia aunque se le nombre.
+   */
+  public function testUnGestorNoSeLimpia(): void {
+    $this->expectException(\InvalidArgumentException::class);
+
+    $this->limpiador()->alumnosPorNombre(['gestor.sam']);
+  }
+
+  /**
+   * Con un turno en marcha no se borra nada.
+   *
+   * Su elemento de la cola quedaría apuntando a una conversación borrada.
+   */
+  public function testConUnTurnoEnMarchaNoBorraNada(): void {
+    $sesiones = $this->container->get('entity_type.manager')->getStorage('sld_diagnostic_session')->loadByProperties(['uid' => $this->otro->id()]);
+    $sesion = reset($sesiones);
+    $sesion->setStatus(DiagnosticStatus::Processing);
+    $sesion->save();
+
+    $alumnos = $this->limpiador()->alumnosPorNombre(['alumno.otro']);
+
+    try {
+      $this->limpiador()->limpiarAlumnos($alumnos);
+      $this->fail('Debió negarse.');
+    }
+    catch (\RuntimeException) {
+    }
+
+    $this->assertSame(1, $this->limpiador()->inventarioDe($alumnos)['entidades']['sld_diagnostic_session'], 'No se borró nada.');
+  }
+
+  /**
+   * Uso de un alumno: conversación, mensaje, informe, memoria, cuenta y aviso.
+   */
+  private function usoDe(UserInterface $alumno): void {
+    $tipos = $this->container->get('entity_type.manager');
+    $sesion = $tipos->getStorage('sld_diagnostic_session')->create([
+      'uid' => $alumno->id(),
+      'wp_user_id' => '1',
+      'course_id' => '35884',
+      'agent' => 'liderazgo',
+      'diagnostic_version' => '1.0',
+      'prompt_snapshot' => 'prompt',
+      'prompt_hash' => 'huella',
+    ]);
+    $sesion->save();
+    $this->container->get('database')->insert('sld_diagnostic_message')->fields([
+      'session_id' => $sesion->id(),
+      'role' => 'user',
+      'content' => 'Hola',
+      'sequence' => 1,
+      'created' => 1,
+    ])->execute();
+    $tipos->getStorage('sld_diagnostic_result')->create([
+      'uid' => $alumno->id(),
+      'session_id' => $sesion->id(),
+      'diagnostic_version' => '1.0',
+      'summary' => 'Resumen.',
+      'payload' => '{}',
+      'agent' => 'liderazgo',
+    ])->save();
+    $tipos->getStorage('sld_student_memory')->create([
+      'uid' => $alumno->id(),
+      'topic' => 'company',
+      'content' => 'Otra empresa.',
+    ])->save();
+    $this->container->get('database')->insert('sld_account')->fields([
+      'uid' => $alumno->id(),
+      'agent' => 'prospeccion',
+      'name' => 'Constructora Dos',
+      'name_key' => 'constructora dos',
+      'first_result_id' => 1,
+      'last_result_id' => 1,
+      'times_in_pack' => 1,
+      'first_seen' => 1,
+      'last_seen' => 1,
+    ])->execute();
+    $this->container->get('state')->set('sld.spend_warned.' . $alumno->id() . '.1', TRUE);
+  }
+
+  /**
    * Un alumno enlazado a WordPress.
    */
   private function alumno(string $nombre, string $wpId): UserInterface {
-    $usuario = User::create(['name' => $nombre, 'status' => 1, 'roles' => [SalesLeadershipDiagnostic::STUDENT_ROLE_ID]]);
+    $usuario = User::create([
+      'name' => $nombre,
+      'mail' => str_replace('alumno.', '', $nombre) . '@ejemplo.com',
+      'status' => 1,
+      'roles' => [SalesLeadershipDiagnostic::STUDENT_ROLE_ID],
+    ]);
     $usuario->save();
     $this->container->get('externalauth.authmap')->save($usuario, SalesLeadershipDiagnostic::AUTHMAP_PROVIDER, $wpId);
 

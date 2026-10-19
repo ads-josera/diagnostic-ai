@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Drupal\sales_leadership_diagnostic\Service\Maintenance;
 
 use Drupal\Core\Database\Connection;
+use Drupal\Core\Database\Query\ConditionInterface;
+use Drupal\Core\Database\Query\SelectInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Queue\QueueFactory;
 use Drupal\Core\State\StateInterface;
+use Drupal\sales_leadership_diagnostic\DiagnosticStatus;
 use Drupal\sales_leadership_diagnostic\SalesLeadershipDiagnostic;
 use Drupal\user\UserInterface;
 
@@ -190,19 +193,245 @@ final class TestDataCleaner {
   }
 
   /**
+   * Los alumnos que se piden por nombre de usuario o por correo.
+   *
+   * Solo alumnos: quien tenga cualquier otro rol (gestor, administrador) se
+   * rechaza aunque se nombre, igual que en alumnosDePrueba().
+   *
+   * @param string[] $identificadores
+   *   Nombres de usuario o correos.
+   *
+   * @return \Drupal\user\UserInterface[]
+   *   Los alumnos encontrados, por uid.
+   *
+   * @throws \InvalidArgumentException
+   *   Si alguno no existe o no es alumno: mejor no borrar nada que borrar a
+   *   medias lo que se pidió.
+   */
+  public function alumnosPorNombre(array $identificadores): array {
+    $almacen = $this->entityTypeManager->getStorage('user');
+    $alumnos = [];
+
+    foreach ($identificadores as $identificador) {
+      $encontrados = $almacen->loadByProperties(['name' => $identificador])
+        ?: $almacen->loadByProperties(['mail' => $identificador]);
+      $usuario = reset($encontrados);
+
+      if (!$usuario instanceof UserInterface) {
+        throw new \InvalidArgumentException(sprintf('No existe ninguna cuenta «%s».', $identificador));
+      }
+
+      $roles = array_values(array_diff($usuario->getRoles(), ['authenticated']));
+      if ((int) $usuario->id() === 1 || $roles !== [SalesLeadershipDiagnostic::STUDENT_ROLE_ID]) {
+        throw new \InvalidArgumentException(sprintf('«%s» no es solo alumno: no se limpia.', $identificador));
+      }
+
+      $alumnos[(int) $usuario->id()] = $usuario;
+    }
+
+    return $alumnos;
+  }
+
+  /**
+   * Qué se borraría de unos alumnos concretos, sin borrar nada.
+   *
+   * @param \Drupal\user\UserInterface[] $alumnos
+   *   Los de alumnosPorNombre().
+   *
+   * @return array{entidades: array<string, int>, tablas: array<string, int>, estado: int, procesando: int}
+   *   Cuántos elementos tiene cada uno, y cuántas conversaciones están
+   *   generando un turno en este momento.
+   */
+  public function inventarioDe(array $alumnos): array {
+    $uids = array_keys($alumnos);
+    $sesiones = $this->sesionesDe($uids);
+
+    $entidades = [];
+    foreach (self::ENTIDADES as $tipo) {
+      $entidades[$tipo] = $uids === [] ? 0 : (int) $this->entityTypeManager->getStorage($tipo)
+        ->getQuery()
+        ->accessCheck(FALSE)
+        ->condition('uid', $uids, 'IN')
+        ->count()
+        ->execute();
+    }
+
+    $tablas = [];
+    foreach (self::TABLAS as $tabla) {
+      $tablas[$tabla] = $this->database->schema()->tableExists($tabla)
+        ? (int) $this->consultaDe($tabla, $uids, $sesiones)->countQuery()->execute()->fetchField()
+        : 0;
+    }
+
+    return [
+      'entidades' => $entidades,
+      'tablas' => $tablas,
+      'estado' => count($this->marcasDeEstado($uids)),
+      'procesando' => $uids === [] ? 0 : (int) $this->entityTypeManager->getStorage('sld_diagnostic_session')
+        ->getQuery()
+        ->accessCheck(FALSE)
+        ->condition('uid', $uids, 'IN')
+        ->condition('status', DiagnosticStatus::Processing->value)
+        ->count()
+        ->execute(),
+    ];
+  }
+
+  /**
+   * Borra el uso de unos alumnos concretos, y nada de nadie más.
+   *
+   * Pensado para dejar una cuenta de demostración como nueva sin tocar el
+   * historial de los demás (José Raúl, 19-10-2026: presentar los dos agentes
+   * desde cero con la cuenta de pruebas). Los usuarios se conservan: vuelven
+   * a entrar desde WordPress igual que siempre, y lo encuentran todo vacío.
+   *
+   * @param \Drupal\user\UserInterface[] $alumnos
+   *   Los de alumnosPorNombre().
+   *
+   * @return array{entidades: array<string, int>, tablas: array<string, int>, estado: int, procesando: int}
+   *   Lo que había antes de borrar: es lo que se borró.
+   *
+   * @throws \RuntimeException
+   *   Si alguna de sus conversaciones está generando un turno: su elemento de
+   *   la cola quedaría apuntando a una conversación borrada.
+   */
+  public function limpiarAlumnos(array $alumnos): array {
+    $antes = $this->inventarioDe($alumnos);
+
+    if ($antes['procesando'] > 0) {
+      throw new \RuntimeException('Hay una conversación generando un turno en este momento. Espera a que termine y repite.');
+    }
+
+    $uids = array_keys($alumnos);
+    $sesiones = $this->sesionesDe($uids);
+
+    foreach (self::ENTIDADES as $tipo) {
+      $almacen = $this->entityTypeManager->getStorage($tipo);
+      do {
+        $ids = $almacen->getQuery()
+          ->accessCheck(FALSE)
+          ->condition('uid', $uids, 'IN')
+          ->range(0, self::TANDA)
+          ->execute();
+        if ($ids !== []) {
+          $almacen->delete($almacen->loadMultiple($ids));
+        }
+      } while ($ids !== []);
+    }
+
+    foreach (self::TABLAS as $tabla) {
+      if ($this->database->schema()->tableExists($tabla)) {
+        $this->filtrar($this->database->delete($tabla), $tabla, $uids, $sesiones)->execute();
+      }
+    }
+
+    $this->state->deleteMultiple($this->marcasDeEstado($uids));
+
+    // Cifras e identificadores internos, nunca contenido ni correos (§43).
+    $this->loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL)->notice(
+      'Limpieza de @n alumno(s) (uid @uids): @conversaciones conversación(es), @informes informe(s), @consumos registro(s) de consumo.',
+      [
+        '@n' => count($uids),
+        '@uids' => implode(', ', $uids),
+        '@conversaciones' => $antes['entidades']['sld_diagnostic_session'],
+        '@informes' => $antes['entidades']['sld_diagnostic_result'],
+        '@consumos' => $antes['tablas']['sld_ai_usage'],
+      ],
+    );
+
+    return $antes;
+  }
+
+  /**
+   * Las conversaciones de unos alumnos, incluidas las ya borradas a medias.
+   *
+   * @param int[] $uids
+   *   Alumnos.
+   *
+   * @return int[]
+   *   Identificadores de sus conversaciones.
+   */
+  private function sesionesDe(array $uids): array {
+    if ($uids === []) {
+      return [];
+    }
+
+    return array_map('intval', array_values($this->entityTypeManager->getStorage('sld_diagnostic_session')
+      ->getQuery()
+      ->accessCheck(FALSE)
+      ->condition('uid', $uids, 'IN')
+      ->execute()));
+  }
+
+  /**
+   * Una consulta de recuento de una tabla, acotada a esos alumnos.
+   *
+   * @param string $tabla
+   *   La tabla.
+   * @param int[] $uids
+   *   Alumnos.
+   * @param int[] $sesiones
+   *   Sus conversaciones.
+   *
+   * @return \Drupal\Core\Database\Query\SelectInterface
+   *   La consulta.
+   */
+  private function consultaDe(string $tabla, array $uids, array $sesiones): SelectInterface {
+    return $this->filtrar($this->database->select($tabla, 't'), $tabla, $uids, $sesiones);
+  }
+
+  /**
+   * Acota una consulta a los alumnos: por uid, o por conversación.
+   *
+   * Los mensajes son la única tabla sin uid: cuelgan de su conversación. Si no
+   * hay nada que acotar, la condición es imposible a propósito —una consulta
+   * sin condición borraría la tabla entera—.
+   *
+   * @param \Drupal\Core\Database\Query\ConditionInterface $consulta
+   *   La consulta: un select o un delete.
+   * @param string $tabla
+   *   La tabla.
+   * @param int[] $uids
+   *   Alumnos.
+   * @param int[] $sesiones
+   *   Sus conversaciones.
+   *
+   * @return \Drupal\Core\Database\Query\ConditionInterface
+   *   La misma, acotada.
+   */
+  private function filtrar(ConditionInterface $consulta, string $tabla, array $uids, array $sesiones): ConditionInterface {
+    if ($tabla === 'sld_diagnostic_message') {
+      $consulta->condition('session_id', $sesiones === [] ? [-1] : $sesiones, 'IN');
+      return $consulta;
+    }
+
+    $consulta->condition('uid', $uids === [] ? [-1] : $uids, 'IN');
+    return $consulta;
+  }
+
+  /**
    * Claves de estado que dependen del uso.
+   *
+   * @param int[]|null $uids
+   *   Solo las de estos alumnos; NULL, las de todos.
    *
    * @return string[]
    *   Las claves.
    */
-  private function marcasDeEstado(): array {
+  private function marcasDeEstado(?array $uids = NULL): array {
     $claves = array_keys($this->keyValue->get('state')->getAll());
 
-    return array_values(array_filter($claves, static function (string $clave): bool {
+    return array_values(array_filter($claves, static function (string $clave) use ($uids): bool {
       foreach (self::PREFIJOS_DE_ESTADO as $prefijo) {
-        if (str_starts_with($clave, $prefijo)) {
+        if (!str_starts_with($clave, $prefijo)) {
+          continue;
+        }
+        if ($uids === NULL) {
           return TRUE;
         }
+        // La clave es «prefijo.uid.periodo» (SpendGuard).
+        $uid = (int) strtok(substr($clave, strlen($prefijo)), '.');
+        return in_array($uid, $uids, TRUE);
       }
       return FALSE;
     }));
