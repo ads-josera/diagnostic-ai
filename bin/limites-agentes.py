@@ -242,6 +242,25 @@ historia = [
         "de búsqueda de abajo salen de medir misiones reales con tu caso de "
         "prueba (Deloitte Ecuador), y no de un número fijado de antemano."
     ),
+    KeepTogether([
+        p("<b>Un ejemplo para verlo claro:</b>", "cuerpo"),
+        p(
+            "Un alumno investiga Deloitte Ecuador el martes con GAP Prospecting AI "
+            "y recibe su Weekly GOLD Pack completo. El jueves abre otra "
+            "conversación y pide investigar una empresa distinta. Esa segunda "
+            "petición <b>no tendrá una investigación completa nueva</b>: el agente "
+            "le explica que ya usó su misión de la semana, sigue trabajando con lo "
+            "que ya investigó (comparar, priorizar, preparar mensajes) y puede "
+            "hacer hasta 3 comprobaciones puntuales. El lunes siguiente vuelve a "
+            "tener una investigación completa disponible.",
+            "cita",
+        ),
+        p(
+            "Por eso conviene elegir bien la empresa y el mercado de la misión de "
+            "cada semana. Sales Leadership Diagnostic AI no tiene esta "
+            "restricción: no sale a internet y sus diagnósticos no tienen límite.",
+        ),
+    ]),
 
     # Sin KeepTogether: la tabla es larga y, entera, deja media página vacía.
     # Se parte por filas y repite la cabecera (repeatRows en tabla()).
@@ -302,13 +321,15 @@ historia = [
         ),
     ]),
 
-    p("Una protección para el alumno", "seccion"),
-    p(
-        "Si un servicio externo de búsqueda deja de responder y la misión termina "
-        "sin haber podido investigar, <b>esa misión no le cuenta al alumno</b>: "
-        "el Pack lo indica y puede repetirla cuando el servicio se restablezca. "
-        "Así nadie pierde su semana por una falla que no es suya."
-    ),
+    KeepTogether([
+        p("Una protección para el alumno", "seccion"),
+        p(
+            "Si un servicio externo de búsqueda deja de responder y la misión termina "
+            "sin haber podido investigar, <b>esa misión no le cuenta al alumno</b>: "
+            "el Pack lo indica y puede repetirla cuando el servicio se restablezca. "
+            "Así nadie pierde su semana por una falla que no es suya."
+        ),
+    ]),
 
     p("Si quieres ajustar algún límite", "seccion"),
     p(
