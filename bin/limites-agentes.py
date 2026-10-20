@@ -206,16 +206,16 @@ historia = [
     p("Sales Leadership Diagnostic AI y GAP Prospecting AI", "subtitulo"),
     p("Octubre de 2026 · valores vigentes en la plataforma", "fecha"),
 
-    p("Hola, Omar:"),
+    p("Hola, Omar y Edith:"),
     p(
-        "Te comparto por escrito los límites con los que funcionan hoy los dos "
-        "agentes, qué parte de ellos sale de tu especificación y qué ve el alumno "
+        "Les comparto por escrito los límites con los que funcionan hoy los dos "
+        "agentes, qué parte de ellos sale de la especificación de Omar y qué ve el alumno "
         "cuando llega a cada uno."
     ),
 
-    p("Las reglas que vienen de tu especificación", "seccion"),
+    p("Las reglas que vienen de la especificación de Omar", "seccion"),
     p(
-        "La forma de los límites de investigación la definiste tú, y la "
+        "La forma de los límites de investigación la definió Omar, y la "
         "plataforma la aplica tal cual:"
     ),
     punto(
@@ -239,7 +239,7 @@ historia = [
     ),
     punto(
         "<b>Los topes se calibran midiendo, no por decreto.</b> Por eso las cifras "
-        "de búsqueda de abajo salen de medir misiones reales con tu caso de "
+        "de búsqueda de abajo salen de medir misiones reales con el caso de "
         "prueba (Deloitte Ecuador), y no de un número fijado de antemano."
     ),
     KeepTogether([
@@ -331,14 +331,14 @@ historia = [
         ),
     ]),
 
-    p("Si quieres ajustar algún límite", "seccion"),
+    p("Si quieren ajustar algún límite", "seccion"),
     p(
         "Cualquiera de estas cifras se puede cambiar. Los topes de consumo se "
-        "ajustan al momento; para los de investigación te proponemos medir antes "
-        "el efecto con tu caso de prueba, como hicimos para fijarlos."
+        "ajustan al momento; para los de investigación les proponemos medir antes "
+        "el efecto con el mismo caso de prueba, como hicimos para fijarlos."
     ),
 
-    p("Quedo atento a tus comentarios.", "firma"),
+    p("Quedo atento a sus comentarios.", "firma"),
     p("Saludos,<br/>José Raúl", "firma"),
 ]
 
