@@ -104,3 +104,22 @@ prueban la puerta nueva por los dos lados: que un agente sin conceder **no se
 encola**, y que **conserva el ledger**.
 
 338 pruebas, 1227 aserciones, phpcs limpio, humo 45/45.
+
+## Corrección del 20-10-2026: el ledger también depende de la puerta
+
+La segunda decisión de arriba —«el ledger NO depende de esta puerta»— se
+revirtió. Su argumento confundía dos cosas: lo que se sabe de **la persona**
+(su empresa, su mercado) le llega a cualquier agente por la memoria del alumno,
+que se inyecta al empezar la sesión; el ledger guarda otra cosa, **lo que
+encontró la investigación de cuentas** del agente de prospección.
+
+Lo destapó la presentación del 20-10: el agente de diagnóstico consultó el
+ledger dos veces a mitad de un informe. Sin resultados esa vez, pero podía
+mezclar la investigación de otra empresa en el diagnóstico, y con
+`anotar_evidencia` escribir en la evidencia que luego lee el otro agente. Cada
+consulta, además, era una llamada al modelo más.
+
+Ahora un agente sin `can_search` recibe la caja vacía: ninguna herramienta, y
+por tanto ninguna declaración, lo que también le conserva la caché del prompt.
+La prueba `testUnAgenteSinBusquedaNoRecibeHerramientas` sustituye a la que
+decía lo contrario.

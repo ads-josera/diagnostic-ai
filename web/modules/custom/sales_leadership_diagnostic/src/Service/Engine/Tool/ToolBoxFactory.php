@@ -94,11 +94,25 @@ final class ToolBoxFactory {
       return new ToolBox();
     }
 
-    // El ledger va SIEMPRE, aunque no se pueda investigar. Es lo que hace
-    // cierto el «después de completar, los follow-ups siguen funcionando con
-    // evidencia persistida» del §2: con la misión cerrada, mirar lo que ya se
-    // sabe es lo único que le queda al agente, y quitárselo lo dejaría sin
-    // nada que decir.
+    // Un agente que no investiga no recibe ninguna herramienta, tampoco el
+    // ledger. El ledger guarda lo que encontró la INVESTIGACIÓN de cuentas
+    // —empresas, señales, compradores—, no lo que se sabe de la persona, que
+    // le llega por la memoria del alumno al empezar la sesión. Hasta el
+    // 20-10-2026 se le daba al agente de diagnóstico (decisión 0013), y ese día
+    // lo consultó dos veces a mitad de un diagnóstico: podía mezclar la
+    // investigación de otra empresa en el informe, y con la escritura, anotar
+    // en la evidencia que luego lee el agente de prospección. Con la caja
+    // vacía, además, no se declara ninguna herramienta y su prompt conserva la
+    // caché.
+    if (!$this->agentMaySearch($this->turn->agentId())) {
+      return new ToolBox();
+    }
+
+    // Al agente que investiga, el ledger le va SIEMPRE, aunque no pueda
+    // investigar. Es lo que hace cierto el «después de completar, los
+    // follow-ups siguen funcionando con evidencia persistida» del §2: con la
+    // misión cerrada, mirar lo que ya se sabe es lo único que le queda, y
+    // quitárselo lo dejaría sin nada que decir.
     $herramientas = [
       new LedgerReadTool($this->ledger, $this->turn),
       new LedgerWriteTool($this->ledger, $this->turn, $this->entitlements),
@@ -111,10 +125,7 @@ final class ToolBoxFactory {
     // nuevo»— sin depender de que el gateway diga que no una y otra vez.
     $entitlement = $this->entitlements->forUser($this->turn->uid());
 
-    if (
-      $this->agentMaySearch($this->turn->agentId())
-      && $entitlement->access($this->entitlements->maxRechecks())->allowsAnything()
-    ) {
+    if ($entitlement->access($this->entitlements->maxRechecks())->allowsAnything()) {
       $herramientas[] = new WebSearchTool(
         $this->search,
         $this->loggerFactory->get(SalesLeadershipDiagnostic::LOGGER_CHANNEL),

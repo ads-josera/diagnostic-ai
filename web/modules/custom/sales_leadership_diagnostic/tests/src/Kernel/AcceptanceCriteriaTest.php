@@ -189,7 +189,16 @@ final class AcceptanceCriteriaTest extends KernelTestBase {
     ]);
     $servicio->completeMission(self::ALUMNO, 100);
 
-    $this->turno(200);
+    // El seguimiento es del agente que investiga: desde el 20-10-2026 el ledger
+    // solo se le da a un agente con la búsqueda concedida.
+    $this->container->get('entity_type.manager')->getStorage('sld_agent')->create([
+      'id' => 'prospeccion',
+      'label' => 'Prospección',
+      'course_id' => '35884',
+      'system_prompt' => 'PROMPT',
+      'can_search' => TRUE,
+    ])->save();
+    $this->container->get(CurrentTurn::class)->begin(self::ALUMNO, 200, FALSE, 'prospeccion');
     $nombres = array_column($this->container->get(ToolBoxFactory::class)->forTurn()->declarations(), 'name');
 
     $this->assertContains(LedgerReadTool::NAME, $nombres, 'Puede consultar lo que ya sabe.');

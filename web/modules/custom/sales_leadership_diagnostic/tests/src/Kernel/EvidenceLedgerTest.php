@@ -218,14 +218,15 @@ final class EvidenceLedgerTest extends KernelTestBase {
   }
 
   /**
-   * Sin búsqueda concedida al agente, el ledger sigue estando.
+   * Un agente sin búsqueda concedida no recibe ninguna herramienta.
    *
-   * Es el mismo reparto que con el entitlement agotado, pero decidido una
-   * puerta más arriba. Importa que salga igual: el agente de diagnóstico no
-   * sale a internet, y aun así tiene que poder mirar lo que ya se sabe de la
-   * persona. Quitarle también eso lo dejaría sin nada que consultar.
+   * Tampoco el ledger: guarda la investigación de cuentas del agente de
+   * prospección, no lo que se sabe de la persona (eso va en su memoria). El
+   * 20-10-2026 el agente de diagnóstico lo consultó a mitad de un informe, y
+   * con la escritura podía anotar en la evidencia que lee el otro agente.
+   * Hasta ese día esta prueba decía lo contrario (decisión 0013).
    */
-  public function testUnAgenteSinBusquedaConservaElLedger(): void {
+  public function testUnAgenteSinBusquedaNoRecibeHerramientas(): void {
     $this->setSetting('sld_search_api_key', 'clave-de-prueba');
     $this->config('sales_leadership_diagnostic.settings')->set('search.enabled', TRUE)->save();
 
@@ -244,9 +245,8 @@ final class EvidenceLedgerTest extends KernelTestBase {
       'name',
     );
 
-    $this->assertNotContains(WebSearchTool::NAME, $nombres, 'Este agente no sale a internet.');
-    $this->assertContains(LedgerReadTool::NAME, $nombres);
-    $this->assertContains(LedgerWriteTool::NAME, $nombres);
+    $this->assertSame([], $nombres, 'Ni búsqueda ni ledger: este agente no investiga.');
+    $this->assertTrue($this->container->get(ToolBoxFactory::class)->forTurn()->isEmpty(), 'Caja vacía: no se declara nada y el prompt conserva la caché.');
   }
 
   /**
